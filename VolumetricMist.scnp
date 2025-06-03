@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<scene version="1.0">
+  <particlesystem>
+    <emissionShape type="box" width="10" height="1" length="10"/>
+    <birthRate>20</birthRate>
+    <lifetime>20</lifetime>
+    <speed>0.5</speed>
+    <color>0.9 0.9 1.0 0.2</color>
+    <blendMode>additive</blendMode>
+    <affectedByGravity>false</affectedByGravity>
+    <lightingEnabled>true</lightingEnabled>
+    <particleImage>spark.png</particleImage>
+  </particlesystem>
+</scene>
