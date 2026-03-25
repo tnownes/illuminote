@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>IlluminoteBuildChannel</key>
+	<string>$(ILLUMINOTE_BUILD_CHANNEL)</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Illuminote needs access to the microphone to record your audio logs for journaling and reflection.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Illuminote requires speech recognition access to transcribe your spoken journal entries into text.</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
+	<key>UTExportedTypeDeclarations</key>
+	<array>
+		<dict>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.json</string>
+				<string>public.content</string>
+				<string>public.data</string>
+			</array>
+			<key>UTTypeDescription</key>
+			<string>Illuminote Draft</string>
+			<key>UTTypeIconFiles</key>
+			<array/>
+			<key>UTTypeIdentifier</key>
+			<string>com.illuminote.draft</string>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>public.filename-extension</key>
+				<array>
+					<string>illdraft</string>
+				</array>
+			</dict>
+		</dict>
+	</array>
+</dict>
+</plist>

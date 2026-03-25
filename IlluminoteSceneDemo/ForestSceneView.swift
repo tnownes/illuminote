@@ -8,6 +8,12 @@ struct ForestSceneView: View {
             options: []
         )
         .ignoresSafeArea()
+        .overlay {
+            Rectangle()
+                .fill(.ultraThinMaterial)
+                .opacity(0.15)
+                .ignoresSafeArea()
+        }
     }
 }
 
@@ -15,14 +21,14 @@ func createForestScene() -> SCNScene {
     let scene = SCNScene()
 
     // Use the provided image as a background
-    scene.background.contents = UIImage(named: "forest-scene-reference-Design1.jpg")
+    scene.background.contents = UIImage(named: "ForestBackground")
 
     // MARK: - Water Surface with Ripple Animation
     // Create a flat water plane
     let waterPlane = SCNPlane(width: 10, height: 10)
     let waterMat = SCNMaterial()
     waterMat.diffuse.contents = UIColor.clear.withAlphaComponent(0.3)
-    waterMat.normal.contents = UIImage(named: "waterNormal.png")
+    waterMat.normal.contents = UIImage(named: "WaterNormal")
     waterMat.normal.wrapS = .repeat
     waterMat.normal.wrapT = .repeat
     waterMat.lightingModel = .physicallyBased
@@ -55,7 +61,7 @@ func createForestScene() -> SCNScene {
 
     // MARK: - Falling Leaves Particle System
     let leavesSystem = SCNParticleSystem()
-    leavesSystem.particleImage = UIImage(named: "leaf.png")  // stylized leaf silhouette
+    leavesSystem.particleImage = UIImage(named: "Leaf")  // stylized leaf silhouette
     leavesSystem.birthRate = 10
     leavesSystem.particleLifeSpan = 18.0
     leavesSystem.particleSize = 0.03

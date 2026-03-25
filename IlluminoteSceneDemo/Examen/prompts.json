@@ -1,0 +1,4181 @@
+{
+  "prompts": [
+    {
+      "id": "20000000-0000-0000-0000-000000000001",
+      "phase": 0,
+      "text": "As you begin, notice what you are carrying from today. Hope, worry, gratitude, fatigue. Reflect on this.",
+      "stepIndex": 0,
+      "stage": "opening",
+      "depth": "standard",
+      "experienceTypes": [
+        "shadowing",
+        "clinical",
+        "service",
+        "leadership",
+        "research",
+        "work"
+      ],
+      "professionTags": [
+        "preMedicine",
+        "preDentistry",
+        "preOccupationalTherapy",
+        "prePhysicalTherapy",
+        "prePhysicianAssistant",
+        "prePharmacy",
+        "preVeterinaryMedicine",
+        "preOptometry",
+        "medicalOrDentalResidency",
+        "general",
+        "other",
+        "preLaw"
+      ],
+      "tags": [
+        "emotion",
+        "presence",
+        "dailylife",
+        "daily"
+      ],
+      "intent": null
+    },
+    {
+      "id": "20000000-0000-0000-0000-000000000002",
+      "phase": 1,
+      "text": "Pause and name a gift you received today, small or large: insight, kindness, encouragement.",
+      "stepIndex": 0,
+      "stage": "gratitude",
+      "depth": "standard",
+      "experienceTypes": [
+        "shadowing",
+        "clinical",
+        "service",
+        "leadership",
+        "research",
+        "work"
+      ],
+      "professionTags": [
+        "preMedicine",
+        "preDentistry",
+        "preOccupationalTherapy",
+        "prePhysicalTherapy",
+        "prePhysicianAssistant",
+        "prePharmacy",
+        "preVeterinaryMedicine",
+        "preOptometry",
+        "medicalOrDentalResidency",
+        "general",
+        "other",
+        "preLaw"
+      ],
+      "tags": [
+        "gratitude",
+        "presence",
+        "dailylife",
+        "daily"
+      ],
+      "intent": null
+    },
+    {
+      "id": "20000000-0000-0000-0000-000000000003",
+      "phase": 2,
+      "text": "Was there a moment when you felt deeply connected, to a person, a task, a role?",
+      "stepIndex": 0,
+      "stage": "presence",
+      "depth": "standard",
+      "experienceTypes": [
+        "shadowing",
+        "clinical",
+        "service",
+        "leadership",
+        "research",
+        "work"
+      ],
+      "professionTags": [
+        "preMedicine",
+        "preDentistry",
+        "preOccupationalTherapy",
+        "prePhysicalTherapy",
+        "prePhysicianAssistant",
+        "prePharmacy",
+        "preVeterinaryMedicine",
+        "preOptometry",
+        "medicalOrDentalResidency",
+        "general",
+        "other",
+        "preLaw"
+      ],
+      "tags": [
+        "meaning",
+        "connection",
+        "emotion"
+      ],
+      "intent": null
+    },
+    {
+      "id": "20000000-0000-0000-0000-000000000004",
+      "phase": 2,
+      "text": "What moments today stirred discomfort, tension, or inner questioning, challenging what you expected or wanted?",
+      "stepIndex": 1,
+      "stage": "disquiet",
+      "depth": "standard",
+      "experienceTypes": [
+        "shadowing",
+        "clinical",
+        "service",
+        "leadership",
+        "research",
+        "work"
+      ],
+      "professionTags": [
+        "preMedicine",
+        "preDentistry",
+        "preOccupationalTherapy",
+        "prePhysicalTherapy",
+        "prePhysicianAssistant",
+        "prePharmacy",
+        "preVeterinaryMedicine",
+        "preOptometry",
+        "medicalOrDentalResidency",
+        "general",
+        "other",
+        "preLaw"
+      ],
+      "tags": [
+        "discomfort",
+        "tension",
+        "emotion"
+      ],
+      "intent": null
+    },
+    {
+      "id": "20000000-0000-0000-0000-000000000005",
+      "phase": 2,
+      "text": "Did you notice any assumptions or beliefs being tested today? What was challenged? How did you react?",
+      "stepIndex": 1,
+      "stage": "assumptions",
+      "depth": "standard",
+      "experienceTypes": [
+        "shadowing",
+        "clinical",
+        "service",
+        "leadership",
+        "research",
+        "work"
+      ],
+      "professionTags": [
+        "preMedicine",
+        "preDentistry",
+        "preOccupationalTherapy",
+        "prePhysicalTherapy",
+        "prePhysicianAssistant",
+        "prePharmacy",
+        "preVeterinaryMedicine",
+        "preOptometry",
+        "medicalOrDentalResidency",
+        "general",
+        "other",
+        "preLaw"
+      ],
+      "tags": [
+        "assumptions",
+        "challenge",
+        "self-awareness"
+      ],
+      "intent": null
+    },
+    {
+      "id": "20000000-0000-0000-0000-000000000006",
+      "phase": 3,
+      "text": "Where did you sense hope, healing, compassion or care during the experience?",
+      "stepIndex": 1,
+      "stage": "compassion",
+      "depth": "deep",
+      "experienceTypes": [
+        "shadowing",
+        "clinical",
+        "service",
+        "leadership",
+        "research",
+        "work"
+      ],
+      "professionTags": [
+        "preMedicine",
+        "preDentistry",
+        "preOccupationalTherapy",
+        "prePhysicalTherapy",
+        "prePhysicianAssistant",
+        "prePharmacy",
+        "preVeterinaryMedicine",
+        "preOptometry",
+        "medicalOrDentalResidency",
+        "general",
+        "other",
+        "preLaw"
+      ],
+      "tags": [
+        "hope",
+        "compassion",
+        "spiritual"
+      ],
+      "intent": null
+    },
+    {
+      "id": "20000000-0000-0000-0000-000000000007",
+      "phase": 2,
+      "text": "What, if anything, made you feel uneasy or distant from your calling, or sense of purpose today?",
+      "stepIndex": 1,
+      "stage": "tension",
+      "depth": "standard",
+      "experienceTypes": [
+        "shadowing",
+        "clinical",
+        "service",
+        "leadership",
+        "research",
+        "work"
+      ],
+      "professionTags": [
+        "preMedicine",
+        "preDentistry",
+        "preOccupationalTherapy",
+        "prePhysicalTherapy",
+        "prePhysicianAssistant",
+        "prePharmacy",
+        "preVeterinaryMedicine",
+        "preOptometry",
+        "medicalOrDentalResidency",
+        "general",
+        "other",
+        "preLaw"
+      ],
+      "tags": [
+        "conscience",
+        "despair",
+        "vocation"
+      ],
+      "intent": null
+    },
+    {
+      "id": "20000000-0000-0000-0000-000000000008",
+      "phase": 2,
+      "text": "As you reflect, notice any stirring toward your future? Is there a moment of confidence or uncertainty?",
+      "stepIndex": 1,
+      "stage": "vocation-reflection",
+      "depth": "standard",
+      "experienceTypes": [
+        "shadowing",
+        "clinical",
+        "service",
+        "leadership",
+        "research",
+        "work"
+      ],
+      "professionTags": [
+        "preMedicine",
+        "preDentistry",
+        "preOccupationalTherapy",
+        "prePhysicalTherapy",
+        "prePhysicianAssistant",
+        "prePharmacy",
+        "preVeterinaryMedicine",
+        "preOptometry",
+        "medicalOrDentalResidency",
+        "general",
+        "other",
+        "preLaw"
+      ],
+      "tags": [
+        "pre-professional",
+        "reflection",
+        "vocation"
+      ],
+      "intent": null
+    },
+    {
+      "id": "20000000-0000-0000-0000-000000000009",
+      "phase": 2,
+      "text": "Was there a moment today that stood out to you? What did it stir in your heart?",
+      "stepIndex": 1,
+      "stage": "humanity",
+      "depth": "standard",
+      "experienceTypes": [
+        "shadowing",
+        "clinical",
+        "service",
+        "leadership",
+        "research",
+        "work"
+      ],
+      "professionTags": [
+        "preMedicine",
+        "preDentistry",
+        "preOccupationalTherapy",
+        "prePhysicalTherapy",
+        "prePhysicianAssistant",
+        "prePharmacy",
+        "preVeterinaryMedicine",
+        "preOptometry",
+        "medicalOrDentalResidency",
+        "general",
+        "other",
+        "preLaw"
+      ],
+      "tags": [
+        "compassion",
+        "justice",
+        "emotion",
+        "suffering"
+      ],
+      "intent": null
+    },
+    {
+      "id": "20000000-0000-0000-0000-00000000000a",
+      "phase": 2,
+      "text": "Was there a moment when you hesitated to engage or act? What held you back?",
+      "stepIndex": 1,
+      "stage": "hesitation",
+      "depth": "standard",
+      "experienceTypes": [
+        "shadowing",
+        "clinical",
+        "service",
+        "leadership",
+        "research",
+        "work"
+      ],
+      "professionTags": [
+        "preMedicine",
+        "preDentistry",
+        "preOccupationalTherapy",
+        "prePhysicalTherapy",
+        "prePhysicianAssistant",
+        "prePharmacy",
+        "preVeterinaryMedicine",
+        "preOptometry",
+        "medicalOrDentalResidency",
+        "general",
+        "other",
+        "preLaw"
+      ],
+      "tags": [
+        "introspection",
+        "conscience",
+        "honesty"
+      ],
+      "intent": null
+    },
+    {
+      "id": "20000000-0000-0000-0000-00000000000b",
+      "phase": 3,
+      "text": "Were you aware of another's vulnerability or need? If so, how did that make you feel? To care? To act?",
+      "stepIndex": 1,
+      "stage": "empathy",
+      "depth": "deep",
+      "experienceTypes": [
+        "shadowing",
+        "clinical",
+        "service",
+        "leadership",
+        "research",
+        "work"
+      ],
+      "professionTags": [
+        "preMedicine",
+        "preDentistry",
+        "preOccupationalTherapy",
+        "prePhysicalTherapy",
+        "prePhysicianAssistant",
+        "prePharmacy",
+        "preVeterinaryMedicine",
+        "preOptometry",
+        "medicalOrDentalResidency",
+        "general",
+        "other",
+        "preLaw"
+      ],
+      "tags": [
+        "empathy",
+        "emotion",
+        "witness"
+      ],
+      "intent": null
+    },
+    {
+      "id": "20000000-0000-0000-0000-00000000000c",
+      "phase": 4,
+      "text": "What part of today made you feel conected to or more certain about your path, purpose, or calling?",
+      "stepIndex": 2,
+      "stage": "affirmation",
+      "depth": "deep",
+      "experienceTypes": [
+        "shadowing",
+        "clinical",
+        "service",
+        "leadership",
+        "research",
+        "work"
+      ],
+      "professionTags": [
+        "preMedicine",
+        "preDentistry",
+        "preOccupationalTherapy",
+        "prePhysicalTherapy",
+        "prePhysicianAssistant",
+        "prePharmacy",
+        "preVeterinaryMedicine",
+        "preOptometry",
+        "medicalOrDentalResidency",
+        "general",
+        "other",
+        "preLaw"
+      ],
+      "tags": [
+        "hope",
+        "vocation",
+        "reflection"
+      ],
+      "intent": null
+    },
+    {
+      "id": "20000000-0000-0000-0000-00000000000d",
+      "phase": 3,
+      "text": "What did today show you about compassion and humility, service, or justice? Does this inform who you want to become?",
+      "stepIndex": 2,
+      "stage": "calling",
+      "depth": "deep",
+      "experienceTypes": [
+        "shadowing",
+        "clinical",
+        "service",
+        "leadership",
+        "research",
+        "work"
+      ],
+      "professionTags": [
+        "preMedicine",
+        "preDentistry",
+        "preOccupationalTherapy",
+        "prePhysicalTherapy",
+        "prePhysicianAssistant",
+        "prePharmacy",
+        "preVeterinaryMedicine",
+        "preOptometry",
+        "medicalOrDentalResidency",
+        "general",
+        "other",
+        "preLaw"
+      ],
+      "tags": [
+        "ethics",
+        "growth",
+        "pre-professional"
+      ],
+      "intent": null
+    },
+    {
+      "id": "20000000-0000-0000-0000-00000000000e",
+      "phase": 3,
+      "text": "Did you question your vocational interest or motivation today? What is it?",
+      "stepIndex": 2,
+      "stage": "discernment",
+      "depth": "deep",
+      "experienceTypes": [
+        "shadowing",
+        "clinical",
+        "service",
+        "leadership",
+        "research",
+        "work"
+      ],
+      "professionTags": [
+        "preMedicine",
+        "preDentistry",
+        "preOccupationalTherapy",
+        "prePhysicalTherapy",
+        "prePhysicianAssistant",
+        "prePharmacy",
+        "preVeterinaryMedicine",
+        "preOptometry",
+        "medicalOrDentalResidency",
+        "general",
+        "other",
+        "preLaw"
+      ],
+      "tags": [
+        "reflection",
+        "vocation",
+        "spiritual",
+        "questions"
+      ],
+      "intent": null
+    },
+    {
+      "id": "20000000-0000-0000-0000-00000000000f",
+      "phase": 4,
+      "text": "What intention or commitment do you want to carry forward on your path or for your next experience?",
+      "stepIndex": 2,
+      "stage": "commitment",
+      "depth": "deep",
+      "experienceTypes": [
+        "shadowing",
+        "clinical",
+        "service",
+        "leadership",
+        "research",
+        "work"
+      ],
+      "professionTags": [
+        "preMedicine",
+        "preDentistry",
+        "preOccupationalTherapy",
+        "prePhysicalTherapy",
+        "prePhysicianAssistant",
+        "prePharmacy",
+        "preVeterinaryMedicine",
+        "preOptometry",
+        "medicalOrDentalResidency",
+        "general",
+        "other",
+        "preLaw"
+      ],
+      "tags": [
+        "spiritual",
+        "resolution",
+        "hope"
+      ],
+      "intent": null
+    },
+    {
+      "id": "20000000-0000-0000-0000-000000000010",
+      "phase": 3,
+      "text": "What would you most want to say to God about what you experienced today? Reflect honestly.",
+      "stepIndex": 2,
+      "stage": "compassion-toward-self",
+      "depth": "deep",
+      "experienceTypes": [
+        "shadowing",
+        "clinical",
+        "service",
+        "leadership",
+        "research",
+        "work"
+      ],
+      "professionTags": [
+        "preMedicine",
+        "preDentistry",
+        "preOccupationalTherapy",
+        "prePhysicalTherapy",
+        "prePhysicianAssistant",
+        "prePharmacy",
+        "preVeterinaryMedicine",
+        "preOptometry",
+        "medicalOrDentalResidency",
+        "general",
+        "other",
+        "preLaw"
+      ],
+      "tags": [
+        "spiritual",
+        "prayer",
+        "honesty"
+      ],
+      "intent": null
+    },
+    {
+      "id": "20000000-0000-0000-0000-000000000011",
+      "phase": 1,
+      "text": "What aspect of today's experience, positive or difficult, do you want to remember, and why?",
+      "stepIndex": 2,
+      "stage": "memory",
+      "depth": "deep",
+      "experienceTypes": [
+        "shadowing",
+        "clinical",
+        "service",
+        "leadership",
+        "research",
+        "work"
+      ],
+      "professionTags": [
+        "preMedicine",
+        "preDentistry",
+        "preOccupationalTherapy",
+        "prePhysicalTherapy",
+        "prePhysicianAssistant",
+        "prePharmacy",
+        "preVeterinaryMedicine",
+        "preOptometry",
+        "medicalOrDentalResidency",
+        "general",
+        "other",
+        "preLaw"
+      ],
+      "tags": [
+        "memory",
+        "legacy",
+        "reflection"
+      ],
+      "intent": null
+    },
+    {
+      "id": "20000000-0000-0000-0000-0000000a1001",
+      "phase": 0,
+      "text": "What first struck you today? Was there anything that caught your attention?",
+      "stepIndex": 0,
+      "stage": "opening",
+      "depth": "standard",
+      "experienceTypes": [
+        "shadowing",
+        "clinical",
+        "service",
+        "leadership",
+        "research",
+        "work"
+      ],
+      "professionTags": [
+        "preMedicine",
+        "preDentistry",
+        "preOccupationalTherapy",
+        "prePhysicalTherapy",
+        "prePhysicianAssistant",
+        "prePharmacy",
+        "preVeterinaryMedicine",
+        "preOptometry",
+        "medicalOrDentalResidency",
+        "general",
+        "other",
+        "preLaw"
+      ],
+      "tags": [
+        "gratitude",
+        "presence",
+        "observation"
+      ],
+      "intent": null
+    },
+    {
+      "id": "20000000-0000-0000-0000-0000000a1002",
+      "phase": 0,
+      "text": "What was your first thought in reflecting on today? What do you think sparked that feeling?",
+      "stepIndex": 0,
+      "stage": "opening",
+      "depth": "standard",
+      "experienceTypes": [
+        "shadowing",
+        "clinical",
+        "service",
+        "leadership",
+        "research",
+        "work"
+      ],
+      "professionTags": [
+        "preMedicine",
+        "preDentistry",
+        "preOccupationalTherapy",
+        "prePhysicalTherapy",
+        "prePhysicianAssistant",
+        "prePharmacy",
+        "preVeterinaryMedicine",
+        "preOptometry",
+        "medicalOrDentalResidency",
+        "general",
+        "other",
+        "preLaw"
+      ],
+      "tags": [
+        "emotion",
+        "self-awareness"
+      ],
+      "intent": null
+    },
+    {
+      "id": "20000000-0000-0000-0000-0000000a1003",
+      "phase": 0,
+      "text": "Was there a person or someone you encountered that stood out? What stood out and why?",
+      "stepIndex": 0,
+      "stage": "opening",
+      "depth": "standard",
+      "experienceTypes": [
+        "shadowing",
+        "clinical",
+        "service",
+        "leadership",
+        "research",
+        "work"
+      ],
+      "professionTags": [
+        "preMedicine",
+        "preDentistry",
+        "preOccupationalTherapy",
+        "prePhysicalTherapy",
+        "prePhysicianAssistant",
+        "prePharmacy",
+        "preVeterinaryMedicine",
+        "preOptometry",
+        "medicalOrDentalResidency",
+        "general",
+        "other",
+        "preLaw"
+      ],
+      "tags": [
+        "clinical",
+        "people",
+        "firstimpressions"
+      ],
+      "intent": null
+    },
+    {
+      "id": "20000000-0000-0000-0000-0000000a1004",
+      "phase": 2,
+      "text": "What expectations or assumptions did you bring into today's experience? What was the reality? What do you recall?",
+      "stepIndex": 1,
+      "stage": "disquiet",
+      "depth": "standard",
+      "experienceTypes": [
+        "shadowing",
+        "clinical",
+        "service",
+        "leadership",
+        "research",
+        "work"
+      ],
+      "professionTags": [
+        "preMedicine",
+        "preDentistry",
+        "preOccupationalTherapy",
+        "prePhysicalTherapy",
+        "prePhysicianAssistant",
+        "prePharmacy",
+        "preVeterinaryMedicine",
+        "preOptometry",
+        "medicalOrDentalResidency",
+        "general",
+        "other",
+        "preLaw"
+      ],
+      "tags": [
+        "expectations",
+        "challenge",
+        "awareness"
+      ],
+      "intent": null
+    },
+    {
+      "id": "20000000-0000-0000-0000-0000000a1101",
+      "phase": 1,
+      "text": "When did you feel fully present today? What brought you into that moment?",
+      "stepIndex": 0,
+      "stage": "presence",
+      "depth": "deep",
+      "experienceTypes": [
+        "shadowing",
+        "clinical",
+        "service",
+        "leadership",
+        "research",
+        "work"
+      ],
+      "professionTags": [
+        "preMedicine",
+        "preDentistry",
+        "preOccupationalTherapy",
+        "prePhysicalTherapy",
+        "prePhysicianAssistant",
+        "prePharmacy",
+        "preVeterinaryMedicine",
+        "preOptometry",
+        "medicalOrDentalResidency",
+        "general",
+        "other",
+        "preLaw"
+      ],
+      "tags": [
+        "mindfulness",
+        "attention",
+        "emotion"
+      ],
+      "intent": null
+    },
+    {
+      "id": "20000000-0000-0000-0000-0000000a1102",
+      "phase": 1,
+      "text": "Recall a moment or an interaction you had today and consider what insights it brought you.",
+      "stepIndex": 0,
+      "stage": "presence",
+      "depth": "standard",
+      "experienceTypes": [
+        "shadowing",
+        "clinical",
+        "service",
+        "leadership",
+        "research",
+        "work"
+      ],
+      "professionTags": [
+        "preMedicine",
+        "preDentistry",
+        "preOccupationalTherapy",
+        "prePhysicalTherapy",
+        "prePhysicianAssistant",
+        "prePharmacy",
+        "preVeterinaryMedicine",
+        "preOptometry",
+        "medicalOrDentalResidency",
+        "general",
+        "other",
+        "preLaw"
+      ],
+      "tags": [
+        "clinical",
+        "compassion",
+        "vocation"
+      ],
+      "intent": null
+    },
+    {
+      "id": "20000000-0000-0000-0000-0000000a1103",
+      "phase": 1,
+      "text": "What was the most memorable informal or unexpected intereaction you had today, and why did it stick with you?",
+      "stepIndex": 0,
+      "stage": "presence",
+      "depth": "standard",
+      "experienceTypes": [
+        "shadowing",
+        "clinical",
+        "service",
+        "leadership",
+        "research",
+        "work"
+      ],
+      "professionTags": [
+        "preMedicine",
+        "preDentistry",
+        "preOccupationalTherapy",
+        "prePhysicalTherapy",
+        "prePhysicianAssistant",
+        "prePharmacy",
+        "preVeterinaryMedicine",
+        "preOptometry",
+        "medicalOrDentalResidency",
+        "general",
+        "other",
+        "preLaw"
+      ],
+      "tags": [
+        "observation",
+        "encounter"
+      ],
+      "intent": null
+    },
+    {
+      "id": "20000000-0000-0000-0000-0000000a1104",
+      "phase": 2,
+      "text": "As you watched the people around you today, was there a moment that moved you, something that touched you?",
+      "stepIndex": 0,
+      "stage": "presence",
+      "depth": "standard",
+      "experienceTypes": [
+        "shadowing",
+        "clinical",
+        "service",
+        "leadership",
+        "research",
+        "work"
+      ],
+      "professionTags": [
+        "preMedicine",
+        "preDentistry",
+        "preOccupationalTherapy",
+        "prePhysicalTherapy",
+        "prePhysicianAssistant",
+        "prePharmacy",
+        "preVeterinaryMedicine",
+        "preOptometry",
+        "medicalOrDentalResidency",
+        "general",
+        "other",
+        "preLaw"
+      ],
+      "tags": [
+        "compassion",
+        "observation",
+        "presence"
+      ],
+      "intent": null
+    },
+    {
+      "id": "20000000-0000-0000-0000-0000000a1201",
+      "phase": 2,
+      "text": "What moment today brought tension or discomfort? What is it asking you to look at honestly?",
+      "stepIndex": 1,
+      "stage": "disquiet",
+      "depth": "deep",
+      "experienceTypes": [
+        "shadowing",
+        "clinical",
+        "service",
+        "research",
+        "leadership",
+        "work"
+      ],
+      "professionTags": [
+        "preMedicine",
+        "preDentistry",
+        "preOccupationalTherapy",
+        "prePhysicalTherapy",
+        "prePhysicianAssistant",
+        "prePharmacy",
+        "preVeterinaryMedicine",
+        "preOptometry",
+        "medicalOrDentalResidency",
+        "preLaw",
+        "general",
+        "other"
+      ],
+      "tags": [
+        "disquiet",
+        "honesty",
+        "self-reflection"
+      ],
+      "intent": null
+    },
+    {
+      "id": "20000000-0000-0000-0000-0000000a1202",
+      "phase": 2,
+      "text": "Was there a belief or expectation that was quietly challenged today? Notice what that stirring feels like.",
+      "stepIndex": 1,
+      "stage": "assumptions",
+      "depth": "deep",
+      "experienceTypes": [
+        "shadowing",
+        "clinical",
+        "service",
+        "research",
+        "leadership",
+        "work"
+      ],
+      "professionTags": [
+        "preMedicine",
+        "preDentistry",
+        "preOccupationalTherapy",
+        "prePhysicalTherapy",
+        "prePhysicianAssistant",
+        "prePharmacy",
+        "preVeterinaryMedicine",
+        "preOptometry",
+        "medicalOrDentalResidency",
+        "preLaw",
+        "general",
+        "other"
+      ],
+      "tags": [
+        "assumptions",
+        "challenge",
+        "awareness"
+      ],
+      "intent": null
+    },
+    {
+      "id": "20000000-0000-0000-0000-0000000a1203",
+      "phase": 2,
+      "text": "In what situation did you notice your own fears or hesitations, and what did you learn about yourself from that?",
+      "stepIndex": 1,
+      "stage": "hesitation",
+      "depth": "deep",
+      "experienceTypes": [
+        "shadowing",
+        "clinical",
+        "service",
+        "leadership",
+        "research",
+        "work"
+      ],
+      "professionTags": [
+        "preMedicine",
+        "preDentistry",
+        "preOccupationalTherapy",
+        "prePhysicalTherapy",
+        "prePhysicianAssistant",
+        "prePharmacy",
+        "preVeterinaryMedicine",
+        "preOptometry",
+        "medicalOrDentalResidency",
+        "general",
+        "other",
+        "preLaw"
+      ],
+      "tags": [
+        "hesitation",
+        "self-awareness"
+      ],
+      "intent": null
+    },
+    {
+      "id": "20000000-0000-0000-0000-0000000a1204",
+      "phase": 2,
+      "text": "What surprised you today? Not just an unexpected happening, but a feeling, an awareness?",
+      "stepIndex": 1,
+      "stage": "disquiet",
+      "depth": "standard",
+      "experienceTypes": [
+        "shadowing",
+        "clinical",
+        "service",
+        "research",
+        "leadership",
+        "work"
+      ],
+      "professionTags": [
+        "preMedicine",
+        "preDentistry",
+        "preOccupationalTherapy",
+        "prePhysicalTherapy",
+        "prePhysicianAssistant",
+        "prePharmacy",
+        "preVeterinaryMedicine",
+        "preOptometry",
+        "medicalOrDentalResidency",
+        "preLaw",
+        "general",
+        "other"
+      ],
+      "tags": [
+        "surprise",
+        "awareness",
+        "disquiet"
+      ],
+      "intent": null
+    },
+    {
+      "id": "20000000-0000-0000-0000-0000000a1301",
+      "phase": 3,
+      "text": "How did today's experience connect to your sense of calling or purpose in your profession?",
+      "stepIndex": 2,
+      "stage": "discernment",
+      "depth": "deep",
+      "experienceTypes": [
+        "shadowing",
+        "clinical",
+        "service",
+        "leadership",
+        "research",
+        "work"
+      ],
+      "professionTags": [
+        "preMedicine",
+        "preDentistry",
+        "preOccupationalTherapy",
+        "prePhysicalTherapy",
+        "prePhysicianAssistant",
+        "prePharmacy",
+        "preVeterinaryMedicine",
+        "preOptometry",
+        "medicalOrDentalResidency",
+        "general",
+        "other",
+        "preLaw"
+      ],
+      "tags": [
+        "purpose",
+        "vocation",
+        "calling"
+      ],
+      "intent": null
+    },
+    {
+      "id": "20000000-0000-0000-0000-0000000a1302",
+      "phase": 3,
+      "text": "Where today did you witness someone carrying a heavy weight, physical, emotional, or spiritual?",
+      "stepIndex": 2,
+      "stage": "empathy",
+      "depth": "deep",
+      "experienceTypes": [
+        "shadowing",
+        "clinical",
+        "service",
+        "research",
+        "leadership",
+        "work"
+      ],
+      "professionTags": [
+        "preMedicine",
+        "preDentistry",
+        "preOccupationalTherapy",
+        "prePhysicalTherapy",
+        "prePhysicianAssistant",
+        "prePharmacy",
+        "preVeterinaryMedicine",
+        "preOptometry",
+        "medicalOrDentalResidency",
+        "preLaw",
+        "general",
+        "other"
+      ],
+      "tags": [
+        "compassion",
+        "empathy",
+        "presence"
+      ],
+      "intent": null
+    },
+    {
+      "id": "20000000-0000-0000-0000-0000000a1303",
+      "phase": 3,
+      "text": "Was there a moment today that affirmed something about your path, not certainty, but a small yes?",
+      "stepIndex": 2,
+      "stage": "affirmation",
+      "depth": "deep",
+      "experienceTypes": [
+        "shadowing",
+        "clinical",
+        "service",
+        "research",
+        "leadership",
+        "work"
+      ],
+      "professionTags": [
+        "preMedicine",
+        "preDentistry",
+        "preOccupationalTherapy",
+        "prePhysicalTherapy",
+        "prePhysicianAssistant",
+        "prePharmacy",
+        "preVeterinaryMedicine",
+        "preOptometry",
+        "medicalOrDentalResidency",
+        "preLaw",
+        "general",
+        "other"
+      ],
+      "tags": [
+        "affirmation",
+        "vocation",
+        "hope"
+      ],
+      "intent": null
+    },
+    {
+      "id": "20000000-0000-0000-0000-0000000a1304",
+      "phase": 3,
+      "text": "Of everything you noticed today, what stays with you? Consider why.",
+      "stepIndex": 2,
+      "stage": "compassion",
+      "depth": "standard",
+      "experienceTypes": [
+        "shadowing",
+        "clinical",
+        "service",
+        "research",
+        "leadership",
+        "work"
+      ],
+      "professionTags": [
+        "preMedicine",
+        "preDentistry",
+        "preOccupationalTherapy",
+        "prePhysicalTherapy",
+        "prePhysicianAssistant",
+        "prePharmacy",
+        "preVeterinaryMedicine",
+        "preOptometry",
+        "medicalOrDentalResidency",
+        "preLaw",
+        "general",
+        "other"
+      ],
+      "tags": [
+        "prayer",
+        "presence",
+        "reflection"
+      ],
+      "intent": null
+    },
+    {
+      "id": "20000000-0000-0000-0000-0000000a1401",
+      "phase": 4,
+      "text": "If you could carry just one thing from today into tomorrow what would it be?",
+      "stepIndex": 3,
+      "stage": "affirmation",
+      "depth": "deep",
+      "experienceTypes": [
+        "shadowing",
+        "clinical",
+        "service",
+        "research",
+        "leadership",
+        "work"
+      ],
+      "professionTags": [
+        "preMedicine",
+        "preDentistry",
+        "preOccupationalTherapy",
+        "prePhysicalTherapy",
+        "prePhysicianAssistant",
+        "prePharmacy",
+        "preVeterinaryMedicine",
+        "preOptometry",
+        "medicalOrDentalResidency",
+        "preLaw",
+        "general",
+        "other"
+      ],
+      "tags": [
+        "forward",
+        "intention",
+        "awareness"
+      ],
+      "intent": null
+    },
+    {
+      "id": "20000000-0000-0000-0000-0000000a1402",
+      "phase": 4,
+      "text": "What intentions do you want to set for your future learning after this experience?",
+      "stepIndex": 3,
+      "stage": "commitment",
+      "depth": "deep",
+      "experienceTypes": [
+        "shadowing",
+        "clinical",
+        "service",
+        "leadership",
+        "research",
+        "work"
+      ],
+      "professionTags": [
+        "preMedicine",
+        "preDentistry",
+        "preOccupationalTherapy",
+        "prePhysicalTherapy",
+        "prePhysicianAssistant",
+        "prePharmacy",
+        "preVeterinaryMedicine",
+        "preOptometry",
+        "medicalOrDentalResidency",
+        "general",
+        "other",
+        "preLaw"
+      ],
+      "tags": [
+        "future",
+        "intentions",
+        "vocation"
+      ],
+      "intent": null
+    },
+    {
+      "id": "20000000-0000-0000-0000-0000000a1403",
+      "phase": 4,
+      "text": "As you look toward tomorrow, what do you need? Courage, patience, clarity, rest?",
+      "stepIndex": 3,
+      "stage": "affirmation",
+      "depth": "standard",
+      "experienceTypes": [
+        "shadowing",
+        "clinical",
+        "service",
+        "research",
+        "leadership",
+        "work"
+      ],
+      "professionTags": [
+        "preMedicine",
+        "preDentistry",
+        "preOccupationalTherapy",
+        "prePhysicalTherapy",
+        "prePhysicianAssistant",
+        "prePharmacy",
+        "preVeterinaryMedicine",
+        "preOptometry",
+        "medicalOrDentalResidency",
+        "preLaw",
+        "general",
+        "other"
+      ],
+      "tags": [
+        "spiritual",
+        "prayer",
+        "hope",
+        "future"
+      ],
+      "intent": null
+    },
+    {
+      "id": "20000000-0000-0000-0000-0000000a1404",
+      "phase": 4,
+      "text": "Consider re-reading your earlier notes, look for what stands out.",
+      "stepIndex": 3,
+      "stage": "memory",
+      "depth": "deep",
+      "experienceTypes": [
+        "shadowing",
+        "clinical",
+        "service",
+        "leadership",
+        "research",
+        "work"
+      ],
+      "professionTags": [
+        "preMedicine",
+        "preDentistry",
+        "preOccupationalTherapy",
+        "prePhysicalTherapy",
+        "prePhysicianAssistant",
+        "prePharmacy",
+        "preVeterinaryMedicine",
+        "preOptometry",
+        "medicalOrDentalResidency",
+        "general",
+        "other",
+        "preLaw"
+      ],
+      "tags": [
+        "insight",
+        "memory",
+        "recall",
+        "requires-history"
+      ],
+      "intent": null
+    },
+    {
+      "id": "26cd9825-439d-5511-8730-965c483a0325",
+      "phase": 0,
+      "text": "Ask for the grace to let go of wants and fears; then notice what God reveals as true in this experience.",
+      "stepIndex": 0,
+      "stage": "opening",
+      "depth": "deep",
+      "experienceTypes": [
+        "shadowing",
+        "clinical",
+        "service",
+        "research",
+        "leadership",
+        "work"
+      ],
+      "professionTags": [
+        "preMedicine",
+        "preDentistry",
+        "preOccupationalTherapy",
+        "prePhysicalTherapy",
+        "prePhysicianAssistant",
+        "prePharmacy",
+        "preVeterinaryMedicine",
+        "preOptometry",
+        "medicalOrDentalResidency",
+        "general",
+        "other",
+        "preLaw"
+      ],
+      "tags": [
+        "spiritual",
+        "presence",
+        "prayer"
+      ],
+      "intent": null
+    },
+    {
+      "id": "8c951eff-78a3-56af-b0d8-68fe7ccea08a",
+      "phase": 1,
+      "text": "Where did you sense God, grace, or the sacred at work in your experience today?",
+      "stepIndex": 0,
+      "stage": "presence",
+      "depth": "deep",
+      "experienceTypes": [
+        "shadowing",
+        "clinical",
+        "service",
+        "research",
+        "leadership",
+        "work"
+      ],
+      "professionTags": [
+        "preMedicine",
+        "preDentistry",
+        "preOccupationalTherapy",
+        "prePhysicalTherapy",
+        "prePhysicianAssistant",
+        "prePharmacy",
+        "preVeterinaryMedicine",
+        "preOptometry",
+        "medicalOrDentalResidency",
+        "general",
+        "other",
+        "preLaw"
+      ],
+      "tags": [
+        "spiritual",
+        "presence",
+        "grace"
+      ],
+      "intent": null
+    },
+    {
+      "id": "a60abfe9-985a-59bd-8d26-36c042457255",
+      "phase": 2,
+      "text": "What troubled your spirit today, or where did you feel inner resistance?",
+      "stepIndex": 1,
+      "stage": "disquiet",
+      "depth": "deep",
+      "experienceTypes": [
+        "shadowing",
+        "clinical",
+        "service",
+        "research",
+        "leadership",
+        "work"
+      ],
+      "professionTags": [
+        "preMedicine",
+        "preDentistry",
+        "preOccupationalTherapy",
+        "prePhysicalTherapy",
+        "prePhysicianAssistant",
+        "prePharmacy",
+        "preVeterinaryMedicine",
+        "preOptometry",
+        "medicalOrDentalResidency",
+        "general",
+        "other",
+        "preLaw"
+      ],
+      "tags": [
+        "spiritual",
+        "tension",
+        "disquiet",
+        "reflection"
+      ],
+      "intent": null
+    },
+    {
+      "id": "086af7fe-03f7-547d-9a2f-3b267606f316",
+      "phase": 2,
+      "text": "Was there a moment today when you felt distant from grace, hope, or connection with others?",
+      "stepIndex": 1,
+      "stage": "tension",
+      "depth": "standard",
+      "experienceTypes": [
+        "shadowing",
+        "clinical",
+        "service",
+        "research",
+        "leadership",
+        "work"
+      ],
+      "professionTags": [
+        "preMedicine",
+        "preDentistry",
+        "preOccupationalTherapy",
+        "prePhysicalTherapy",
+        "prePhysicianAssistant",
+        "prePharmacy",
+        "preVeterinaryMedicine",
+        "preOptometry",
+        "medicalOrDentalResidency",
+        "general",
+        "other",
+        "preLaw"
+      ],
+      "tags": [
+        "spiritual",
+        "tension",
+        "despair"
+      ],
+      "intent": null
+    },
+    {
+      "id": "826bc8de-05ee-5b18-8cf3-af1465eeb532",
+      "phase": 3,
+      "text": "What is the Spirit or your inner wisdom inviting you to see in the experiences you just reviewed?",
+      "stepIndex": 2,
+      "stage": "discernment",
+      "depth": "deep",
+      "experienceTypes": [
+        "shadowing",
+        "clinical",
+        "service",
+        "research",
+        "leadership",
+        "work"
+      ],
+      "professionTags": [
+        "preMedicine",
+        "preDentistry",
+        "preOccupationalTherapy",
+        "prePhysicalTherapy",
+        "prePhysicianAssistant",
+        "prePharmacy",
+        "preVeterinaryMedicine",
+        "preOptometry",
+        "medicalOrDentalResidency",
+        "general",
+        "other",
+        "preLaw"
+      ],
+      "tags": [
+        "spiritual",
+        "discernment",
+        "wisdom"
+      ],
+      "intent": null
+    },
+    {
+      "id": "0684b001-77a9-555f-a875-cebca3fddb05",
+      "phase": 3,
+      "text": "What prayer, petition, or desire rises from within you as you consider today's challenges and gifts?",
+      "stepIndex": 2,
+      "stage": "reflection",
+      "depth": "deep",
+      "experienceTypes": [
+        "shadowing",
+        "clinical",
+        "service",
+        "research",
+        "leadership",
+        "work"
+      ],
+      "professionTags": [
+        "preMedicine",
+        "preDentistry",
+        "preOccupationalTherapy",
+        "prePhysicalTherapy",
+        "prePhysicianAssistant",
+        "prePharmacy",
+        "preVeterinaryMedicine",
+        "preOptometry",
+        "medicalOrDentalResidency",
+        "general",
+        "other",
+        "preLaw"
+      ],
+      "tags": [
+        "spiritual",
+        "prayer",
+        "reflection"
+      ],
+      "intent": null
+    },
+    {
+      "id": "af506c55-1edf-5d06-b03b-b621da16f2a3",
+      "phase": 4,
+      "text": "What specific grace or strength do you need to ask for as you look toward tomorrow?",
+      "stepIndex": 3,
+      "stage": "commitment",
+      "depth": "deep",
+      "experienceTypes": [
+        "shadowing",
+        "clinical",
+        "service",
+        "research",
+        "leadership",
+        "work"
+      ],
+      "professionTags": [
+        "preMedicine",
+        "preDentistry",
+        "preOccupationalTherapy",
+        "prePhysicalTherapy",
+        "prePhysicianAssistant",
+        "prePharmacy",
+        "preVeterinaryMedicine",
+        "preOptometry",
+        "medicalOrDentalResidency",
+        "general",
+        "other",
+        "preLaw"
+      ],
+      "tags": [
+        "spiritual",
+        "intention",
+        "hope"
+      ],
+      "intent": null
+    },
+    {
+      "id": "d3ecca5b-e721-556b-ab5b-719d130f2f9e",
+      "phase": 4,
+      "text": "Offer a closing prayer of gratitude for this day, its gifts, struggles, and graces.",
+      "stepIndex": 3,
+      "stage": "affirmation",
+      "depth": "standard",
+      "experienceTypes": [
+        "shadowing",
+        "clinical",
+        "service",
+        "research",
+        "leadership",
+        "work"
+      ],
+      "professionTags": [
+        "preMedicine",
+        "preDentistry",
+        "preOccupationalTherapy",
+        "prePhysicalTherapy",
+        "prePhysicianAssistant",
+        "prePharmacy",
+        "preVeterinaryMedicine",
+        "preOptometry",
+        "medicalOrDentalResidency",
+        "general",
+        "other",
+        "preLaw"
+      ],
+      "tags": [
+        "spiritual",
+        "gratitude",
+        "prayer",
+        "closing",
+        "dailylife",
+        "daily"
+      ],
+      "intent": null
+    },
+    {
+      "id": "6aa77387-b500-58a0-bf92-86bcb6974f51",
+      "phase": 1,
+      "text": "When you think about the type of professional you want to become, did any moment today exemplify that ideal?",
+      "stepIndex": 0,
+      "stage": "presence",
+      "depth": "deep",
+      "experienceTypes": [
+        "shadowing",
+        "clinical",
+        "service",
+        "research",
+        "leadership",
+        "work"
+      ],
+      "professionTags": [
+        "preMedicine",
+        "preDentistry",
+        "preOccupationalTherapy",
+        "prePhysicalTherapy",
+        "prePhysicianAssistant",
+        "prePharmacy",
+        "preVeterinaryMedicine",
+        "preOptometry",
+        "medicalOrDentalResidency",
+        "general",
+        "other",
+        "preLaw"
+      ],
+      "tags": [
+        "vocation",
+        "pre-professional",
+        "growth",
+        "ideal"
+      ],
+      "intent": null
+    },
+    {
+      "id": "84606c1d-a722-529c-8712-b804d5ebfede",
+      "phase": 1,
+      "text": "What professional skill, interaction, or attitude stood out to you today as something you wish to emulate?",
+      "stepIndex": 0,
+      "stage": "presence",
+      "depth": "standard",
+      "experienceTypes": [
+        "shadowing",
+        "clinical",
+        "service",
+        "research",
+        "leadership",
+        "work"
+      ],
+      "professionTags": [
+        "preMedicine",
+        "preDentistry",
+        "preOccupationalTherapy",
+        "prePhysicalTherapy",
+        "prePhysicianAssistant",
+        "prePharmacy",
+        "preVeterinaryMedicine",
+        "preOptometry",
+        "medicalOrDentalResidency",
+        "general",
+        "other",
+        "preLaw"
+      ],
+      "tags": [
+        "vocation",
+        "skills",
+        "observation"
+      ],
+      "intent": null
+    },
+    {
+      "id": "6dda616d-e48f-5c8b-8441-f696ba15079e",
+      "phase": 4,
+      "text": "What is one concrete way you can show up more fully tomorrow in your work, your relationships, or your own growth?",
+      "stepIndex": 3,
+      "stage": "commitment",
+      "depth": "standard",
+      "experienceTypes": [
+        "shadowing",
+        "clinical",
+        "service",
+        "research",
+        "leadership",
+        "work"
+      ],
+      "professionTags": [
+        "preMedicine",
+        "preDentistry",
+        "preOccupationalTherapy",
+        "prePhysicalTherapy",
+        "prePhysicianAssistant",
+        "prePharmacy",
+        "preVeterinaryMedicine",
+        "preOptometry",
+        "medicalOrDentalResidency",
+        "general",
+        "other",
+        "preLaw"
+      ],
+      "tags": [
+        "vocation",
+        "pre-professional",
+        "commitment",
+        "growth",
+        "presence"
+      ],
+      "intent": null
+    },
+    {
+      "id": "d06c0258-200b-5f8d-9015-df5e2a0ce1de",
+      "phase": 4,
+      "text": "How will the lessons of today inform the way you approach your studies, training, or interactions with others moving forward?",
+      "stepIndex": 3,
+      "stage": "affirmation",
+      "depth": "deep",
+      "experienceTypes": [
+        "shadowing",
+        "clinical",
+        "service",
+        "research",
+        "leadership",
+        "work"
+      ],
+      "professionTags": [
+        "preMedicine",
+        "preDentistry",
+        "preOccupationalTherapy",
+        "prePhysicalTherapy",
+        "prePhysicianAssistant",
+        "prePharmacy",
+        "preVeterinaryMedicine",
+        "preOptometry",
+        "medicalOrDentalResidency",
+        "general",
+        "other",
+        "preLaw"
+      ],
+      "tags": [
+        "vocation",
+        "future",
+        "learning",
+        "growth"
+      ],
+      "intent": null
+    },
+    {
+      "id": "40000000-0000-0000-0000-000000000001",
+      "phase": 1,
+      "text": "Before you review the day, pause. Name three gifts as simple as a kind word, finishing a task, or the strength to keep going.",
+      "stepIndex": 0,
+      "stage": "gratitude",
+      "depth": "standard",
+      "experienceTypes": [
+        "shadowing",
+        "clinical",
+        "service",
+        "research",
+        "leadership",
+        "work"
+      ],
+      "professionTags": [
+        "preMedicine",
+        "preDentistry",
+        "preOccupationalTherapy",
+        "prePhysicalTherapy",
+        "prePhysicianAssistant",
+        "prePharmacy",
+        "preVeterinaryMedicine",
+        "preOptometry",
+        "medicalOrDentalResidency",
+        "general",
+        "other",
+        "preLaw"
+      ],
+      "tags": [
+        "gratitude",
+        "presence",
+        "dailylife",
+        "daily"
+      ],
+      "intent": null
+    },
+    {
+      "id": "40000000-0000-0000-0000-000000000002",
+      "phase": 2,
+      "text": "Where today did you feel most alive, most yourself, or most drawn toward your purpose? What was happening, and what stirred in you?",
+      "stepIndex": 0,
+      "stage": "presence",
+      "depth": "standard",
+      "experienceTypes": [
+        "shadowing",
+        "clinical",
+        "service",
+        "research",
+        "leadership",
+        "work"
+      ],
+      "professionTags": [
+        "preMedicine",
+        "preDentistry",
+        "preOccupationalTherapy",
+        "prePhysicalTherapy",
+        "prePhysicianAssistant",
+        "prePharmacy",
+        "preVeterinaryMedicine",
+        "preOptometry",
+        "medicalOrDentalResidency",
+        "general",
+        "other",
+        "preLaw"
+      ],
+      "tags": [
+        "consolation",
+        "aliveness",
+        "emotion",
+        "presence",
+        "dailylife",
+        "daily"
+      ],
+      "intent": null
+    },
+    {
+      "id": "40000000-0000-0000-0000-000000000003",
+      "phase": 2,
+      "text": "Where today did you fall short of who you want to be, in patience, courage, attention, or care?",
+      "stepIndex": 1,
+      "stage": "contrition",
+      "depth": "deep",
+      "experienceTypes": [
+        "shadowing",
+        "clinical",
+        "service",
+        "research",
+        "leadership",
+        "work"
+      ],
+      "professionTags": [
+        "preMedicine",
+        "preDentistry",
+        "preOccupationalTherapy",
+        "prePhysicalTherapy",
+        "prePhysicianAssistant",
+        "prePharmacy",
+        "preVeterinaryMedicine",
+        "preOptometry",
+        "medicalOrDentalResidency",
+        "general",
+        "other",
+        "preLaw"
+      ],
+      "tags": [
+        "spiritual",
+        "contrition",
+        "honesty",
+        "compassion",
+        "dailylife",
+        "daily"
+      ],
+      "intent": null
+    },
+    {
+      "id": "40000000-0000-0000-0000-000000000004",
+      "phase": 3,
+      "text": "What stirred in you today? Gratitude, doubt, awe, tension, tenderness? Which feeling is strongest now? What does it reveal?",
+      "stepIndex": 2,
+      "stage": "reflection",
+      "depth": "standard",
+      "experienceTypes": [
+        "shadowing",
+        "clinical",
+        "service",
+        "research",
+        "leadership",
+        "work"
+      ],
+      "professionTags": [
+        "preMedicine",
+        "preDentistry",
+        "preOccupationalTherapy",
+        "prePhysicalTherapy",
+        "prePhysicianAssistant",
+        "prePharmacy",
+        "preVeterinaryMedicine",
+        "preOptometry",
+        "medicalOrDentalResidency",
+        "general",
+        "other",
+        "preLaw"
+      ],
+      "tags": [
+        "emotion",
+        "attention",
+        "awareness",
+        "reflection",
+        "dailylife",
+        "daily"
+      ],
+      "intent": null
+    },
+    {
+      "id": "40000000-0000-0000-0000-000000000005",
+      "phase": 4,
+      "text": "As you close, notice what you want to place in God's hands? A worry, a hope, a person, a question.",
+      "stepIndex": 3,
+      "stage": "commitment",
+      "depth": "standard",
+      "experienceTypes": [
+        "shadowing",
+        "clinical",
+        "service",
+        "research",
+        "leadership",
+        "work"
+      ],
+      "professionTags": [
+        "preMedicine",
+        "preDentistry",
+        "preOccupationalTherapy",
+        "prePhysicalTherapy",
+        "prePhysicianAssistant",
+        "prePharmacy",
+        "preVeterinaryMedicine",
+        "preOptometry",
+        "medicalOrDentalResidency",
+        "general",
+        "other",
+        "preLaw"
+      ],
+      "tags": [
+        "spiritual",
+        "prayer",
+        "hope",
+        "closing",
+        "dailylife",
+        "daily"
+      ],
+      "intent": null
+    },
+    {
+      "id": "002190f9-1017-5a84-9238-51039ec1f063",
+      "phase": 0,
+      "text": "Set aside what you hoped today would be. What was true, as it actually happened?",
+      "stepIndex": 0,
+      "stage": "first-principle",
+      "depth": "standard",
+      "experienceTypes": [
+        "shadowing",
+        "clinical",
+        "service",
+        "leadership",
+        "research",
+        "work"
+      ],
+      "professionTags": [
+        "preMedicine",
+        "preDentistry",
+        "preOccupationalTherapy",
+        "prePhysicalTherapy",
+        "prePhysicianAssistant",
+        "prePharmacy",
+        "preVeterinaryMedicine",
+        "preOptometry",
+        "medicalOrDentalResidency",
+        "preLaw",
+        "general",
+        "other"
+      ],
+      "tags": [
+        "awareness",
+        "indifference",
+        "honesty",
+        "dailylife",
+        "daily"
+      ],
+      "intent": null
+    },
+    {
+      "id": "c8a40449-d976-5fae-a880-497cdafe19e4",
+      "phase": 0,
+      "text": "Before you review your day, let go of what you wanted or feared. What is here when you become still?",
+      "stepIndex": 0,
+      "stage": "first-principle",
+      "depth": "deep",
+      "experienceTypes": [
+        "shadowing",
+        "clinical",
+        "service",
+        "leadership",
+        "research",
+        "work"
+      ],
+      "professionTags": [
+        "preMedicine",
+        "preDentistry",
+        "preOccupationalTherapy",
+        "prePhysicalTherapy",
+        "prePhysicianAssistant",
+        "prePharmacy",
+        "preVeterinaryMedicine",
+        "preOptometry",
+        "medicalOrDentalResidency",
+        "preLaw",
+        "general",
+        "other"
+      ],
+      "tags": [
+        "spiritual",
+        "presence",
+        "indifference",
+        "prayer"
+      ],
+      "intent": null
+    },
+    {
+      "id": "bf3ca348-83c8-5ca3-9473-041db32c7a69",
+      "phase": 0,
+      "text": "Keep your mind open. As you reflect, welcome insights not influenced by want or desire.",
+      "stepIndex": 0,
+      "stage": "first-principle",
+      "depth": "standard",
+      "experienceTypes": [
+        "shadowing",
+        "clinical",
+        "service",
+        "leadership",
+        "research",
+        "work"
+      ],
+      "professionTags": [
+        "preMedicine",
+        "preDentistry",
+        "preOccupationalTherapy",
+        "prePhysicalTherapy",
+        "prePhysicianAssistant",
+        "prePharmacy",
+        "preVeterinaryMedicine",
+        "preOptometry",
+        "medicalOrDentalResidency",
+        "preLaw",
+        "general",
+        "other"
+      ],
+      "tags": [
+        "awareness",
+        "indifference",
+        "openness",
+        "vocation"
+      ],
+      "intent": null
+    },
+    {
+      "id": "f0f27c5b-81cd-51b3-8e08-fdcf295ffbc8",
+      "phase": 0,
+      "text": "Gently set down what you wanted today to go well or feared might not. From this open place, what do you notice?",
+      "stepIndex": 0,
+      "stage": "first-principle",
+      "depth": "deep",
+      "experienceTypes": [
+        "shadowing",
+        "clinical",
+        "service",
+        "leadership",
+        "research",
+        "work"
+      ],
+      "professionTags": [
+        "preMedicine",
+        "preDentistry",
+        "preOccupationalTherapy",
+        "prePhysicalTherapy",
+        "prePhysicianAssistant",
+        "prePharmacy",
+        "preVeterinaryMedicine",
+        "preOptometry",
+        "medicalOrDentalResidency",
+        "preLaw",
+        "general",
+        "other"
+      ],
+      "tags": [
+        "spiritual",
+        "presence",
+        "indifference",
+        "openness"
+      ],
+      "intent": null
+    },
+    {
+      "id": "8abbd502-aa1b-5400-ad73-c03872eebed2",
+      "phase": 0,
+      "text": "Before you begin, let go of how you wish today had gone. Simply be here, open to what surfaces.",
+      "stepIndex": 0,
+      "stage": "first-principle",
+      "depth": "standard",
+      "experienceTypes": [
+        "shadowing",
+        "clinical",
+        "service",
+        "leadership",
+        "research",
+        "work"
+      ],
+      "professionTags": [
+        "preMedicine",
+        "preDentistry",
+        "preOccupationalTherapy",
+        "prePhysicalTherapy",
+        "prePhysicianAssistant",
+        "prePharmacy",
+        "preVeterinaryMedicine",
+        "preOptometry",
+        "medicalOrDentalResidency",
+        "preLaw",
+        "general",
+        "other"
+      ],
+      "tags": [
+        "awareness",
+        "indifference",
+        "honesty",
+        "presence"
+      ],
+      "intent": null
+    },
+    {
+      "id": "9a75b8ed-f74d-52c3-bd18-fecf26479da9",
+      "phase": 3,
+      "text": "What did you learn today about the profession you observed? What drew you in or gave you pause?",
+      "stepIndex": 2,
+      "stage": "feature-prayer",
+      "depth": "standard",
+      "experienceTypes": [
+        "shadowing"
+      ],
+      "professionTags": [
+        "preMedicine",
+        "preDentistry",
+        "preOccupationalTherapy",
+        "prePhysicalTherapy",
+        "prePhysicianAssistant",
+        "prePharmacy",
+        "preVeterinaryMedicine",
+        "preOptometry",
+        "medicalOrDentalResidency",
+        "preLaw",
+        "general",
+        "other"
+      ],
+      "tags": [
+        "vocation",
+        "pre-professional",
+        "experience-specific",
+        "shadowing",
+        "observation"
+      ],
+      "intent": null
+    },
+    {
+      "id": "6f01d8e1-1c95-59a2-9795-b08e44110a4e",
+      "phase": 3,
+      "text": "Was there a moment during shadowing that showed you something about patient care, or the profession? What do you recall?",
+      "stepIndex": 2,
+      "stage": "feature-prayer",
+      "depth": "deep",
+      "experienceTypes": [
+        "shadowing"
+      ],
+      "professionTags": [
+        "preMedicine",
+        "preDentistry",
+        "preOccupationalTherapy",
+        "prePhysicalTherapy",
+        "prePhysicianAssistant",
+        "prePharmacy",
+        "preVeterinaryMedicine",
+        "preOptometry",
+        "medicalOrDentalResidency",
+        "preLaw",
+        "general",
+        "other"
+      ],
+      "tags": [
+        "vocation",
+        "pre-professional",
+        "experience-specific",
+        "shadowing",
+        "clinical",
+        "compassion"
+      ],
+      "intent": null
+    },
+    {
+      "id": "c0867cdb-d0ad-5da5-bce5-34576dab4909",
+      "phase": 3,
+      "text": "What drew you closer to patient care today? Was there an interaction you want to return to?",
+      "stepIndex": 2,
+      "stage": "feature-prayer",
+      "depth": "standard",
+      "experienceTypes": [
+        "clinical"
+      ],
+      "professionTags": [
+        "preMedicine",
+        "preDentistry",
+        "preOccupationalTherapy",
+        "prePhysicalTherapy",
+        "prePhysicianAssistant",
+        "prePharmacy",
+        "preVeterinaryMedicine",
+        "preOptometry",
+        "medicalOrDentalResidency",
+        "preLaw",
+        "general",
+        "other"
+      ],
+      "tags": [
+        "vocation",
+        "pre-professional",
+        "experience-specific",
+        "clinical",
+        "compassion"
+      ],
+      "intent": null
+    },
+    {
+      "id": "63c98968-2205-5a45-82f6-8acb88eb2a89",
+      "phase": 3,
+      "text": "In the clinical setting today, what challenged your understanding of what it means to care for someone?",
+      "stepIndex": 2,
+      "stage": "feature-prayer",
+      "depth": "deep",
+      "experienceTypes": [
+        "clinical"
+      ],
+      "professionTags": [
+        "preMedicine",
+        "preDentistry",
+        "preOccupationalTherapy",
+        "prePhysicalTherapy",
+        "prePhysicianAssistant",
+        "prePharmacy",
+        "preVeterinaryMedicine",
+        "preOptometry",
+        "medicalOrDentalResidency",
+        "preLaw",
+        "general",
+        "other"
+      ],
+      "tags": [
+        "vocation",
+        "pre-professional",
+        "experience-specific",
+        "clinical",
+        "ethics"
+      ],
+      "intent": null
+    },
+    {
+      "id": "be7f38ae-bf9f-50a5-9127-dc5311badcf4",
+      "phase": 3,
+      "text": "What offered you a sense of connection through your service today? A person, a task, or a moment?",
+      "stepIndex": 2,
+      "stage": "feature-prayer",
+      "depth": "standard",
+      "experienceTypes": [
+        "service"
+      ],
+      "professionTags": [
+        "preMedicine",
+        "preDentistry",
+        "preOccupationalTherapy",
+        "prePhysicalTherapy",
+        "prePhysicianAssistant",
+        "prePharmacy",
+        "preVeterinaryMedicine",
+        "preOptometry",
+        "medicalOrDentalResidency",
+        "preLaw",
+        "general",
+        "other"
+      ],
+      "tags": [
+        "vocation",
+        "pre-professional",
+        "experience-specific",
+        "service",
+        "compassion"
+      ],
+      "intent": null
+    },
+    {
+      "id": "60909de8-3046-53fd-ad9b-677e224bdc68",
+      "phase": 3,
+      "text": "Who did you serve today, and what did their experience teach you about your own life or calling?",
+      "stepIndex": 2,
+      "stage": "feature-prayer",
+      "depth": "deep",
+      "experienceTypes": [
+        "service"
+      ],
+      "professionTags": [
+        "preMedicine",
+        "preDentistry",
+        "preOccupationalTherapy",
+        "prePhysicalTherapy",
+        "prePhysicianAssistant",
+        "prePharmacy",
+        "preVeterinaryMedicine",
+        "preOptometry",
+        "medicalOrDentalResidency",
+        "preLaw",
+        "general",
+        "other"
+      ],
+      "tags": [
+        "vocation",
+        "pre-professional",
+        "experience-specific",
+        "service",
+        "growth"
+      ],
+      "intent": null
+    },
+    {
+      "id": "e7e4d69c-0c58-504c-8eff-0e8b3cbe42c5",
+      "phase": 3,
+      "text": "What question or discovery captivated you today? Why does it stay with you?",
+      "stepIndex": 2,
+      "stage": "feature-prayer",
+      "depth": "standard",
+      "experienceTypes": [
+        "research"
+      ],
+      "professionTags": [
+        "preMedicine",
+        "preDentistry",
+        "preOccupationalTherapy",
+        "prePhysicalTherapy",
+        "prePhysicianAssistant",
+        "prePharmacy",
+        "preVeterinaryMedicine",
+        "preOptometry",
+        "medicalOrDentalResidency",
+        "preLaw",
+        "general",
+        "other"
+      ],
+      "tags": [
+        "vocation",
+        "pre-professional",
+        "experience-specific",
+        "research"
+      ],
+      "intent": null
+    },
+    {
+      "id": "c0d49b40-7ae6-5f0f-a3c9-0b4bf8248e0f",
+      "phase": 3,
+      "text": "Where in today's work did you sense the connection between your research and the people it might one day serve?",
+      "stepIndex": 2,
+      "stage": "feature-prayer",
+      "depth": "deep",
+      "experienceTypes": [
+        "research"
+      ],
+      "professionTags": [
+        "preMedicine",
+        "preDentistry",
+        "preOccupationalTherapy",
+        "prePhysicalTherapy",
+        "prePhysicianAssistant",
+        "prePharmacy",
+        "preVeterinaryMedicine",
+        "preOptometry",
+        "medicalOrDentalResidency",
+        "preLaw",
+        "general",
+        "other"
+      ],
+      "tags": [
+        "vocation",
+        "pre-professional",
+        "experience-specific",
+        "research",
+        "compassion"
+      ],
+      "intent": null
+    },
+    {
+      "id": "688d8d3f-8b1d-58d9-a77f-028e2f85c61b",
+      "phase": 3,
+      "text": "What responsibility did you feel today as a leader? Was there a decision or moment where you sensed its weight?",
+      "stepIndex": 2,
+      "stage": "feature-prayer",
+      "depth": "standard",
+      "experienceTypes": [
+        "leadership"
+      ],
+      "professionTags": [
+        "preMedicine",
+        "preDentistry",
+        "preOccupationalTherapy",
+        "prePhysicalTherapy",
+        "prePhysicianAssistant",
+        "prePharmacy",
+        "preVeterinaryMedicine",
+        "preOptometry",
+        "medicalOrDentalResidency",
+        "preLaw",
+        "general",
+        "other"
+      ],
+      "tags": [
+        "vocation",
+        "pre-professional",
+        "experience-specific",
+        "leadership",
+        "ethics"
+      ],
+      "intent": null
+    },
+    {
+      "id": "edc5defc-70ec-5a09-9ae8-e9dc0c42c86d",
+      "phase": 3,
+      "text": "Who looked to you for guidance today, and what did that reveal about the kind of leader you are becoming?",
+      "stepIndex": 2,
+      "stage": "feature-prayer",
+      "depth": "deep",
+      "experienceTypes": [
+        "leadership"
+      ],
+      "professionTags": [
+        "preMedicine",
+        "preDentistry",
+        "preOccupationalTherapy",
+        "prePhysicalTherapy",
+        "prePhysicianAssistant",
+        "prePharmacy",
+        "preVeterinaryMedicine",
+        "preOptometry",
+        "medicalOrDentalResidency",
+        "preLaw",
+        "general",
+        "other"
+      ],
+      "tags": [
+        "vocation",
+        "pre-professional",
+        "experience-specific",
+        "leadership",
+        "growth"
+      ],
+      "intent": null
+    },
+    {
+      "id": "f1600b36-5ea0-5e06-83a1-69af1678437a",
+      "phase": 3,
+      "text": "What skill, insight, or interaction from your work today surprised you or taught you something new?",
+      "stepIndex": 2,
+      "stage": "feature-prayer",
+      "depth": "standard",
+      "experienceTypes": [
+        "work"
+      ],
+      "professionTags": [
+        "preMedicine",
+        "preDentistry",
+        "preOccupationalTherapy",
+        "prePhysicalTherapy",
+        "prePhysicianAssistant",
+        "prePharmacy",
+        "preVeterinaryMedicine",
+        "preOptometry",
+        "medicalOrDentalResidency",
+        "preLaw",
+        "general",
+        "other"
+      ],
+      "tags": [
+        "vocation",
+        "pre-professional",
+        "experience-specific",
+        "work"
+      ],
+      "intent": null
+    },
+    {
+      "id": "6f53d4dd-a412-5e3d-8bcb-9af2c00c5909",
+      "phase": 3,
+      "text": "Was there a moment at work where you glimpsed the kind of professional or person you are growing into?",
+      "stepIndex": 2,
+      "stage": "feature-prayer",
+      "depth": "deep",
+      "experienceTypes": [
+        "work"
+      ],
+      "professionTags": [
+        "preMedicine",
+        "preDentistry",
+        "preOccupationalTherapy",
+        "prePhysicalTherapy",
+        "prePhysicianAssistant",
+        "prePharmacy",
+        "preVeterinaryMedicine",
+        "preOptometry",
+        "medicalOrDentalResidency",
+        "preLaw",
+        "general",
+        "other"
+      ],
+      "tags": [
+        "vocation",
+        "pre-professional",
+        "experience-specific",
+        "work",
+        "growth"
+      ],
+      "intent": null
+    },
+    {
+      "id": "3d3e977d-7a9c-53f0-8e0b-9cb0d91cb1e0",
+      "phase": 3,
+      "text": "Choose one feature of today? A person or a moment? What does it ask of you?",
+      "stepIndex": 2,
+      "stage": "feature-prayer",
+      "depth": "standard",
+      "experienceTypes": [
+        "shadowing",
+        "clinical",
+        "service",
+        "leadership",
+        "research",
+        "work",
+        "other"
+      ],
+      "professionTags": [
+        "preMedicine",
+        "preDentistry",
+        "preOccupationalTherapy",
+        "prePhysicalTherapy",
+        "prePhysicianAssistant",
+        "prePharmacy",
+        "preVeterinaryMedicine",
+        "preOptometry",
+        "medicalOrDentalResidency",
+        "preLaw",
+        "general",
+        "other"
+      ],
+      "tags": [
+        "vocation",
+        "experience-specific",
+        "reflection"
+      ],
+      "intent": null
+    },
+    {
+      "id": "50000000-0000-0000-0000-000000000001",
+      "phase": 0,
+      "text": "Ask for the grace to let go of comparison, urgency, and fear; receive this discernment time as it is.",
+      "stepIndex": 0,
+      "stage": "opening",
+      "depth": "standard",
+      "experienceTypes": [
+        "discernment"
+      ],
+      "professionTags": null,
+      "tags": [
+        "discernment",
+        "vocation",
+        "indifference",
+        "presence"
+      ],
+      "intent": null
+    },
+    {
+      "id": "50000000-0000-0000-0000-000000000002",
+      "phase": 0,
+      "text": "As you begin, what desire or fear feels loudest about your vocational path right now?",
+      "stepIndex": 0,
+      "stage": "first-principle",
+      "depth": "standard",
+      "experienceTypes": [
+        "discernment"
+      ],
+      "professionTags": null,
+      "tags": [
+        "discernment",
+        "vocation",
+        "awareness",
+        "honesty"
+      ],
+      "intent": null
+    },
+    {
+      "id": "50000000-0000-0000-0000-000000000003",
+      "phase": 0,
+      "text": "In prayer, ask for inner freedom. What becomes clearer when you release the need to force an answer?",
+      "stepIndex": 0,
+      "stage": "first-principle",
+      "depth": "deep",
+      "experienceTypes": [
+        "discernment"
+      ],
+      "professionTags": null,
+      "tags": [
+        "discernment",
+        "vocation",
+        "spiritual",
+        "prayer",
+        "indifference"
+      ],
+      "intent": null
+    },
+    {
+      "id": "50000000-0000-0000-0000-000000000004",
+      "phase": 1,
+      "text": "Name three gifts from this season of discernment: people, experiences, or moments of clarity.",
+      "stepIndex": 0,
+      "stage": "gratitude",
+      "depth": "standard",
+      "experienceTypes": [
+        "discernment"
+      ],
+      "professionTags": null,
+      "tags": [
+        "discernment",
+        "gratitude",
+        "vocation",
+        "presence"
+      ],
+      "intent": null
+    },
+    {
+      "id": "50000000-0000-0000-0000-000000000005",
+      "phase": 1,
+      "text": "What part of your current path has strengthened your trust in who you are becoming?",
+      "stepIndex": 0,
+      "stage": "gratitude",
+      "depth": "standard",
+      "experienceTypes": [
+        "discernment"
+      ],
+      "professionTags": null,
+      "tags": [
+        "discernment",
+        "gratitude",
+        "growth",
+        "vocation"
+      ],
+      "intent": null
+    },
+    {
+      "id": "50000000-0000-0000-0000-000000000006",
+      "phase": 1,
+      "text": "Where have you noticed grace accompanying your vocational questions lately?",
+      "stepIndex": 0,
+      "stage": "gratitude",
+      "depth": "deep",
+      "experienceTypes": [
+        "discernment"
+      ],
+      "professionTags": null,
+      "tags": [
+        "discernment",
+        "spiritual",
+        "gratitude",
+        "hope",
+        "prayer"
+      ],
+      "intent": null
+    },
+    {
+      "id": "50000000-0000-0000-0000-000000000007",
+      "phase": 1,
+      "text": "Which recent challenge has quietly formed you for service, and what are you grateful for in it?",
+      "stepIndex": 0,
+      "stage": "gratitude",
+      "depth": "deep",
+      "experienceTypes": [
+        "discernment"
+      ],
+      "professionTags": null,
+      "tags": [
+        "discernment",
+        "gratitude",
+        "resilience",
+        "service",
+        "vocation"
+      ],
+      "intent": null
+    },
+    {
+      "id": "50000000-0000-0000-0000-000000000008",
+      "phase": 2,
+      "text": "When have you recently felt alive, peaceful, or energized while exploring this path?",
+      "stepIndex": 1,
+      "stage": "presence",
+      "depth": "standard",
+      "experienceTypes": [
+        "discernment"
+      ],
+      "professionTags": null,
+      "tags": [
+        "discernment",
+        "consolation",
+        "vocation",
+        "emotion",
+        "presence"
+      ],
+      "intent": null
+    },
+    {
+      "id": "50000000-0000-0000-0000-000000000009",
+      "phase": 2,
+      "text": "When have you felt drained, restless, or diminished while considering this path?",
+      "stepIndex": 1,
+      "stage": "disquiet",
+      "depth": "standard",
+      "experienceTypes": [
+        "discernment"
+      ],
+      "professionTags": null,
+      "tags": [
+        "discernment",
+        "disquiet",
+        "vocation",
+        "emotion",
+        "awareness"
+      ],
+      "intent": null
+    },
+    {
+      "id": "50000000-0000-0000-0000-00000000000a",
+      "phase": 2,
+      "text": "Where do ego, fear, or external pressure seem to cloud your discernment today?",
+      "stepIndex": 1,
+      "stage": "contrition",
+      "depth": "deep",
+      "experienceTypes": [
+        "discernment"
+      ],
+      "professionTags": null,
+      "tags": [
+        "discernment",
+        "spiritual",
+        "honesty",
+        "contrition",
+        "vocation"
+      ],
+      "intent": null
+    },
+    {
+      "id": "50000000-0000-0000-0000-00000000000b",
+      "phase": 2,
+      "text": "Which assumptions about success or worth are being tested as you discern your next step?",
+      "stepIndex": 1,
+      "stage": "assumptions",
+      "depth": "deep",
+      "experienceTypes": [
+        "discernment"
+      ],
+      "professionTags": null,
+      "tags": [
+        "discernment",
+        "assumptions",
+        "challenge",
+        "vocation",
+        "self-awareness"
+      ],
+      "intent": null
+    },
+    {
+      "id": "50000000-0000-0000-0000-00000000000c",
+      "phase": 3,
+      "text": "Looking across your recent experiences, what pattern keeps repeating and asking for attention?",
+      "stepIndex": 2,
+      "stage": "reflection",
+      "depth": "standard",
+      "experienceTypes": [
+        "discernment"
+      ],
+      "professionTags": null,
+      "tags": [
+        "discernment",
+        "reflection",
+        "pattern",
+        "vocation",
+        "awareness"
+      ],
+      "intent": null
+    },
+    {
+      "id": "50000000-0000-0000-0000-00000000000d",
+      "phase": 3,
+      "text": "What option currently seems to bear more peace, freedom, and love?",
+      "stepIndex": 2,
+      "stage": "discernment",
+      "depth": "standard",
+      "experienceTypes": [
+        "discernment"
+      ],
+      "professionTags": null,
+      "tags": [
+        "discernment",
+        "calling",
+        "vocation",
+        "peace",
+        "clarity"
+      ],
+      "intent": null
+    },
+    {
+      "id": "50000000-0000-0000-0000-00000000000e",
+      "phase": 3,
+      "text": "In prayer, what truth do you sense God inviting you to trust about your calling right now?",
+      "stepIndex": 2,
+      "stage": "compassion",
+      "depth": "deep",
+      "experienceTypes": [
+        "discernment"
+      ],
+      "professionTags": null,
+      "tags": [
+        "discernment",
+        "spiritual",
+        "prayer",
+        "calling",
+        "hope"
+      ],
+      "intent": null
+    },
+    {
+      "id": "50000000-0000-0000-0000-00000000000f",
+      "phase": 3,
+      "text": "What counsel would you give a close friend in your exact situation, and what does that reveal for you?",
+      "stepIndex": 2,
+      "stage": "reflection",
+      "depth": "deep",
+      "experienceTypes": [
+        "discernment"
+      ],
+      "professionTags": null,
+      "tags": [
+        "discernment",
+        "reflection",
+        "wisdom",
+        "compassion",
+        "vocation"
+      ],
+      "intent": null
+    },
+    {
+      "id": "50000000-0000-0000-0000-000000000010",
+      "phase": 4,
+      "text": "What is one concrete next step you can take in the next 7 days to test this path faithfully?",
+      "stepIndex": 3,
+      "stage": "commitment",
+      "depth": "standard",
+      "experienceTypes": [
+        "discernment"
+      ],
+      "professionTags": null,
+      "tags": [
+        "discernment",
+        "commitment",
+        "next-step",
+        "vocation",
+        "action"
+      ],
+      "intent": null
+    },
+    {
+      "id": "50000000-0000-0000-0000-000000000011",
+      "phase": 4,
+      "text": "What will you continue, what will you pause, and what will you seek next in your discernment?",
+      "stepIndex": 3,
+      "stage": "affirmation",
+      "depth": "standard",
+      "experienceTypes": [
+        "discernment"
+      ],
+      "professionTags": null,
+      "tags": [
+        "discernment",
+        "affirmation",
+        "decision",
+        "vocation",
+        "planning"
+      ],
+      "intent": null
+    },
+    {
+      "id": "50000000-0000-0000-0000-000000000012",
+      "phase": 4,
+      "text": "Place your uncertainty before God. What grace do you need for the next step?",
+      "stepIndex": 3,
+      "stage": "commitment",
+      "depth": "deep",
+      "experienceTypes": [
+        "discernment"
+      ],
+      "professionTags": null,
+      "tags": [
+        "discernment",
+        "spiritual",
+        "prayer",
+        "commitment",
+        "hope"
+      ],
+      "intent": null
+    },
+    {
+      "id": "50000000-0000-0000-0000-000000000013",
+      "phase": 4,
+      "text": "How will you review the fruit of your next step so discernment stays grounded in reality?",
+      "stepIndex": 3,
+      "stage": "memory",
+      "depth": "deep",
+      "experienceTypes": [
+        "discernment"
+      ],
+      "professionTags": null,
+      "tags": [
+        "discernment",
+        "memory",
+        "evaluation",
+        "vocation",
+        "reflection"
+      ],
+      "intent": null
+    },
+    {
+      "id": "50000000-0000-0000-0000-000000000014",
+      "phase": 0,
+      "text": "Ask for freedom from fear and ambition; where are you being invited to see medicine truthfully today?",
+      "stepIndex": 0,
+      "stage": "first-principle",
+      "depth": "standard",
+      "experienceTypes": [
+        "discernment"
+      ],
+      "professionTags": [
+        "preMedicine"
+      ],
+      "tags": [
+        "discernment",
+        "vocation",
+        "track-specific",
+        "medicine",
+        "indifference"
+      ],
+      "intent": null
+    },
+    {
+      "id": "50000000-0000-0000-0000-000000000015",
+      "phase": 1,
+      "text": "What gift today strengthened your desire to care for the whole person, not just disease?",
+      "stepIndex": 0,
+      "stage": "gratitude",
+      "depth": "standard",
+      "experienceTypes": [
+        "discernment"
+      ],
+      "professionTags": [
+        "preMedicine"
+      ],
+      "tags": [
+        "discernment",
+        "vocation",
+        "track-specific",
+        "medicine",
+        "gratitude"
+      ],
+      "intent": null
+    },
+    {
+      "id": "50000000-0000-0000-0000-000000000016",
+      "phase": 2,
+      "text": "Where did you feel drawn toward the responsibilities of medicine with peace and clarity?",
+      "stepIndex": 1,
+      "stage": "presence",
+      "depth": "standard",
+      "experienceTypes": [
+        "discernment"
+      ],
+      "professionTags": [
+        "preMedicine"
+      ],
+      "tags": [
+        "discernment",
+        "vocation",
+        "track-specific",
+        "medicine",
+        "presence"
+      ],
+      "intent": null
+    },
+    {
+      "id": "50000000-0000-0000-0000-000000000017",
+      "phase": 3,
+      "text": "Where did you feel resistance or unrest about medicine, and what might that unrest be teaching you?",
+      "stepIndex": 2,
+      "stage": "reflection",
+      "depth": "standard",
+      "experienceTypes": [
+        "discernment"
+      ],
+      "professionTags": [
+        "preMedicine"
+      ],
+      "tags": [
+        "discernment",
+        "vocation",
+        "track-specific",
+        "medicine",
+        "reflection"
+      ],
+      "intent": null
+    },
+    {
+      "id": "50000000-0000-0000-0000-000000000018",
+      "phase": 4,
+      "text": "What is one faithful next step in discerning medicine, and what grace do you need to take it?",
+      "stepIndex": 3,
+      "stage": "commitment",
+      "depth": "standard",
+      "experienceTypes": [
+        "discernment"
+      ],
+      "professionTags": [
+        "preMedicine"
+      ],
+      "tags": [
+        "discernment",
+        "vocation",
+        "track-specific",
+        "medicine",
+        "commitment"
+      ],
+      "intent": null
+    },
+    {
+      "id": "50000000-0000-0000-0000-000000000019",
+      "phase": 0,
+      "text": "Ask for a clear heart as you discern dentistry beyond status or outcome.",
+      "stepIndex": 0,
+      "stage": "first-principle",
+      "depth": "standard",
+      "experienceTypes": [
+        "discernment"
+      ],
+      "professionTags": [
+        "preDentistry"
+      ],
+      "tags": [
+        "discernment",
+        "vocation",
+        "track-specific",
+        "dentistry",
+        "indifference"
+      ],
+      "intent": null
+    },
+    {
+      "id": "50000000-0000-0000-0000-00000000001a",
+      "phase": 1,
+      "text": "What moment today made you grateful for the chance to restore comfort, confidence, or dignity?",
+      "stepIndex": 0,
+      "stage": "gratitude",
+      "depth": "standard",
+      "experienceTypes": [
+        "discernment"
+      ],
+      "professionTags": [
+        "preDentistry"
+      ],
+      "tags": [
+        "discernment",
+        "vocation",
+        "track-specific",
+        "dentistry",
+        "gratitude"
+      ],
+      "intent": null
+    },
+    {
+      "id": "50000000-0000-0000-0000-00000000001b",
+      "phase": 2,
+      "text": "Where did you sense real desire for the precision and patient trust dentistry requires?",
+      "stepIndex": 1,
+      "stage": "presence",
+      "depth": "standard",
+      "experienceTypes": [
+        "discernment"
+      ],
+      "professionTags": [
+        "preDentistry"
+      ],
+      "tags": [
+        "discernment",
+        "vocation",
+        "track-specific",
+        "dentistry",
+        "presence"
+      ],
+      "intent": null
+    },
+    {
+      "id": "50000000-0000-0000-0000-00000000001c",
+      "phase": 3,
+      "text": "Where did you feel hesitation about the demands of dentistry, and what truth surfaced there?",
+      "stepIndex": 2,
+      "stage": "reflection",
+      "depth": "standard",
+      "experienceTypes": [
+        "discernment"
+      ],
+      "professionTags": [
+        "preDentistry"
+      ],
+      "tags": [
+        "discernment",
+        "vocation",
+        "track-specific",
+        "dentistry",
+        "reflection"
+      ],
+      "intent": null
+    },
+    {
+      "id": "50000000-0000-0000-0000-00000000001d",
+      "phase": 4,
+      "text": "What next step can help you discern dentistry with honesty and generosity?",
+      "stepIndex": 3,
+      "stage": "commitment",
+      "depth": "standard",
+      "experienceTypes": [
+        "discernment"
+      ],
+      "professionTags": [
+        "preDentistry"
+      ],
+      "tags": [
+        "discernment",
+        "vocation",
+        "track-specific",
+        "dentistry",
+        "commitment"
+      ],
+      "intent": null
+    },
+    {
+      "id": "50000000-0000-0000-0000-00000000001e",
+      "phase": 0,
+      "text": "Ask for freedom to discern pharmacy in light of service, safety, and truth.",
+      "stepIndex": 0,
+      "stage": "first-principle",
+      "depth": "standard",
+      "experienceTypes": [
+        "discernment"
+      ],
+      "professionTags": [
+        "prePharmacy"
+      ],
+      "tags": [
+        "discernment",
+        "vocation",
+        "track-specific",
+        "pharmacy",
+        "indifference"
+      ],
+      "intent": null
+    },
+    {
+      "id": "50000000-0000-0000-0000-00000000001f",
+      "phase": 1,
+      "text": "What moment today made you grateful for the role of careful stewardship in medication use?",
+      "stepIndex": 0,
+      "stage": "gratitude",
+      "depth": "standard",
+      "experienceTypes": [
+        "discernment"
+      ],
+      "professionTags": [
+        "prePharmacy"
+      ],
+      "tags": [
+        "discernment",
+        "vocation",
+        "track-specific",
+        "pharmacy",
+        "gratitude"
+      ],
+      "intent": null
+    },
+    {
+      "id": "50000000-0000-0000-0000-000000000020",
+      "phase": 2,
+      "text": "Where did you feel drawn to pharmacy's blend of science, counseling, and responsibility?",
+      "stepIndex": 1,
+      "stage": "presence",
+      "depth": "standard",
+      "experienceTypes": [
+        "discernment"
+      ],
+      "professionTags": [
+        "prePharmacy"
+      ],
+      "tags": [
+        "discernment",
+        "vocation",
+        "track-specific",
+        "pharmacy",
+        "presence"
+      ],
+      "intent": null
+    },
+    {
+      "id": "50000000-0000-0000-0000-000000000021",
+      "phase": 3,
+      "text": "Where did you feel uncertainty about this path, and what does that reveal about your motivations?",
+      "stepIndex": 2,
+      "stage": "reflection",
+      "depth": "standard",
+      "experienceTypes": [
+        "discernment"
+      ],
+      "professionTags": [
+        "prePharmacy"
+      ],
+      "tags": [
+        "discernment",
+        "vocation",
+        "track-specific",
+        "pharmacy",
+        "reflection"
+      ],
+      "intent": null
+    },
+    {
+      "id": "50000000-0000-0000-0000-000000000022",
+      "phase": 4,
+      "text": "What is one concrete next step toward discerning pharmacy with wisdom?",
+      "stepIndex": 3,
+      "stage": "commitment",
+      "depth": "standard",
+      "experienceTypes": [
+        "discernment"
+      ],
+      "professionTags": [
+        "prePharmacy"
+      ],
+      "tags": [
+        "discernment",
+        "vocation",
+        "track-specific",
+        "pharmacy",
+        "commitment"
+      ],
+      "intent": null
+    },
+    {
+      "id": "50000000-0000-0000-0000-000000000023",
+      "phase": 0,
+      "text": "Ask for openness as you discern whether restoring daily function is part of your calling.",
+      "stepIndex": 0,
+      "stage": "first-principle",
+      "depth": "standard",
+      "experienceTypes": [
+        "discernment"
+      ],
+      "professionTags": [
+        "preOccupationalTherapy"
+      ],
+      "tags": [
+        "discernment",
+        "vocation",
+        "track-specific",
+        "occupational-therapy",
+        "indifference"
+      ],
+      "intent": null
+    },
+    {
+      "id": "50000000-0000-0000-0000-000000000024",
+      "phase": 1,
+      "text": "What gift today made you grateful for work that helps people regain meaningful daily life?",
+      "stepIndex": 0,
+      "stage": "gratitude",
+      "depth": "standard",
+      "experienceTypes": [
+        "discernment"
+      ],
+      "professionTags": [
+        "preOccupationalTherapy"
+      ],
+      "tags": [
+        "discernment",
+        "vocation",
+        "track-specific",
+        "occupational-therapy",
+        "gratitude"
+      ],
+      "intent": null
+    },
+    {
+      "id": "50000000-0000-0000-0000-000000000025",
+      "phase": 2,
+      "text": "Where did you feel most aligned with OT's focus on participation, adaptation, and dignity?",
+      "stepIndex": 1,
+      "stage": "presence",
+      "depth": "standard",
+      "experienceTypes": [
+        "discernment"
+      ],
+      "professionTags": [
+        "preOccupationalTherapy"
+      ],
+      "tags": [
+        "discernment",
+        "vocation",
+        "track-specific",
+        "occupational-therapy",
+        "presence"
+      ],
+      "intent": null
+    },
+    {
+      "id": "50000000-0000-0000-0000-000000000026",
+      "phase": 3,
+      "text": "Where did you feel tension about this path, and what might be getting clarified through it?",
+      "stepIndex": 2,
+      "stage": "reflection",
+      "depth": "standard",
+      "experienceTypes": [
+        "discernment"
+      ],
+      "professionTags": [
+        "preOccupationalTherapy"
+      ],
+      "tags": [
+        "discernment",
+        "vocation",
+        "track-specific",
+        "occupational-therapy",
+        "reflection"
+      ],
+      "intent": null
+    },
+    {
+      "id": "50000000-0000-0000-0000-000000000027",
+      "phase": 4,
+      "text": "What faithful next step can deepen your discernment of occupational therapy?",
+      "stepIndex": 3,
+      "stage": "commitment",
+      "depth": "standard",
+      "experienceTypes": [
+        "discernment"
+      ],
+      "professionTags": [
+        "preOccupationalTherapy"
+      ],
+      "tags": [
+        "discernment",
+        "vocation",
+        "track-specific",
+        "occupational-therapy",
+        "commitment"
+      ],
+      "intent": null
+    },
+    {
+      "id": "50000000-0000-0000-0000-000000000028",
+      "phase": 0,
+      "text": "Ask for inner freedom as you discern a vocation of healing through movement and persistence.",
+      "stepIndex": 0,
+      "stage": "first-principle",
+      "depth": "standard",
+      "experienceTypes": [
+        "discernment"
+      ],
+      "professionTags": [
+        "prePhysicalTherapy"
+      ],
+      "tags": [
+        "discernment",
+        "vocation",
+        "track-specific",
+        "physical-therapy",
+        "indifference"
+      ],
+      "intent": null
+    },
+    {
+      "id": "50000000-0000-0000-0000-000000000029",
+      "phase": 1,
+      "text": "What moment today made you grateful for the possibility of helping others recover function?",
+      "stepIndex": 0,
+      "stage": "gratitude",
+      "depth": "standard",
+      "experienceTypes": [
+        "discernment"
+      ],
+      "professionTags": [
+        "prePhysicalTherapy"
+      ],
+      "tags": [
+        "discernment",
+        "vocation",
+        "track-specific",
+        "physical-therapy",
+        "gratitude"
+      ],
+      "intent": null
+    },
+    {
+      "id": "50000000-0000-0000-0000-00000000002a",
+      "phase": 2,
+      "text": "Where did you feel drawn to PT's long-term relational and rehabilitative work?",
+      "stepIndex": 1,
+      "stage": "presence",
+      "depth": "standard",
+      "experienceTypes": [
+        "discernment"
+      ],
+      "professionTags": [
+        "prePhysicalTherapy"
+      ],
+      "tags": [
+        "discernment",
+        "vocation",
+        "track-specific",
+        "physical-therapy",
+        "presence"
+      ],
+      "intent": null
+    },
+    {
+      "id": "50000000-0000-0000-0000-00000000002b",
+      "phase": 3,
+      "text": "Where did doubt arise about the demands of PT, and what truth did it uncover?",
+      "stepIndex": 2,
+      "stage": "reflection",
+      "depth": "standard",
+      "experienceTypes": [
+        "discernment"
+      ],
+      "professionTags": [
+        "prePhysicalTherapy"
+      ],
+      "tags": [
+        "discernment",
+        "vocation",
+        "track-specific",
+        "physical-therapy",
+        "reflection"
+      ],
+      "intent": null
+    },
+    {
+      "id": "50000000-0000-0000-0000-00000000002c",
+      "phase": 4,
+      "text": "What next step will help you discern physical therapy with courage and clarity?",
+      "stepIndex": 3,
+      "stage": "commitment",
+      "depth": "standard",
+      "experienceTypes": [
+        "discernment"
+      ],
+      "professionTags": [
+        "prePhysicalTherapy"
+      ],
+      "tags": [
+        "discernment",
+        "vocation",
+        "track-specific",
+        "physical-therapy",
+        "commitment"
+      ],
+      "intent": null
+    },
+    {
+      "id": "50000000-0000-0000-0000-00000000002d",
+      "phase": 0,
+      "text": "Ask for openness to discern a path of collaborative care without attachment to image.",
+      "stepIndex": 0,
+      "stage": "first-principle",
+      "depth": "standard",
+      "experienceTypes": [
+        "discernment"
+      ],
+      "professionTags": [
+        "prePhysicianAssistant"
+      ],
+      "tags": [
+        "discernment",
+        "vocation",
+        "track-specific",
+        "physician-assistant",
+        "indifference"
+      ],
+      "intent": null
+    },
+    {
+      "id": "50000000-0000-0000-0000-00000000002e",
+      "phase": 1,
+      "text": "What grace today made you grateful for team-based care and adaptable service?",
+      "stepIndex": 0,
+      "stage": "gratitude",
+      "depth": "standard",
+      "experienceTypes": [
+        "discernment"
+      ],
+      "professionTags": [
+        "prePhysicianAssistant"
+      ],
+      "tags": [
+        "discernment",
+        "vocation",
+        "track-specific",
+        "physician-assistant",
+        "gratitude"
+      ],
+      "intent": null
+    },
+    {
+      "id": "50000000-0000-0000-0000-00000000002f",
+      "phase": 2,
+      "text": "Where did you feel most drawn to the PA role's flexibility and shared responsibility?",
+      "stepIndex": 1,
+      "stage": "presence",
+      "depth": "standard",
+      "experienceTypes": [
+        "discernment"
+      ],
+      "professionTags": [
+        "prePhysicianAssistant"
+      ],
+      "tags": [
+        "discernment",
+        "vocation",
+        "track-specific",
+        "physician-assistant",
+        "presence"
+      ],
+      "intent": null
+    },
+    {
+      "id": "50000000-0000-0000-0000-000000000030",
+      "phase": 3,
+      "text": "Where did resistance surface, and what does it reveal about your readiness for this path?",
+      "stepIndex": 2,
+      "stage": "reflection",
+      "depth": "standard",
+      "experienceTypes": [
+        "discernment"
+      ],
+      "professionTags": [
+        "prePhysicianAssistant"
+      ],
+      "tags": [
+        "discernment",
+        "vocation",
+        "track-specific",
+        "physician-assistant",
+        "reflection"
+      ],
+      "intent": null
+    },
+    {
+      "id": "50000000-0000-0000-0000-000000000031",
+      "phase": 4,
+      "text": "What one step can you take now to discern physician assistant practice faithfully?",
+      "stepIndex": 3,
+      "stage": "commitment",
+      "depth": "standard",
+      "experienceTypes": [
+        "discernment"
+      ],
+      "professionTags": [
+        "prePhysicianAssistant"
+      ],
+      "tags": [
+        "discernment",
+        "vocation",
+        "track-specific",
+        "physician-assistant",
+        "commitment"
+      ],
+      "intent": null
+    },
+    {
+      "id": "50000000-0000-0000-0000-000000000032",
+      "phase": 0,
+      "text": "Ask for freedom from ego and fear as you discern service through law.",
+      "stepIndex": 0,
+      "stage": "first-principle",
+      "depth": "standard",
+      "experienceTypes": [
+        "discernment"
+      ],
+      "professionTags": [
+        "preLaw"
+      ],
+      "tags": [
+        "discernment",
+        "vocation",
+        "track-specific",
+        "law",
+        "indifference"
+      ],
+      "intent": null
+    },
+    {
+      "id": "50000000-0000-0000-0000-000000000033",
+      "phase": 1,
+      "text": "What moment today made you grateful for truth-telling, advocacy, or justice?",
+      "stepIndex": 0,
+      "stage": "gratitude",
+      "depth": "standard",
+      "experienceTypes": [
+        "discernment"
+      ],
+      "professionTags": [
+        "preLaw"
+      ],
+      "tags": [
+        "discernment",
+        "vocation",
+        "track-specific",
+        "law",
+        "gratitude"
+      ],
+      "intent": null
+    },
+    {
+      "id": "50000000-0000-0000-0000-000000000034",
+      "phase": 2,
+      "text": "Where did you feel genuine desire to use legal training for the good of others?",
+      "stepIndex": 1,
+      "stage": "presence",
+      "depth": "standard",
+      "experienceTypes": [
+        "discernment"
+      ],
+      "professionTags": [
+        "preLaw"
+      ],
+      "tags": [
+        "discernment",
+        "vocation",
+        "track-specific",
+        "law",
+        "presence"
+      ],
+      "intent": null
+    },
+    {
+      "id": "50000000-0000-0000-0000-000000000035",
+      "phase": 3,
+      "text": "Where did you notice tension between ambition and service, and what did you learn?",
+      "stepIndex": 2,
+      "stage": "reflection",
+      "depth": "standard",
+      "experienceTypes": [
+        "discernment"
+      ],
+      "professionTags": [
+        "preLaw"
+      ],
+      "tags": [
+        "discernment",
+        "vocation",
+        "track-specific",
+        "law",
+        "reflection"
+      ],
+      "intent": null
+    },
+    {
+      "id": "50000000-0000-0000-0000-000000000036",
+      "phase": 4,
+      "text": "What faithful next step will help you discern whether law is your path?",
+      "stepIndex": 3,
+      "stage": "commitment",
+      "depth": "standard",
+      "experienceTypes": [
+        "discernment"
+      ],
+      "professionTags": [
+        "preLaw"
+      ],
+      "tags": [
+        "discernment",
+        "vocation",
+        "track-specific",
+        "law",
+        "commitment"
+      ],
+      "intent": null
+    },
+    {
+      "id": "50000000-0000-0000-0000-000000000037",
+      "phase": 0,
+      "text": "Ask for a clear spirit as you discern care for animals, people, and communities.",
+      "stepIndex": 0,
+      "stage": "first-principle",
+      "depth": "standard",
+      "experienceTypes": [
+        "discernment"
+      ],
+      "professionTags": [
+        "preVeterinaryMedicine"
+      ],
+      "tags": [
+        "discernment",
+        "vocation",
+        "track-specific",
+        "veterinary",
+        "indifference"
+      ],
+      "intent": null
+    },
+    {
+      "id": "50000000-0000-0000-0000-000000000038",
+      "phase": 1,
+      "text": "What gift today made you grateful for the vocation of veterinary care?",
+      "stepIndex": 0,
+      "stage": "gratitude",
+      "depth": "standard",
+      "experienceTypes": [
+        "discernment"
+      ],
+      "professionTags": [
+        "preVeterinaryMedicine"
+      ],
+      "tags": [
+        "discernment",
+        "vocation",
+        "track-specific",
+        "veterinary",
+        "gratitude"
+      ],
+      "intent": null
+    },
+    {
+      "id": "50000000-0000-0000-0000-000000000039",
+      "phase": 2,
+      "text": "Where did you feel most drawn to veterinary work's compassion, science, and responsibility?",
+      "stepIndex": 1,
+      "stage": "presence",
+      "depth": "standard",
+      "experienceTypes": [
+        "discernment"
+      ],
+      "professionTags": [
+        "preVeterinaryMedicine"
+      ],
+      "tags": [
+        "discernment",
+        "vocation",
+        "track-specific",
+        "veterinary",
+        "presence"
+      ],
+      "intent": null
+    },
+    {
+      "id": "50000000-0000-0000-0000-00000000003a",
+      "phase": 3,
+      "text": "Where did strain appear in this calling, and what truth emerged in that strain?",
+      "stepIndex": 2,
+      "stage": "reflection",
+      "depth": "standard",
+      "experienceTypes": [
+        "discernment"
+      ],
+      "professionTags": [
+        "preVeterinaryMedicine"
+      ],
+      "tags": [
+        "discernment",
+        "vocation",
+        "track-specific",
+        "veterinary",
+        "reflection"
+      ],
+      "intent": null
+    },
+    {
+      "id": "50000000-0000-0000-0000-00000000003b",
+      "phase": 4,
+      "text": "What concrete next step will move your veterinary discernment forward with honesty?",
+      "stepIndex": 3,
+      "stage": "commitment",
+      "depth": "standard",
+      "experienceTypes": [
+        "discernment"
+      ],
+      "professionTags": [
+        "preVeterinaryMedicine"
+      ],
+      "tags": [
+        "discernment",
+        "vocation",
+        "track-specific",
+        "veterinary",
+        "commitment"
+      ],
+      "intent": null
+    },
+    {
+      "id": "50000000-0000-0000-0000-00000000003c",
+      "phase": 0,
+      "text": "Ask for openness as you discern a path of restoring sight and attentive care.",
+      "stepIndex": 0,
+      "stage": "first-principle",
+      "depth": "standard",
+      "experienceTypes": [
+        "discernment"
+      ],
+      "professionTags": [
+        "preOptometry"
+      ],
+      "tags": [
+        "discernment",
+        "vocation",
+        "track-specific",
+        "optometry",
+        "indifference"
+      ],
+      "intent": null
+    },
+    {
+      "id": "50000000-0000-0000-0000-00000000003d",
+      "phase": 1,
+      "text": "What moment today made you grateful for work that improves daily life through vision care?",
+      "stepIndex": 0,
+      "stage": "gratitude",
+      "depth": "standard",
+      "experienceTypes": [
+        "discernment"
+      ],
+      "professionTags": [
+        "preOptometry"
+      ],
+      "tags": [
+        "discernment",
+        "vocation",
+        "track-specific",
+        "optometry",
+        "gratitude"
+      ],
+      "intent": null
+    },
+    {
+      "id": "50000000-0000-0000-0000-00000000003e",
+      "phase": 2,
+      "text": "Where did you feel most alive in the precision and continuity of optometric care?",
+      "stepIndex": 1,
+      "stage": "presence",
+      "depth": "standard",
+      "experienceTypes": [
+        "discernment"
+      ],
+      "professionTags": [
+        "preOptometry"
+      ],
+      "tags": [
+        "discernment",
+        "vocation",
+        "track-specific",
+        "optometry",
+        "presence"
+      ],
+      "intent": null
+    },
+    {
+      "id": "50000000-0000-0000-0000-00000000003f",
+      "phase": 3,
+      "text": "Where did uncertainty arise, and what is it asking you to examine?",
+      "stepIndex": 2,
+      "stage": "reflection",
+      "depth": "standard",
+      "experienceTypes": [
+        "discernment"
+      ],
+      "professionTags": [
+        "preOptometry"
+      ],
+      "tags": [
+        "discernment",
+        "vocation",
+        "track-specific",
+        "optometry",
+        "reflection"
+      ],
+      "intent": null
+    },
+    {
+      "id": "50000000-0000-0000-0000-000000000040",
+      "phase": 4,
+      "text": "What is one faithful step you can take to test and clarify this calling?",
+      "stepIndex": 3,
+      "stage": "commitment",
+      "depth": "standard",
+      "experienceTypes": [
+        "discernment"
+      ],
+      "professionTags": [
+        "preOptometry"
+      ],
+      "tags": [
+        "discernment",
+        "vocation",
+        "track-specific",
+        "optometry",
+        "commitment"
+      ],
+      "intent": null
+    },
+    {
+      "id": "50000000-0000-0000-0000-000000000041",
+      "phase": 0,
+      "text": "Ask for humility and freedom as you discern your path within advanced training.",
+      "stepIndex": 0,
+      "stage": "first-principle",
+      "depth": "standard",
+      "experienceTypes": [
+        "discernment"
+      ],
+      "professionTags": [
+        "medicalOrDentalResidency"
+      ],
+      "tags": [
+        "discernment",
+        "vocation",
+        "track-specific",
+        "residency",
+        "indifference"
+      ],
+      "intent": null
+    },
+    {
+      "id": "50000000-0000-0000-0000-000000000042",
+      "phase": 1,
+      "text": "What gift today made you grateful for the privilege and burden of deeper responsibility?",
+      "stepIndex": 0,
+      "stage": "gratitude",
+      "depth": "standard",
+      "experienceTypes": [
+        "discernment"
+      ],
+      "professionTags": [
+        "medicalOrDentalResidency"
+      ],
+      "tags": [
+        "discernment",
+        "vocation",
+        "track-specific",
+        "residency",
+        "gratitude"
+      ],
+      "intent": null
+    },
+    {
+      "id": "50000000-0000-0000-0000-000000000043",
+      "phase": 2,
+      "text": "Where did you sense alignment between your strengths and the demands of residency?",
+      "stepIndex": 1,
+      "stage": "presence",
+      "depth": "standard",
+      "experienceTypes": [
+        "discernment"
+      ],
+      "professionTags": [
+        "medicalOrDentalResidency"
+      ],
+      "tags": [
+        "discernment",
+        "vocation",
+        "track-specific",
+        "residency",
+        "presence"
+      ],
+      "intent": null
+    },
+    {
+      "id": "50000000-0000-0000-0000-000000000044",
+      "phase": 3,
+      "text": "Where did fatigue, fear, or misalignment appear, and what truth did it expose?",
+      "stepIndex": 2,
+      "stage": "reflection",
+      "depth": "standard",
+      "experienceTypes": [
+        "discernment"
+      ],
+      "professionTags": [
+        "medicalOrDentalResidency"
+      ],
+      "tags": [
+        "discernment",
+        "vocation",
+        "track-specific",
+        "residency",
+        "reflection"
+      ],
+      "intent": null
+    },
+    {
+      "id": "50000000-0000-0000-0000-000000000045",
+      "phase": 4,
+      "text": "What next faithful action will help you discern your direction within residency training?",
+      "stepIndex": 3,
+      "stage": "commitment",
+      "depth": "standard",
+      "experienceTypes": [
+        "discernment"
+      ],
+      "professionTags": [
+        "medicalOrDentalResidency"
+      ],
+      "tags": [
+        "discernment",
+        "vocation",
+        "track-specific",
+        "residency",
+        "commitment"
+      ],
+      "intent": null
+    },
+    {
+      "id": "50000000-0000-0000-0000-000000000046",
+      "phase": 0,
+      "text": "Ask for grace to release pressure and listen for what is most true in your life right now.",
+      "stepIndex": 0,
+      "stage": "first-principle",
+      "depth": "standard",
+      "experienceTypes": [
+        "discernment"
+      ],
+      "professionTags": [
+        "general",
+        "other"
+      ],
+      "tags": [
+        "discernment",
+        "vocation",
+        "track-specific",
+        "personal",
+        "indifference"
+      ],
+      "intent": null
+    },
+    {
+      "id": "50000000-0000-0000-0000-000000000047",
+      "phase": 1,
+      "text": "What gifts from today are you most grateful for as you discern your direction?",
+      "stepIndex": 0,
+      "stage": "gratitude",
+      "depth": "standard",
+      "experienceTypes": [
+        "discernment"
+      ],
+      "professionTags": [
+        "general",
+        "other"
+      ],
+      "tags": [
+        "discernment",
+        "vocation",
+        "track-specific",
+        "personal",
+        "gratitude"
+      ],
+      "intent": null
+    },
+    {
+      "id": "50000000-0000-0000-0000-000000000048",
+      "phase": 2,
+      "text": "Where did you feel most alive, free, and drawn toward love or service today?",
+      "stepIndex": 1,
+      "stage": "presence",
+      "depth": "standard",
+      "experienceTypes": [
+        "discernment"
+      ],
+      "professionTags": [
+        "general",
+        "other"
+      ],
+      "tags": [
+        "discernment",
+        "vocation",
+        "track-specific",
+        "personal",
+        "presence"
+      ],
+      "intent": null
+    },
+    {
+      "id": "50000000-0000-0000-0000-000000000049",
+      "phase": 3,
+      "text": "Where did you feel divided or restless, and what might that be revealing?",
+      "stepIndex": 2,
+      "stage": "reflection",
+      "depth": "standard",
+      "experienceTypes": [
+        "discernment"
+      ],
+      "professionTags": [
+        "general",
+        "other"
+      ],
+      "tags": [
+        "discernment",
+        "vocation",
+        "track-specific",
+        "personal",
+        "reflection"
+      ],
+      "intent": null
+    },
+    {
+      "id": "50000000-0000-0000-0000-00000000004a",
+      "phase": 4,
+      "text": "What one faithful step can you take tomorrow in response to what you noticed?",
+      "stepIndex": 3,
+      "stage": "commitment",
+      "depth": "standard",
+      "experienceTypes": [
+        "discernment"
+      ],
+      "professionTags": [
+        "general",
+        "other"
+      ],
+      "tags": [
+        "discernment",
+        "vocation",
+        "track-specific",
+        "personal",
+        "commitment"
+      ],
+      "intent": null
+    }
+  ]
+}

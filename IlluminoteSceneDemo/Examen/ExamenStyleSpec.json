@@ -1,0 +1,118 @@
+{
+  "specification": "Examen Flow Style & Behavior",
+  "version": "1.0",
+  "sections": {
+    "theming": {
+      "tokens": [
+        {
+          "category": "Color Palette",
+          "usage": "Semantic colors (DSColor.*)",
+          "notes": "Separate Core vs Reflective (Examen) themes."
+        },
+        {
+          "category": "Typography",
+          "usage": "DSFont / ThemedText",
+          "notes": "Maintain hierarchy (Headings, Body, Caption). Support Dynamic Type."
+        },
+        {
+          "category": "Spacing / Grid",
+          "usage": "DSSpacing tokens",
+          "notes": "Consistent 8-pt rhythm. No magic numbers."
+        },
+        {
+          "category": "Components",
+          "usage": "CardView, AppButton, ThemedText",
+          "notes": "Ensure consistency and avoid style drift."
+        }
+      ],
+      "themeBehavior": {
+        "core": "Neutral background, standard contrast, minimal effects.",
+        "reflective": "Soft backgrounds (flat/gentle gradient), calm tone, subtle accent."
+      }
+    },
+    "navigation": {
+      "tabBar": {
+        "coreScreens": "Visible",
+        "examenScreens": "Hidden (slide down)",
+        "behavior": "Reappears (slide up) on exit/completion."
+      },
+      "controls": "Minimal UI chrome. Exit/Cancel, Next, Back, Finish. No unrelated controls."
+    },
+    "animations": {
+      "guidelines": {
+        "api": "SwiftUI native (withAnimation, .transition)",
+        "easing": ".easeInOut or spring (for softness)",
+        "reduceMotion": "Respect system setting (simplify/disable)",
+        "density": "Limit to 1-2 concurrent effects."
+      },
+      "durations": {
+        "standard": "0.25 - 0.35s",
+        "promptTransition": "0.20 - 0.25s",
+        "limits": "Avoid > 0.5s or < 0.1s"
+      }
+    },
+    "screens": [
+      {
+        "name": "Experience Type Selection",
+        "ui": "Nav bar + Tab bar visible. Grid of cards."
+      },
+      {
+        "name": "Transition to Examen",
+        "ui": "Animate tab bar hide. Fade out grid. Enter Posture screen."
+      },
+      {
+        "name": "Prayerful Posture",
+        "ui": "Full screen. Theme background. Centered text. Begin button."
+      },
+      {
+        "name": "Examen Prompt Step",
+        "ui": "Full screen Theme background. Prompt card. Nav controls."
+      },
+      {
+        "name": "Completion / Exit",
+        "ui": "Summary/Confirmation. Return Home button. Tab bar slides in."
+      }
+    ],
+    "requirements": {
+      "state": "Centralized state (Step, InExamen, TabBarVisible). Cleanup on exit.",
+      "persistence": "Save data before exit/interruption.",
+      "accessibility": {
+        "dynamicType": "Required",
+        "reduceMotion": "Required",
+        "contrast": "WCAG/HIG standards",
+        "touchTargets": "Min 44pt",
+        "input": "Button + optional gesture"
+      },
+      "performance": "Efficient rendering. Fallback for low-end devices."
+    },
+    "qaChecklist": [
+      "Entry: Tab bar hides, correct screen loads",
+      "Exit: Tab bar returns, UI stable",
+      "Dynamic Type: Layout scales correctly",
+      "Reduce Motion: Animations simplified",
+      "Contrast: Readable in all themes",
+      "Orientation: Works in support orientations",
+      "Performance: Smooth transitions",
+      "Persistence: Data saved on interruption"
+    ],
+    "animationReference": {
+      "tabBarHide": {
+        "type": "slide",
+        "edge": "bottom",
+        "duration": "0.30s",
+        "easing": "easeInOut"
+      },
+      "tabBarShow": {
+        "type": "slide",
+        "edge": "bottom",
+        "duration": "0.30s",
+        "easing": "easeInOut"
+      },
+      "screenChange": {
+        "type": "opacity + slide",
+        "duration": "0.25s",
+        "easing": "easeInOut"
+      }
+    }
+  }
+}

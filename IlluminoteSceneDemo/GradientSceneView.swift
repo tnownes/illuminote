@@ -1,59 +1,45 @@
 import SwiftUI
 
 struct GradientSceneView: View {
-    @State private var gradientColors: [Color] = [
-        Color(#colorLiteral(red: 0.3, green: 0.5, blue: 0.9, alpha: 1)), // Deep blue
-        Color(#colorLiteral(red: 0.4, green: 0.6, blue: 1.0, alpha: 1)), // Sky blue
-        Color(#colorLiteral(red: 0.5, green: 0.4, blue: 1.0, alpha: 1)), // Purple-blue
-        Color(#colorLiteral(red: 0.2, green: 0.7, blue: 0.8, alpha: 1))  // Teal
-    ]
-    @State private var gradientStart: UnitPoint = .topLeading
-    @State private var gradientEnd: UnitPoint = .bottomTrailing
-    
-    @State private var messageOpacity: Double = 0
-    @State private var tapToBeginOpacity: Double = 0
-    @State private var gradientAnimating: Bool = false
-    
-    var onBegin: () -> Void
-    
+    // MARK: - Inputs
     var highlightColor: Color? = nil
-    
-    // Animate gradient and text
-    private let timer = Timer.publish(every: 5, on: .main, in: .common).autoconnect()
-    
+
+    // MARK: - Gradient state
+    @State private var gradientColors: [Color] = [
+        Color(red: 0.30, green: 0.50, blue: 0.90), // Deep blue
+        Color(red: 0.40, green: 0.60, blue: 1.00), // Sky blue
+        Color(red: 0.50, green: 0.40, blue: 1.00), // Purple-blue
+        Color(red: 0.20, green: 0.70, blue: 0.80)  // Teal
+    ]
+    @State private var startPoint: UnitPoint = .topLeading
+    @State private var endPoint: UnitPoint = .bottomTrailing
+
+    // Animate by toggling the start/end points instead of shuffling colors
+    @State private var moveGradient = false
+
     var body: some View {
         ZStack {
             // Animated Gradient Background
             LinearGradient(
                 gradient: Gradient(colors: gradientColors),
-                startPoint: gradientStart,
-                endPoint: gradientEnd
+                startPoint: moveGradient ? .bottomTrailing : .topLeading,
+                endPoint:   moveGradient ? .topLeading : .bottomTrailing
             )
-            .edgesIgnoringSafeArea(.all)
-            
-                    }
-                    .onAppear {
-                        // Start gradient animation smoothly
-                        gradientAnimating = true
+            .ignoresSafeArea()
+            .animation(.easeInOut(duration: 8).repeatForever(autoreverses: true), value: moveGradient)
+        }
+        .onAppear {
+            // If a highlight is provided, bias the palette toward it
+            if let c = highlightColor {
+                gradientColors = [c, c.opacity(0.8), c.opacity(0.6), gradientColors.last!]
+            }
 
-                        // Animate text and tap circle
-                        withAnimation(.easeInOut(duration: 2).delay(0.5)) {
-                            messageOpacity = 1
-                        }
-
-                        withAnimation(.easeInOut(duration: 2).delay(1.5)) {
-                            tapToBeginOpacity = 1
-                        }
-
-                        // Smoothly transition gradient colors
-                        withAnimation(Animation.easeInOut(duration: 8).repeatForever(autoreverses: true)) {
-                            gradientColors = gradientColors.shuffled() // Gradual color shifting
-                        }
-                    }
-
+            // Start animations
+            moveGradient.toggle()
         }
     }
+}
 
 #Preview {
-    GradientSceneView(onBegin: {})
+    GradientSceneView(highlightColor: .blue)
 }

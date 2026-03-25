@@ -1,0 +1,724 @@
+{
+  "fields": [
+    {
+      "id": "medicine",
+      "name": "Medicine",
+      "fieldDescription": "Guidance for MD/DO personal statements, including AMCAS and TMDSAS applications.",
+      "services": [
+        {
+          "id": "amcas",
+          "name": "AMCAS",
+          "cyclePrompts": [
+            {
+              "id": "amcas_2026",
+              "cycle": "2026",
+              "promptText": "Use the space provided to explain why you want to go to medical school.",
+              "characterLimit": 5300
+            }
+          ]
+        },
+        {
+          "id": "tmdsas",
+          "name": "TMDSAS",
+          "cyclePrompts": [
+            {
+              "id": "tmdsas_2026",
+              "cycle": "2026",
+              "promptText": "Personal Characteristics Essay: Explain how your experiences have shaped your motivation to pursue medicine.",
+              "characterLimit": 5000
+            }
+          ]
+        }
+      ],
+      "bestPractice": {
+        "id": "bp_medicine",
+        "overview": "Your medical school personal statement should convey genuine motivation for patient care, demonstrate self-awareness through reflection on meaningful experiences, and show how your unique path has prepared you to serve others through medicine.",
+        "commonThemes": [
+          {
+            "id": "med_clinical_motivation",
+            "title": "Motivation for Clinical Work",
+            "themeDescription": "Draw on specific patient encounters or clinical moments that revealed why direct care resonates with you. Show, don't tell: illustrate the qualities of compassion and empathy through detailed stories, rather than just stating you possess them."
+          },
+          {
+            "id": "med_service_equity",
+            "title": "Service & Health Equity",
+            "themeDescription": "Demonstrate sustained commitment to underserved communities. Committees value applicants who see medicine as a vehicle for addressing disparities, not just treating individuals."
+          },
+          {
+            "id": "med_research_curiosity",
+            "title": "Research & Intellectual Curiosity",
+            "themeDescription": "If research shaped your identity, connect your scientific questions to patient impact. Show how inquiry deepened your understanding of disease, treatment, or the human experience of illness."
+          },
+          {
+            "id": "med_resilience_growth",
+            "title": "Resilience & Growth",
+            "themeDescription": "Reflect on a challenge, failure, or setback that refined your commitment to medicine. Admissions committees look for evidence that you can handle adversity with maturity and learn from difficulty."
+          },
+          {
+            "id": "med_mentorship_models",
+            "title": "Mentorship & Role Models",
+            "themeDescription": "Describe a physician, mentor, or patient who modeled the kind of doctor you want to become. Be specific about what quality you observed and how it shaped your professional aspirations."
+          }
+        ],
+        "toneGuidelines": {
+          "id": "tone_medicine",
+          "recommendedTone": "Reflective, sincere, and grounded. Write as though you are having an honest conversation with someone you respect about why this path matters to you.",
+          "avoidList": [
+            "Clichés like 'I've always wanted to help people'",
+            "Listing accomplishments without reflection on what they meant to you",
+            "Summarizing your activities section or repeating your resume. Your personal statement should complement, not replicate, the rest of your application.",
+            "Mentioning grades, MCAT scores, or academic metrics",
+            "Grandiose claims about knowing what medicine is like from shadowing alone",
+            "Generic motivations that could apply to any health profession"
+          ]
+        },
+        "structure": {
+          "id": "structure_medicine",
+          "introduction": "Open with a specific moment, image, or encounter that draws the reader into your story. The strongest openings are concrete and sensory, not abstract declarations.",
+          "body": "Weave together 2-3 experiences with honest reflection. Each experience should reveal something about your character, values, or understanding of medicine. Show growth across time rather than listing events.",
+          "conclusion": "Return to the thread you opened with and look forward. Articulate not just that you want to be a doctor, but what kind of physician you hope to become and why. Remember to allocate time for an iterative review process spanning several months, involving trusted peer editors to help protect your authentic voice."
+        }
+      }
+    },
+    {
+      "id": "dentistry",
+      "name": "Dentistry",
+      "fieldDescription": "Guidance for DDS/DMD personal statements through the AADSAS application.",
+      "services": [
+        {
+          "id": "aadsas",
+          "name": "AADSAS",
+          "cyclePrompts": [
+            {
+              "id": "aadsas_2026",
+              "cycle": "2026",
+              "promptText": "What motivated you to pursue a career in oral health? In your response, you may wish to describe and highlight your strengths, experiences, backgrounds and uniqueness that will contribute to your success in this career.",
+              "characterLimit": 4500
+            }
+          ]
+        }
+      ],
+      "bestPractice": {
+        "id": "bp_dentistry",
+        "overview": "A strong dental school statement answers 'why dentistry specifically' with authenticity and specificity. Admissions committees want to see genuine engagement with oral health, evidence that you understand the profession beyond the chair, and the personal qualities that will make you a compassionate and skilled clinician.",
+        "commonThemes": [
+          {
+            "id": "dent_discovering_oral_health",
+            "title": "Discovering Oral Health",
+            "themeDescription": "Describe the moment or experience that made dentistry your path. Committees value specificity — a single defining encounter is more powerful than a broad timeline of growing interest."
+          },
+          {
+            "id": "dent_manual_artistry",
+            "title": "Manual Dexterity & Artistry",
+            "themeDescription": "Dentistry uniquely combines scientific knowledge with hands-on skill. If your artistic, technical, or craft abilities inform your attraction to the field, show how those skills translate to clinical care."
+          },
+          {
+            "id": "dent_community_oral_health",
+            "title": "Community Oral Health",
+            "themeDescription": "Addressing disparities in dental access is a theme that resonates strongly with admissions committees. Show how you have engaged with or been moved by oral health inequities in your community."
+          },
+          {
+            "id": "dent_patient_relationships",
+            "title": "Patient Relationships",
+            "themeDescription": "Dentists build long-term relationships with patients across their lifetimes. If this continuity of care appeals to you, illustrate it through a specific interaction that showed you the power of trust in the dental setting."
+          },
+          {
+            "id": "dent_cultural_identity",
+            "title": "Cultural & Personal Identity",
+            "themeDescription": "Your heritage, background, or personal journey can be a powerful frame for your statement. Committees appreciate understanding how your identity shapes your perspective on care and community."
+          }
+        ],
+        "toneGuidelines": {
+          "id": "tone_dentistry",
+          "recommendedTone": "Colorful, positive, imaginative, and personal. Be original and demonstrate genuine enthusiasm for the specific craft of dentistry. Ensure every paragraph answers 'Why Dentistry' uniquely rather than a generic 'Why Healthcare.'",
+          "avoidList": [
+            "Suggesting dentistry is a backup plan to medicine",
+            "Emphasizing negative experiences or complaining about current healthcare systems; aim for a resilient, constructive tone",
+            "Focusing exclusively on cosmetic or aesthetic dentistry",
+            "Listing shadowing hours without reflecting on what you observed",
+            "Controversial religious or political statements",
+            "Being vague about why dentistry rather than another health profession",
+            "Summarizing your resume or repeating transcript information"
+          ]
+        },
+        "structure": {
+          "id": "structure_dentistry",
+          "introduction": "Open with a vivid, personal moment that sparked your interest in oral health. A strong image or sensory detail creates immediate engagement.",
+          "body": "Develop 2-3 themes that show your understanding of dentistry, your relevant skills, and your character. Each paragraph should reflect on what an experience taught you, not just describe it.",
+          "conclusion": "Connect your experiences to your future vision as a dentist. Explicitly articulate how you will contribute to the profession and the specific populations or communities you hope to serve to positively impact the field."
+        }
+      }
+    },
+    {
+      "id": "pharmacy",
+      "name": "Pharmacy",
+      "fieldDescription": "Guidance for PharmD personal statements through the PharmCAS application.",
+      "services": [
+        {
+          "id": "pharmcas",
+          "name": "PharmCAS",
+          "cyclePrompts": [
+            {
+              "id": "pharmcas_2026",
+              "cycle": "2026",
+              "promptText": "Write a personal essay that addresses why you selected pharmacy as a career and how the Doctor of Pharmacy degree relates to your immediate and long-term professional goals. Describe how your personal, educational, and professional background will help you achieve your goals.",
+              "characterLimit": 4500
+            }
+          ]
+        }
+      ],
+      "bestPractice": {
+        "id": "bp_pharmacy",
+        "overview": "Your pharmacy statement should explain why you are drawn to the pharmacist's unique role in healthcare — as the most accessible provider, as a medication expert, and as a patient advocate. Ground your motivation in real experiences and connect them clearly to your professional goals.",
+        "commonThemes": [
+          {
+            "id": "pharm_patient_centered",
+            "title": "Patient-Centered Care",
+            "themeDescription": "Pharmacists are among the most accessible healthcare providers. Show how interactions with pharmacists, or your own experiences helping patients understand medications, revealed this role's significance to you."
+          },
+          {
+            "id": "pharm_science_medications",
+            "title": "Science of Medications",
+            "themeDescription": "If pharmacology, drug interactions, or the chemistry behind therapeutics excites you, illustrate how that intellectual passion connects to improving patient outcomes."
+          },
+          {
+            "id": "pharm_community_advocacy",
+            "title": "Community Health Advocacy",
+            "themeDescription": "Pharmacists play a critical role in public health, from immunizations to medication access. If advocacy or community health work shaped your interest, describe the specific impact you witnessed or contributed to."
+          },
+          {
+            "id": "pharm_interdisciplinary",
+            "title": "Interdisciplinary Collaboration",
+            "themeDescription": "Pharmacy is inherently collaborative. Show how your experiences working across healthcare teams, or observing pharmacists on rounds, revealed the value of interdisciplinary care."
+          }
+        ],
+        "toneGuidelines": {
+          "id": "tone_pharmacy",
+          "recommendedTone": "Direct, thoughtful, and professional. Balance your personal story with clear articulation of how pharmacy specifically fits your goals.",
+          "avoidList": [
+            "Vague statements about wanting to help people without pharmacy-specific grounding",
+            "Starting paragraphs with variations of 'I want' or 'I am'. Focus the narrative on the experiences and what they taught you, rather than just yourself.",
+            "Focusing only on retail pharmacy without acknowledging the breadth of the profession",
+            "Tailoring your essay to a specific school (PharmCAS sends one statement to all programs)",
+            "Mentioning grades or standardized test scores",
+            "Claiming expertise you haven't yet earned"
+          ]
+        },
+        "structure": {
+          "id": "structure_pharmacy",
+          "introduction": "Open with a personal experience or moment that first connected you to pharmacy. This could be an interaction with a pharmacist, a family health experience, or a moment of scientific curiosity.",
+          "body": "Address the PharmCAS prompt directly: why pharmacy, how the PharmD degree relates to your goals, and how your background prepares you. Weave these together rather than treating them as separate sections.",
+          "conclusion": "Explicitly break down both your immediate goals (e.g., residency, finding a clinical focus) and your long-term goals (e.g., leadership, specialized practice, community advocacy) as requested by the PharmCAS prompt."
+        }
+      }
+    },
+    {
+      "id": "occupational_therapy",
+      "name": "Occupational Therapy",
+      "fieldDescription": "Guidance for OT/OTD personal statements through the OTCAS application.",
+      "services": [
+        {
+          "id": "otcas",
+          "name": "OTCAS",
+          "cyclePrompts": [
+            {
+              "id": "otcas_2026",
+              "cycle": "2026",
+              "promptText": "Please describe how your lived experiences (e.g., personal, professional, cultural, etc.) have influenced your interest in pursuing occupational therapy.",
+              "characterLimit": 7500
+            }
+          ]
+        }
+      ],
+      "bestPractice": {
+        "id": "bp_occupational_therapy",
+        "overview": "Your OT statement should demonstrate that you understand what occupational therapy is — helping people participate in the activities that give their lives meaning. Show how your experiences have given you insight into the profession's holistic, client-centered approach, and why OT specifically is your calling.",
+        "commonThemes": [
+          {
+            "id": "ot_meaningful_occupation",
+            "title": "Meaningful Occupation",
+            "themeDescription": "OT is grounded in the idea that people need to engage in meaningful activities to thrive. Show that you understand this philosophy through a story about witnessing someone regain function, independence, or purpose."
+          },
+          {
+            "id": "ot_holistic_care",
+            "title": "Holistic & Client-Centered Care",
+            "themeDescription": "OTs treat the whole person, not just a diagnosis. Illustrate your understanding of this approach through an experience where you saw how environment, relationships, or daily routines affected someone's wellbeing."
+          },
+          {
+            "id": "ot_creativity_problem_solving",
+            "title": "Creativity & Problem-Solving",
+            "themeDescription": "Occupational therapists design adaptive solutions for everyday challenges. If your creative thinking, resourcefulness, or hands-on problem-solving has been part of your journey, show how it connects to OT practice."
+          },
+          {
+            "id": "ot_diverse_settings",
+            "title": "Diverse Practice Settings",
+            "themeDescription": "OT spans pediatrics, geriatrics, mental health, rehabilitation, and beyond. If a particular setting drew you in, describe what you observed and why that population or context calls to you."
+          },
+          {
+            "id": "ot_personal_experience",
+            "title": "Personal Experience with OT",
+            "themeDescription": "Many strong applicants were first exposed to OT through personal or family experience. If this is your story, be honest about how it shaped your understanding of recovery, adaptation, or resilience."
+          }
+        ],
+        "toneGuidelines": {
+          "id": "tone_occupational_therapy",
+          "recommendedTone": "Warm, authentic, and purposeful. Let your personality show while demonstrating professionalism and readiness for graduate-level work. Ensure your experiences highlight the unique psychological and environmental aspects of OT (e.g., home adaptation, mental health), clearly distinguishing it from physical therapy.",
+          "avoidList": [
+            "Confusing OT with physical therapy or failing to distinguish between them",
+            "Writing an autobiography rather than a focused professional narrative",
+            "Focusing primarily on childhood experiences. Keep the core narrative focused on college and post-college maturity.",
+            "Listing volunteer or observation hours without reflecting on their meaning",
+            "Mentioning specific programs by name (OTCAS sends one essay to all)",
+            "Attempting humor in the statement",
+            "Talking down other healthcare professions to elevate OT"
+          ]
+        },
+        "structure": {
+          "id": "structure_occupational_therapy",
+          "introduction": "Open with a compelling personal story that connects you to the philosophy of occupation and meaningful activity. Draw the reader into a specific moment.",
+          "body": "Address why OT specifically, what experiences prepared you, and what qualities you bring. Use the language of occupational therapy (occupation, function, adaptation, client-centered) where natural. Show your understanding of the profession.",
+          "conclusion": "Share your professional goals and vision for how you will contribute to the OT field. Be specific about the populations, settings, or problems you hope to address."
+        }
+      }
+    },
+    {
+      "id": "physical_therapy",
+      "name": "Physical Therapy",
+      "fieldDescription": "Guidance for DPT personal statements through the PTCAS application.",
+      "services": [
+        {
+          "id": "ptcas",
+          "name": "PTCAS",
+          "cyclePrompts": [
+            {
+              "id": "ptcas_2026",
+              "cycle": "2026",
+              "promptText": "Every applicant is unique in their own way, possessing individual qualities, abilities, and backgrounds. What unique traits will you bring to the physical therapy profession that will help you to be successful?",
+              "characterLimit": 4500
+            }
+          ]
+        }
+      ],
+      "bestPractice": {
+        "id": "bp_physical_therapy",
+        "overview": "The PTCAS essay asks what makes you unique. Rather than listing qualifications, tell a story that reveals your character, resilience, and understanding of the PT profession. Show how your specific traits and experiences will make you not just a competent therapist, but one who brings something distinctive to patient care.",
+        "commonThemes": [
+          {
+            "id": "pt_movement_function",
+            "title": "Movement & Function",
+            "themeDescription": "Physical therapy is fundamentally about restoring movement and function. Share what drew you to this specific aspect of healthcare — perhaps through your own body's experience, an athletic background, or watching someone regain mobility."
+          },
+          {
+            "id": "pt_patient_advocacy",
+            "title": "Patient Advocacy & Empowerment",
+            "themeDescription": "PTs empower patients to take an active role in their recovery. If you've witnessed or participated in this kind of empowerment, describe the moment and what it revealed about the therapist-patient relationship."
+          },
+          {
+            "id": "pt_sports_injury",
+            "title": "Moving Beyond the Spark (Athletics or Injury)",
+            "themeDescription": "Many PT applicants are drawn to the field through a personal injury. It is crucial to transition quickly from what initially sparked your interest to the adult, professional experiences that confirmed your dedication to the field."
+          },
+          {
+            "id": "pt_unique_qualities",
+            "title": "Unique Qualities & Perspective",
+            "themeDescription": "The PTCAS prompt specifically asks about uniqueness. Reflect honestly on what sets you apart — cultural background, career change, unconventional path, specific skill sets — and how these make you a stronger future PT."
+          }
+        ],
+        "toneGuidelines": {
+          "id": "tone_physical_therapy",
+          "recommendedTone": "Confident but humble, personal and specific. Answer the prompt directly — what is unique about you — rather than writing a generic 'why PT' essay.",
+          "avoidList": [
+            "Generic statements about wanting to help people move better",
+            "Using clichés like 'I liked healing my stuffed animals as a child' or 'I just want to help people' without defining exactly how PT accomplishes that",
+            "Restating your resume or listing observation hours",
+            "Ignoring the prompt's specific focus on uniqueness",
+            "Using clichéd sports injury narratives without deeper reflection",
+            "Mentioning GPA or GRE scores"
+          ]
+        },
+        "structure": {
+          "id": "structure_physical_therapy",
+          "introduction": "Open with a specific moment that crystallizes what makes you unique and connects it to physical therapy. This sets the frame for everything that follows.",
+          "body": "Develop your unique qualities with concrete examples and honest reflection. Each example should demonstrate both the trait and why it matters for PT practice. Stay focused on the prompt.",
+          "conclusion": "Tie your unique qualities to your vision for how you will contribute to the PT profession. Show that you understand what the field needs and why you are the right fit."
+        }
+      }
+    },
+    {
+      "id": "physician_assistant",
+      "name": "Physician Assistant",
+      "fieldDescription": "Guidance for PA personal statements through the CASPA application.",
+      "services": [
+        {
+          "id": "caspa",
+          "name": "CASPA",
+          "cyclePrompts": [
+            {
+              "id": "caspa_2026",
+              "cycle": "2026",
+              "promptText": "In the space provided, write a brief statement expressing your motivation or desire to become a physician assistant.",
+              "characterLimit": 5000
+            }
+          ]
+        }
+      ],
+      "bestPractice": {
+        "id": "bp_physician_assistant",
+        "overview": "Your PA statement has 5,000 characters to explain why you want to be a PA specifically — not a doctor, not a nurse, a physician assistant. Committees want to see that you understand the PA model of team-based, flexible, patient-centered care and that your experiences have confirmed this is the right role for you.",
+        "commonThemes": [
+          {
+            "id": "pa_team_based",
+            "title": "Team-Based Medicine",
+            "themeDescription": "The PA model is built on collaboration with supervising physicians and healthcare teams. Show that you are drawn to this collaborative approach, not defaulting to it as an easier path than medical school."
+          },
+          {
+            "id": "pa_versatility",
+            "title": "Versatility & Scope",
+            "themeDescription": "PAs can switch specialties and work across diverse settings. If this flexibility appeals to you, ground it in specific clinical experiences where you saw the value of breadth."
+          },
+          {
+            "id": "pa_direct_impact",
+            "title": "Direct Patient Impact",
+            "themeDescription": "Your clinical hours and patient care experiences are central to your narrative. Describe specific moments with patients that confirmed your desire to provide hands-on care as a PA."
+          },
+          {
+            "id": "pa_service_access",
+            "title": "Service & Access",
+            "themeDescription": "PAs play a critical role in expanding healthcare access, especially in underserved and rural communities. If service drives your motivation, show how your experiences brought you to this understanding."
+          }
+        ],
+        "toneGuidelines": {
+          "id": "tone_physician_assistant",
+          "recommendedTone": "Concise, warm, and clinically grounded. With only 5,000 characters, every sentence must serve a purpose. Let your patient care experiences speak for themselves.",
+          "avoidList": [
+            "Explaining why you chose PA over medical school in a way that diminishes either profession",
+            "Focusing on lifestyle advantages (shorter training, work-life balance) as primary motivation. Your primary reasons for wanting to be a PA should center on patient care.",
+            "Listing clinical hours without reflection on what they taught you",
+            "Criticizing other healthcare professions or spending space explaining why you *don't* want to be an MD/DO or NP. Keep the focus entirely positive and on the PA role.",
+            "Using the full 5,000 characters if the story is complete sooner",
+            "Vague statements about wanting to 'give back' without specific context"
+          ]
+        },
+        "structure": {
+          "id": "structure_physician_assistant",
+          "introduction": "Open with a vivid clinical moment or personal experience that planted the seed for your interest in the PA profession. Specificity creates credibility.",
+          "body": "Thread together your clinical experiences, your understanding of the PA role, and your personal qualities. Address why PA specifically — not just healthcare in general. Be efficient with your characters.",
+          "conclusion": "Articulate your vision for your career as a PA. What populations will you serve? What kind of team member will you be? Leave the committee with a clear image of you in the role."
+        }
+      }
+    },
+    {
+      "id": "veterinary_medicine",
+      "name": "Veterinary Medicine",
+      "fieldDescription": "Guidance for DVM personal statements through the VMCAS application.",
+      "services": [
+        {
+          "id": "vmcas",
+          "name": "VMCAS",
+          "cyclePrompts": [
+            {
+              "id": "vmcas_2026",
+              "cycle": "2026",
+              "promptText": "Based on your current understanding of careers in veterinary medicine, how do you aspire to contribute to the veterinary profession? Additionally, what qualities and perspectives do you have that will help you succeed as a veterinary student?",
+              "characterLimit": 3000
+            }
+          ]
+        }
+      ],
+      "bestPractice": {
+        "id": "bp_veterinary_medicine",
+        "overview": "Your VMCAS statement must be exceptionally concise at 3,000 characters. Answer the prompt directly: how will you contribute to the profession, and what qualities will help you succeed as a student? Every sentence must earn its place. Ground your claims in real experience with animals and veterinary practice.",
+        "commonThemes": [
+          {
+            "id": "vet_animal_welfare",
+            "title": "Animal Welfare & Advocacy",
+            "themeDescription": "Show your deep commitment to animal health and wellbeing through specific experiences — working with animals in clinical, farm, shelter, or research settings. Avoid sentimentality; focus on what you learned."
+          },
+          {
+            "id": "vet_one_health",
+            "title": "One Health Perspective",
+            "themeDescription": "Veterinary medicine increasingly recognizes the connection between animal, human, and environmental health. If this broader perspective shapes your interest, describe a moment that illuminated this interconnection."
+          },
+          {
+            "id": "vet_research_clinical",
+            "title": "Research, Science & Public Health",
+            "themeDescription": "If research or clinical experiences deepened your understanding of veterinary medicine, share what you discovered. Admissions value an understanding that veterinary medicine extends into public health, zoonotic diseases, and the broader 'One Health' concept."
+          },
+          {
+            "id": "vet_community_service",
+            "title": "Rural or Community Service",
+            "themeDescription": "Many veterinarians serve rural or agricultural communities where animal health is inseparable from livelihoods. If community service or rural experience drives you, describe its impact on your sense of purpose."
+          }
+        ],
+        "toneGuidelines": {
+          "id": "tone_veterinary_medicine",
+          "recommendedTone": "Genuine, focused, and efficient. With only 3,000 characters, there is no room for filler. Be specific and let your experiences demonstrate your commitment.",
+          "avoidList": [
+            "Relying on the 'I've always known I wanted to be a vet since I was 5' narrative. Committees look for a mature, reflective decision-making process in adulthood, not just a childhood realization.",
+            "Starting with 'I have always loved animals' or similar generic openings",
+            "Writing more than 4-6 short paragraphs (the space won't allow it)",
+            "Focusing only on companion animals if your interests are broader",
+            "Listing animal experience without reflecting on what it taught you",
+            "Using formatting (bold, italics, tabs) that VMCAS doesn't support"
+          ]
+        },
+        "structure": {
+          "id": "structure_veterinary_medicine",
+          "introduction": "Open with a specific animal encounter or moment in veterinary practice that crystallized your calling. At 3,000 characters, your opening must be precise.",
+          "body": "In 2-3 tight paragraphs, answer the prompt: what will you contribute to the profession, and what qualities prepare you to succeed? Use concrete examples, not abstract claims.",
+          "conclusion": "Close with a clear, forward-looking statement about your veterinary aspirations. In a short essay, your conclusion should be 1-2 sentences that leave a lasting impression."
+        }
+      }
+    },
+    {
+      "id": "optometry",
+      "name": "Optometry",
+      "fieldDescription": "Guidance for OD personal statements through the OptomCAS application.",
+      "services": [
+        {
+          "id": "optomcas",
+          "name": "OptomCAS",
+          "cyclePrompts": [
+            {
+              "id": "optomcas_2026",
+              "cycle": "2026",
+              "promptText": "Please describe what inspires your decision for becoming an optometrist, including your preparation for training in this profession, your aptitude and motivation, the basis for your interest in optometry, and your future career goals.",
+              "characterLimit": 4500
+            }
+          ]
+        }
+      ],
+      "bestPractice": {
+        "id": "bp_optometry",
+        "overview": "Your optometry statement should address each element of the OptomCAS prompt: what inspires you, your preparation, your aptitude, and your goals. Show that you understand optometry's unique position as a primary care profession focused on vision and quality of life.",
+        "commonThemes": [
+          {
+            "id": "opt_vision_quality",
+            "title": "Vision & Quality of Life",
+            "themeDescription": "Vision profoundly affects daily life, learning, and independence. Show how you came to understand this — perhaps through personal experience, an eye exam that changed someone's life, or observing patients receive corrective care."
+          },
+          {
+            "id": "opt_patient_education",
+            "title": "Patient Education & Prevention",
+            "themeDescription": "Optometrists build long-term relationships through regular exams and preventive care. If the continuity and educational aspects of the profession appeal to you, ground that interest in a specific interaction."
+          },
+          {
+            "id": "opt_technology_innovation",
+            "title": "Technology & Innovation",
+            "themeDescription": "Optometry is rapidly evolving with diagnostic imaging, specialty lenses, and digital eye health tools. If technology and innovation excite you, connect that interest to patient outcomes."
+          },
+          {
+            "id": "opt_community_eye_health",
+            "title": "Community Eye Health",
+            "themeDescription": "Vision disparities affect underserved communities worldwide. If you have volunteered at vision screenings, worked with underserved populations, or been moved by access issues, share that story."
+          }
+        ],
+        "toneGuidelines": {
+          "id": "tone_optometry",
+          "recommendedTone": "Enthusiastic, specific, and forward-looking. Demonstrate genuine passion for eye care and a clear understanding of what optometrists do day to day.",
+          "avoidList": [
+            "Confusing optometry with ophthalmology without understanding the distinction",
+            "Focusing only on glasses and contacts without acknowledging the breadth of the profession",
+            "Generic motivations that could apply to any healthcare field",
+            "Failing to address all parts of the OptomCAS prompt",
+            "Listing extracurriculars without connecting them to your optometry aspirations"
+          ]
+        },
+        "structure": {
+          "id": "structure_optometry",
+          "introduction": "Open with the moment that drew you to optometry. If your interest was sparked by getting your first pair of glasses, keep that anecdote brief. Transition quickly to the shadowing and clinical experiences that matured that initial interest into a career choice.",
+          "body": "Address each component the prompt asks for: your inspiration, preparation, aptitude, and motivation. Connect your experiences to your understanding of the profession rather than listing them.",
+          "conclusion": "Share your future career goals clearly. Whether you see yourself in private practice, specialty care, global health, or research, show that you have thought about where optometry will take you."
+        }
+      }
+    },
+    {
+      "id": "law",
+      "name": "Law",
+      "fieldDescription": "Guidance for JD personal statements submitted through LSAC and individual law school applications.",
+      "services": [
+        {
+          "id": "lsac",
+          "name": "LSAC",
+          "cyclePrompts": [
+            {
+              "id": "lsac_2026",
+              "cycle": "2026",
+              "promptText": "Most law schools allow an open-ended personal statement. Write about something personal, relevant, and completely individual to you. Requirements vary by school — typically 2 pages double-spaced, though some schools specify up to 4 pages.",
+              "characterLimit": 10000
+            }
+          ]
+        }
+      ],
+      "bestPractice": {
+        "id": "bp_law",
+        "overview": "Your law school personal statement is the most open-ended of all professional school essays. Most schools give no specific prompt — they want to hear your story in your voice. The strongest statements reveal how you think, what drives you, and why law is the right vehicle for your ambitions, all through a personal narrative rather than an argument.",
+        "commonThemes": [
+          {
+            "id": "law_justice_advocacy",
+            "title": "Justice & Advocacy",
+            "themeDescription": "If a commitment to fairness, equity, or advocacy drives you toward law, ground that commitment in a specific experience. Abstract ideals are less compelling than a concrete moment that stirred your sense of justice."
+          },
+          {
+            "id": "law_analytical_reasoning",
+            "title": "Analytical Reasoning & Argument",
+            "themeDescription": "Law schools value clear, rigorous thinking. If your intellectual style naturally gravitates toward analysis, debate, or problem-solving, show how that way of thinking has played out in your life."
+          },
+          {
+            "id": "law_personal_experience",
+            "title": "Personal Experience with the Law",
+            "themeDescription": "Some applicants are drawn to law through direct encounters — family legal issues, immigration, civil rights, or witnessing the legal system at work. If this is your story, be honest and specific."
+          },
+          {
+            "id": "law_public_service",
+            "title": "Public Service & Policy",
+            "themeDescription": "If you see law as a tool for shaping systems and institutions, describe how your public service, policy work, or community involvement led you to this understanding."
+          }
+        ],
+        "toneGuidelines": {
+          "id": "tone_law",
+          "recommendedTone": "Narrative, introspective, and precise. Write a personal story, not a legal brief. Demonstrate your writing ability through clarity, structure, and voice.",
+          "avoidList": [
+            "Writing a legal argument or analysis instead of a personal narrative",
+            "Discussing LSAT scores or undergraduate GPA",
+            "Using overly formal or legalistic language that obscures your voice",
+            "Generic statements about wanting to 'make a difference' or 'fight for justice'",
+            "Tailoring to one school if submitting the same essay to multiple (check each school's requirements)"
+          ]
+        },
+        "structure": {
+          "id": "structure_law",
+          "introduction": "Open with a compelling personal moment that reveals something essential about you. Law school essays are personal narratives first — the legal connection can be subtle or explicit.",
+          "body": "Develop your story with reflection and specificity. Show how your experiences shaped your thinking, your values, or your understanding of systems and people. The reader should finish knowing who you are, not just what you've done.",
+          "conclusion": "Bring your narrative to a close with a sense of forward motion. You don't need to declare your legal specialty — just leave the reader convinced that law school is a natural next step for the person they've just met. Some law schools encourage or expect you to tailor the conclusion: consider adding a few sentences addressing 'Why this specific law school' if the application allows."
+        }
+      }
+    },
+    {
+      "id": "residency",
+      "name": "Medical/Dental Residency",
+      "fieldDescription": "Guidance for residency personal statements submitted through ERAS and similar match systems.",
+      "services": [
+        {
+          "id": "eras",
+          "name": "ERAS",
+          "cyclePrompts": [
+            {
+              "id": "eras_2026",
+              "cycle": "2026",
+              "promptText": "Personal statement for residency application. Explain your motivation for your chosen specialty and what experiences have prepared you for this career. The system allows up to 28,000 characters, but one page (approximately 4,000-5,300 characters) is the standard and recommended length.",
+              "characterLimit": 5300
+            }
+          ]
+        }
+      ],
+      "bestPractice": {
+        "id": "bp_residency",
+        "overview": "Your residency statement is a professional document written from a position of clinical experience. Unlike your medical school essay, the focus here is specialty-specific. Treat this statement as a pre-interview: if there are red flags or gaps in your academic history, address them constructively and explicitly show what you learned from them. Keep it to one page.",
+        "commonThemes": [
+          {
+            "id": "res_specialty_fit",
+            "title": "Clinical Passion & Specialty Fit",
+            "themeDescription": "Program directors want to understand why this specialty, specifically. Describe the clinical experiences, patient encounters, or rotations that confirmed your choice. Be concrete and honest about the moment of clarity."
+          },
+          {
+            "id": "res_research",
+            "title": "Research Contributions",
+            "themeDescription": "If research played a role in your specialty choice, describe your scholarly work and how it informs your clinical perspective. Connect the lab to the bedside."
+          },
+          {
+            "id": "res_patient_stories",
+            "title": "Defining Patient Encounters",
+            "themeDescription": "The most compelling residency statements include a specific patient story that crystallized the applicant's commitment. Share the encounter and what it taught you about this field."
+          },
+          {
+            "id": "res_professional_identity",
+            "title": "Professional Identity & Growth",
+            "themeDescription": "Residency programs want to see growth from student to physician. Reflect on how medical school transformed your understanding of yourself, your values, and your approach to care."
+          },
+          {
+            "id": "res_future_vision",
+            "title": "Future Vision & Contribution",
+            "themeDescription": "Close with how you envision contributing to the field — through clinical practice, education, research, advocacy, or a combination. Show that you have thought beyond training."
+          },
+          {
+            "id": "res_img_focus",
+            "title": "The IMG Experience",
+            "themeDescription": "For IMGs: Highlight your international experience, adaptability to different healthcare systems, and how your background contributes to a diverse perspective on patient care."
+          }
+        ],
+        "toneGuidelines": {
+          "id": "tone_residency",
+          "recommendedTone": "Professional, reflective, and specialty-specific. This is a more focused, mature document than your medical school essay. Write with clinical confidence while maintaining genuine warmth.",
+          "avoidList": [
+            "Rehashing your medical school personal statement",
+            "Using the full 28,000-character system limit — one page is standard",
+            "Listing every rotation without focusing on what mattered most",
+            "Making claims about a specialty that demonstrate superficial understanding",
+            "Failing to explain why this specialty over others you considered"
+          ]
+        },
+        "structure": {
+          "id": "structure_residency",
+          "introduction": "Open with a specific clinical moment, patient encounter, or experience that crystallized your commitment to this specialty. Avoid generic medical school reflection.",
+          "body": "In 2-3 focused paragraphs, develop your narrative: how clinical rotations, research, or mentorship confirmed your specialty choice. Each paragraph should build toward a picture of the physician you are becoming.",
+          "conclusion": "Articulate your vision for your career in this specialty. What will you contribute as a resident and beyond? This is your chance to show program directors that you have thought about the long arc of your career."
+        }
+      }
+    },
+    {
+      "id": "general",
+      "name": "General",
+      "fieldDescription": "Broad personal statement guidance for applicants exploring professional directions or applying to programs without a centralized application service.",
+      "services": [],
+      "bestPractice": {
+        "id": "bp_general",
+        "overview": "Whether you are still exploring professional directions or applying to a program without a centralized service, the fundamentals of a strong personal statement are the same: tell a genuine story about who you are, what drives you, and how your experiences have prepared you for the path ahead. Be specific, be honest, and let your voice come through.",
+        "commonThemes": [
+          {
+            "id": "gen_personal_mission",
+            "title": "Personal Mission",
+            "themeDescription": "What drives you professionally and personally? The most compelling statements reveal a clear sense of purpose, even if the specific career path is still taking shape."
+          },
+          {
+            "id": "gen_formative_experiences",
+            "title": "Formative Experiences",
+            "themeDescription": "Describe the experiences — academic, professional, personal, or service-based — that shaped your direction. Focus on a few key moments rather than trying to cover everything."
+          },
+          {
+            "id": "gen_values_service",
+            "title": "Values & Service",
+            "themeDescription": "Your commitment to serving others, your community, or a cause larger than yourself can be a powerful through-line. Ground your values in real experience, not abstract statements."
+          },
+          {
+            "id": "gen_growth_awareness",
+            "title": "Growth & Self-Awareness",
+            "themeDescription": "Admissions committees across all fields value self-awareness. Show how challenges, mistakes, or pivots in your journey have developed your character and strengthened your resolve."
+          },
+          {
+            "id": "gen_future_contribution",
+            "title": "Future Contribution",
+            "themeDescription": "What do you hope to bring to your chosen field? Even if you are still clarifying your direction, articulate the qualities, skills, and perspectives you will contribute."
+          }
+        ],
+        "toneGuidelines": {
+          "id": "tone_general",
+          "recommendedTone": "Authentic, reflective, and clear. Write as yourself — not as who you think the reader wants you to be. Genuine voice is more persuasive than polished performance.",
+          "avoidList": [
+            "Trying to sound like someone you're not",
+            "Listing activities and achievements without reflection",
+            "Opening with dictionary definitions or famous quotes",
+            "Being vague about your goals when you do have clarity",
+            "Exceeding the stated length or character limit"
+          ]
+        },
+        "structure": {
+          "id": "structure_general",
+          "introduction": "Open with a specific moment, experience, or realization that connects to your professional aspirations. Concrete openings are always stronger than abstract ones.",
+          "body": "Develop your narrative through 2-4 meaningful experiences with honest reflection. Show how each experience shaped your thinking or confirmed your direction. Connect your background to your goals.",
+          "conclusion": "Close with a clear statement of what you hope to accomplish and what you will bring to the program or profession. Leave the reader with a sense of who you are and where you are headed."
+        }
+      }
+    }
+  ]
+}

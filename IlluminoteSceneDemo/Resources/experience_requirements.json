@@ -1,0 +1,192 @@
+[
+  {
+    "id": "amcas_experiences_2026",
+    "service_code": "amcas",
+    "title": "AMCAS Work and Activities",
+    "max_experiences": 15,
+    "max_highlights": 3,
+    "highlight_label": "Most Meaningful",
+    "requires_total_hours": true,
+    "requires_average_weekly_hours": false,
+    "requires_contact_details": false,
+    "requires_contact_permission": false,
+    "supports_repeated_date_ranges": true,
+    "supports_current_planned_split": false,
+    "description_character_limit": 700,
+    "guidance_notes": [
+      "Track total completed hours and separate planned work thoughtfully.",
+      "Use reflection to inform the description, but keep the entry itself concise and factual."
+    ]
+  },
+  {
+    "id": "aacomas_experiences_2026",
+    "service_code": "aacomas",
+    "title": "AACOMAS Experiences",
+    "max_experiences": null,
+    "max_highlights": 3,
+    "highlight_label": "Most Meaningful",
+    "requires_total_hours": true,
+    "requires_average_weekly_hours": false,
+    "requires_contact_details": false,
+    "requires_contact_permission": false,
+    "supports_repeated_date_ranges": true,
+    "supports_current_planned_split": false,
+    "description_character_limit": 600,
+    "guidance_notes": [
+      "Keep osteopathic and service-oriented experiences easy to identify.",
+      "Avoid double counting the same hours across multiple entries."
+    ]
+  },
+  {
+    "id": "tmdsas_experiences_2026",
+    "service_code": "tmdsas",
+    "title": "TMDSAS Activities",
+    "max_experiences": null,
+    "max_highlights": 3,
+    "highlight_label": "Most Meaningful",
+    "requires_total_hours": true,
+    "requires_average_weekly_hours": false,
+    "requires_contact_details": false,
+    "requires_contact_permission": false,
+    "supports_repeated_date_ranges": false,
+    "supports_current_planned_split": true,
+    "description_character_limit": 300,
+    "guidance_notes": [
+      "Separate completed work from planned work when an activity continues into the cycle year.",
+      "Use concise descriptions and save deeper reflection for essays and interview prep."
+    ]
+  },
+  {
+    "id": "aadsas_experiences_2026",
+    "service_code": "aadsas",
+    "title": "ADEA AADSAS Experiences",
+    "max_experiences": null,
+    "max_highlights": 6,
+    "highlight_label": "Most Important",
+    "requires_total_hours": true,
+    "requires_average_weekly_hours": true,
+    "requires_contact_details": true,
+    "requires_contact_permission": true,
+    "supports_repeated_date_ranges": false,
+    "supports_current_planned_split": false,
+    "description_character_limit": 600,
+    "guidance_notes": [
+      "Be explicit about manual dexterity, service, and dental exposure where relevant.",
+      "Keep organization, supervisor, and average weekly hours ready before data entry."
+    ]
+  },
+  {
+    "id": "caspa_experiences_2026",
+    "service_code": "caspa",
+    "title": "CASPA Experiences",
+    "max_experiences": null,
+    "max_highlights": null,
+    "highlight_label": null,
+    "requires_total_hours": true,
+    "requires_average_weekly_hours": true,
+    "requires_contact_details": true,
+    "requires_contact_permission": true,
+    "supports_repeated_date_ranges": false,
+    "supports_current_planned_split": false,
+    "description_character_limit": 600,
+    "guidance_notes": [
+      "Differentiate patient care, healthcare experience, and shadowing cleanly.",
+      "Do not reuse the same hours in multiple CASPA categories."
+    ]
+  },
+  {
+    "id": "pharmcas_experiences_2026",
+    "service_code": "pharmcas",
+    "title": "PharmCAS Experiences",
+    "max_experiences": null,
+    "max_highlights": null,
+    "highlight_label": null,
+    "requires_total_hours": true,
+    "requires_average_weekly_hours": true,
+    "requires_contact_details": true,
+    "requires_contact_permission": true,
+    "supports_repeated_date_ranges": false,
+    "supports_current_planned_split": false,
+    "description_character_limit": 600,
+    "guidance_notes": [
+      "Keep pharmacy work, service, and leadership easy to separate.",
+      "Capture supervisor and organization details while they are still easy to verify."
+    ]
+  },
+  {
+    "id": "otcas_experiences_2026",
+    "service_code": "otcas",
+    "title": "OTCAS Experiences",
+    "max_experiences": null,
+    "max_highlights": null,
+    "highlight_label": null,
+    "requires_total_hours": true,
+    "requires_average_weekly_hours": true,
+    "requires_contact_details": true,
+    "requires_contact_permission": true,
+    "supports_repeated_date_ranges": false,
+    "supports_current_planned_split": false,
+    "description_character_limit": 600,
+    "guidance_notes": [
+      "Observation and service experiences matter; keep settings and supervisors organized.",
+      "Track weekly cadence so later entry is faster and more accurate."
+    ]
+  },
+  {
+    "id": "ptcas_experiences_2026",
+    "service_code": "ptcas",
+    "title": "PTCAS Experiences",
+    "max_experiences": null,
+    "max_highlights": null,
+    "highlight_label": null,
+    "requires_total_hours": true,
+    "requires_average_weekly_hours": true,
+    "requires_contact_details": true,
+    "requires_contact_permission": true,
+    "supports_repeated_date_ranges": false,
+    "supports_current_planned_split": false,
+    "description_character_limit": 600,
+    "guidance_notes": [
+      "Separate observation, employment, and volunteer roles clearly.",
+      "Keep location and supervisor information ready for verification."
+    ]
+  },
+  {
+    "id": "vmcas_experiences_2026",
+    "service_code": "vmcas",
+    "title": "VMCAS Experiences",
+    "max_experiences": null,
+    "max_highlights": null,
+    "highlight_label": null,
+    "requires_total_hours": true,
+    "requires_average_weekly_hours": true,
+    "requires_contact_details": true,
+    "requires_contact_permission": true,
+    "supports_repeated_date_ranges": false,
+    "supports_current_planned_split": false,
+    "description_character_limit": 600,
+    "guidance_notes": [
+      "Animal and veterinary experience should be easy to distinguish.",
+      "Capture exact hours and setting details early so you can verify them later."
+    ]
+  },
+  {
+    "id": "optomcas_experiences_2026",
+    "service_code": "optomcas",
+    "title": "OptomCAS Experiences",
+    "max_experiences": null,
+    "max_highlights": null,
+    "highlight_label": null,
+    "requires_total_hours": true,
+    "requires_average_weekly_hours": true,
+    "requires_contact_details": true,
+    "requires_contact_permission": true,
+    "supports_repeated_date_ranges": false,
+    "supports_current_planned_split": false,
+    "description_character_limit": 600,
+    "guidance_notes": [
+      "Track shadowing, employment, and service in distinct entries.",
+      "Maintain supervisor and organization details for later verification."
+    ]
+  }
+]

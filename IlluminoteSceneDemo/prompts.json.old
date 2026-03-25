@@ -1,0 +1,390 @@
+{
+  "prompts": [
+    {
+      "id": "e44d3d8e-9941-4712-a8c9-3a05be46a001",
+      "stage": "gratitude",
+      "text": "What is one small moment today that brought you life?",
+      "depth": "standard",
+      "experienceTypes": [],
+      "professionTags": [],
+      "intent": "descriptive",
+      "stepIndex": 0
+    },
+    {
+      "id": "e44d3d8e-9941-4712-a8c9-3a05be46a002",
+      "stage": "awareness",
+      "text": "Where did you feel a sense of flow or connection?",
+      "depth": "standard",
+      "experienceTypes": [],
+      "professionTags": [],
+      "intent": "emotional",
+      "stepIndex": 1
+    },
+    {
+      "id": "e44d3d8e-9941-4712-a8c9-3a05be46a003",
+      "stage": "reflection",
+      "text": "What felt draining or challenging?",
+      "depth": "standard",
+      "experienceTypes": [],
+      "professionTags": [],
+      "intent": "emotional",
+      "stepIndex": 2
+    },
+    {
+      "id": "e44d3d8e-9941-4712-a8c9-3a05be46a004",
+      "stage": "integration",
+      "text": "How do you want to show up tomorrow?",
+      "depth": "standard",
+      "experienceTypes": [],
+      "professionTags": [],
+      "intent": "motivational",
+      "stepIndex": 3
+    },
+    {
+      "id": "d10e5a95-3b1a-4f5c-9c7d-8e4b2a1f0001",
+      "stage": "awareness",
+      "text": "Describe a moment when you felt truly useful today.",
+      "depth": "deep",
+      "experienceTypes": [
+        "clinical",
+        "volunteer"
+      ],
+      "professionTags": [
+        "preMedicine",
+        "prePhysicianAssistant",
+        "preNursing"
+      ],
+      "intent": "professional_realism",
+      "stepIndex": 1
+    },
+    {
+      "id": "d10e5a95-3b1a-4f5c-9c7d-8e4b2a1f0002",
+      "stage": "awareness",
+      "text": "When did you feel out of your depth or uncertain?",
+      "depth": "deep",
+      "experienceTypes": [
+        "clinical",
+        "shadowing"
+      ],
+      "professionTags": [
+        "preMedicine"
+      ],
+      "intent": "professional_realism",
+      "stepIndex": 1
+    },
+    {
+      "id": "d10e5a95-3b1a-4f5c-9c7d-8e4b2a1f0003",
+      "stage": "reflection",
+      "text": "Did you see an interaction that made you question the system?",
+      "depth": "deep",
+      "experienceTypes": [
+        "clinical",
+        "work"
+      ],
+      "professionTags": [
+        "preMedicine",
+        "social_work"
+      ],
+      "intent": "professional_realism",
+      "stepIndex": 2
+    },
+    {
+      "id": "d10e5a95-3b1a-4f5c-9c7d-8e4b2a1f0004",
+      "stage": "reflection",
+      "text": "How did your body feel during that difficult moment?",
+      "depth": "deep",
+      "experienceTypes": [],
+      "professionTags": [],
+      "intent": "emotional",
+      "stepIndex": 2
+    },
+    {
+      "id": "b6d04a3a-b8a5-45df-bfe6-2d98aad10184",
+      "phase": 1,
+      "text": "Describe a moment where you found yourself fully present.",
+      "stepIndex": 1,
+      "stage": "presence",
+      "depth": "standard",
+      "experienceTypes": [
+        "shadowing"
+      ],
+      "professionTags": [
+        "preMedicine"
+      ],
+      "tags": [
+        "presence"
+      ],
+      "intent": null
+    },
+    {
+      "id": "2f9d6cc7-bf26-4ffa-9081-fddd012194c4",
+      "phase": 1,
+      "text": "Describe a moment where you found yourself fully present.",
+      "stepIndex": 1,
+      "stage": "presence",
+      "depth": "standard",
+      "experienceTypes": [
+        "shadowing"
+      ],
+      "professionTags": [
+        "preMedicine"
+      ],
+      "tags": [
+        "presence"
+      ],
+      "intent": null
+    },
+    {
+      "id": "9208f544-cbd0-4f4e-a2d9-e20a629126d8",
+      "phase": 1,
+      "text": "Describe a moment where you found yourself fully present.",
+      "stepIndex": 1,
+      "stage": "presence",
+      "depth": "standard",
+      "experienceTypes": [
+        "shadowing"
+      ],
+      "professionTags": [
+        "preMedicine"
+      ],
+      "tags": [
+        "presence"
+      ],
+      "intent": null
+    },
+    {
+      "id": "d5d09a90-5091-4b2c-b83c-6da578438d2b",
+      "phase": 1,
+      "text": "Describe a moment where you found yourself fully present.",
+      "stepIndex": 1,
+      "stage": "presence",
+      "depth": "standard",
+      "experienceTypes": [
+        "shadowing"
+      ],
+      "professionTags": [
+        "preMedicine"
+      ],
+      "tags": [
+        "presence"
+      ],
+      "intent": null
+    },
+    {
+      "id": "39ccdac9-2ea7-4f4e-b265-63797ed0470b",
+      "phase": 2,
+      "text": "What challenged you most emotionally or intellectually?",
+      "stepIndex": 2,
+      "stage": "disquiet",
+      "depth": "standard",
+      "experienceTypes": [
+        "shadowing"
+      ],
+      "professionTags": [
+        "preMedicine"
+      ],
+      "tags": [
+        "disquiet"
+      ],
+      "intent": null
+    },
+    {
+      "id": "3e21b555-e2ae-44b4-b89e-c101a7f38d90",
+      "phase": 2,
+      "text": "What challenged you most emotionally or intellectually?",
+      "stepIndex": 2,
+      "stage": "disquiet",
+      "depth": "standard",
+      "experienceTypes": [
+        "shadowing"
+      ],
+      "professionTags": [
+        "preMedicine"
+      ],
+      "tags": [
+        "disquiet"
+      ],
+      "intent": null
+    },
+    {
+      "id": "eb14d49f-085a-4df2-b25c-29e5660bea20",
+      "phase": 2,
+      "text": "What challenged you most emotionally or intellectually?",
+      "stepIndex": 2,
+      "stage": "disquiet",
+      "depth": "standard",
+      "experienceTypes": [
+        "shadowing"
+      ],
+      "professionTags": [
+        "preMedicine"
+      ],
+      "tags": [
+        "disquiet"
+      ],
+      "intent": null
+    },
+    {
+      "id": "0dc4bf51-ea62-48e4-8725-4db7b64bc052",
+      "phase": 2,
+      "text": "What challenged you most emotionally or intellectually?",
+      "stepIndex": 2,
+      "stage": "disquiet",
+      "depth": "standard",
+      "experienceTypes": [
+        "shadowing"
+      ],
+      "professionTags": [
+        "preMedicine"
+      ],
+      "tags": [
+        "disquiet"
+      ],
+      "intent": null
+    },
+    {
+      "id": "14d4a5d0-dcdd-4288-8a69-221baa222ff3",
+      "phase": 3,
+      "text": "Reflect further on reflection.",
+      "stepIndex": 3,
+      "stage": "reflection",
+      "depth": "standard",
+      "experienceTypes": [
+        "shadowing"
+      ],
+      "professionTags": [
+        "preMedicine"
+      ],
+      "tags": [
+        "reflection"
+      ],
+      "intent": null
+    },
+    {
+      "id": "4e175f36-8fdc-45ba-b6b6-5ecbdd4bde57",
+      "phase": 3,
+      "text": "Reflect further on reflection.",
+      "stepIndex": 3,
+      "stage": "reflection",
+      "depth": "standard",
+      "experienceTypes": [
+        "shadowing"
+      ],
+      "professionTags": [
+        "preMedicine"
+      ],
+      "tags": [
+        "reflection"
+      ],
+      "intent": null
+    },
+    {
+      "id": "77597d1b-d452-47ae-973d-ea2321a4b1df",
+      "phase": 3,
+      "text": "Reflect further on reflection.",
+      "stepIndex": 3,
+      "stage": "reflection",
+      "depth": "standard",
+      "experienceTypes": [
+        "shadowing"
+      ],
+      "professionTags": [
+        "preMedicine"
+      ],
+      "tags": [
+        "reflection"
+      ],
+      "intent": null
+    },
+    {
+      "id": "cee5363a-b8dc-4cc4-b163-26f2e488f9dd",
+      "phase": 3,
+      "text": "Reflect further on reflection.",
+      "stepIndex": 3,
+      "stage": "reflection",
+      "depth": "standard",
+      "experienceTypes": [
+        "shadowing"
+      ],
+      "professionTags": [
+        "preMedicine"
+      ],
+      "tags": [
+        "reflection"
+      ],
+      "intent": null
+    },
+    {
+      "id": "c13bb2aa-aee0-4b85-814e-2b8966a0f617",
+      "phase": 4,
+      "text": "What intention do you want to carry forward from this experience?",
+      "stepIndex": 4,
+      "stage": "commitment",
+      "depth": "standard",
+      "experienceTypes": [
+        "shadowing"
+      ],
+      "professionTags": [
+        "preMedicine"
+      ],
+      "tags": [
+        "commitment"
+      ],
+      "intent": null
+    },
+    {
+      "id": "ffd0f835-c991-4db7-bb90-9f51bf591a3e",
+      "phase": 4,
+      "text": "What intention do you want to carry forward from this experience?",
+      "stepIndex": 4,
+      "stage": "commitment",
+      "depth": "standard",
+      "experienceTypes": [
+        "shadowing"
+      ],
+      "professionTags": [
+        "preMedicine"
+      ],
+      "tags": [
+        "commitment"
+      ],
+      "intent": null
+    },
+    {
+      "id": "6fadff7c-018d-40b3-baca-99aca11767e7",
+      "phase": 4,
+      "text": "What intention do you want to carry forward from this experience?",
+      "stepIndex": 4,
+      "stage": "commitment",
+      "depth": "standard",
+      "experienceTypes": [
+        "shadowing"
+      ],
+      "professionTags": [
+        "preMedicine"
+      ],
+      "tags": [
+        "commitment"
+      ],
+      "intent": null
+    },
+    {
+      "id": "cd7e60bf-146e-4fca-a7ae-68c3c78c6c10",
+      "phase": 4,
+      "text": "What intention do you want to carry forward from this experience?",
+      "stepIndex": 4,
+      "stage": "commitment",
+      "depth": "standard",
+      "experienceTypes": [
+        "shadowing"
+      ],
+      "professionTags": [
+        "preMedicine"
+      ],
+      "tags": [
+        "commitment"
+      ],
+      "intent": null
+    }
+  ]
+}
