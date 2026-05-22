@@ -3,51 +3,95 @@ import SwiftData
 
 @Model
 final class StatementDraft {
-    @Attribute(.unique) var id: UUID
-    var title: String
-    var version: Int
+    var id: UUID = UUID()
+    var title: String = ""
+    var version: Int = 1
     var draftScopeRaw: String?
-    var isFinal: Bool
-    var isLocked: Bool
-    @Relationship(deleteRule: .cascade) var sections: [StatementSection]
-    var dateCreated: Date
-    var dateModified: Date
+    var writingTargetID: String?
+    var writingTargetCategoryRaw: String?
+    var customPromptText: String?
+    var isFinal: Bool = false
+    var isLocked: Bool = false
+    @Relationship(deleteRule: .cascade, originalName: "sections", inverse: \StatementSection.draft) private var sectionStorage: [StatementSection]?
+    var dateCreated: Date = Date.now
+    var dateModified: Date = Date.now
     var richTextData: Data?
+    var syncRevision: Int?
+    var lastSyncedAt: Date?
+    var lastConflictDetectedAt: Date?
+
+    var sections: [StatementSection] {
+        get { sectionStorage ?? [] }
+        set { sectionStorage = newValue }
+    }
 
     var draftScope: StatementDraftScope {
         get { StatementDraftScope(rawValue: draftScopeRaw ?? "") ?? .full }
         set { draftScopeRaw = newValue.rawValue }
     }
 
+    var writingTargetCategory: WritingTargetCategory? {
+        get {
+            guard let writingTargetCategoryRaw else { return nil }
+            return WritingTargetCategory(rawValue: writingTargetCategoryRaw)
+        }
+        set {
+            writingTargetCategoryRaw = newValue?.rawValue
+        }
+    }
+
     init(
         title: String,
         version: Int = 1,
         richTextData: Data? = nil,
-        draftScope: StatementDraftScope = .full
+        draftScope: StatementDraftScope = .full,
+        writingTargetID: String? = nil,
+        writingTargetCategory: WritingTargetCategory? = nil,
+        customPromptText: String? = nil
     ) {
         self.id = UUID()
         self.title = title
         self.version = version
         self.draftScopeRaw = draftScope.rawValue
+        self.writingTargetID = writingTargetID
+        self.writingTargetCategoryRaw = writingTargetCategory?.rawValue
+        self.customPromptText = customPromptText
         self.isFinal = false
         self.isLocked = false
-        self.sections = []
+        self.sectionStorage = []
         self.dateCreated = Date()
         self.dateModified = Date()
         self.richTextData = richTextData
+        self.syncRevision = 0
+        self.lastSyncedAt = nil
+        self.lastConflictDetectedAt = nil
+    }
+
+    var isSnapshot: Bool {
+        get { isFinal }
+        set { isFinal = newValue }
+    }
+
+    func assignWritingTarget(_ target: WritingTargetDefinition) {
+        writingTargetID = target.id
+        writingTargetCategory = target.category
+        if !target.allowsCustomPrompt {
+            customPromptText = nil
+        }
     }
 }
 
 @Model
 final class StatementSection {
-    @Attribute(.unique) var id: UUID
-    var order: Int
-    var source: SectionSource
-    var content: String  // plain text or markdown
-    var date: Date
+    var id: UUID = UUID()
+    var order: Int = 0
+    var source: SectionSource = SectionSource.manual
+    var content: String = ""  // plain text or markdown
+    var date: Date = Date.now
     
     // Optional reference to original source ID (e.g. ExamenSession.id) for tracing back
     var sourceID: UUID?
+    var draft: StatementDraft?
 
     init(source: SectionSource, content: String, order: Int, sourceID: UUID? = nil) {
         self.id = UUID()
@@ -56,13 +100,28 @@ final class StatementSection {
         self.order = order
         self.date = Date()
         self.sourceID = sourceID
+        self.draft = nil
     }
 }
 
 enum SectionSource: String, Codable {
     case journalEntry
     case examenNote
+    case insightWorkspace
     case manual
+
+    var displayName: String {
+        switch self {
+        case .journalEntry:
+            return "Journal"
+        case .examenNote:
+            return "Examen"
+        case .insightWorkspace:
+            return "Brainstorming"
+        case .manual:
+            return "Manual"
+        }
+    }
 }
 
 enum StatementDraftScope: String, Codable, CaseIterable, Identifiable {
@@ -112,6 +171,9 @@ extension StatementDraft {
             title: title,
             version: version,
             draftScopeRaw: draftScopeRaw,
+            writingTargetID: writingTargetID,
+            writingTargetCategoryRaw: writingTargetCategoryRaw,
+            customPromptText: customPromptText,
             isFinal: isFinal,
             isLocked: isLocked,
             dateCreated: dateCreated,
@@ -153,6 +215,9 @@ extension StatementDraft {
         draft.dateCreated = payload.dateCreated
         draft.dateModified = payload.dateModified
         draft.draftScopeRaw = payload.draftScopeRaw
+        draft.writingTargetID = payload.writingTargetID
+        draft.writingTargetCategoryRaw = payload.writingTargetCategoryRaw
+        draft.customPromptText = payload.customPromptText
 
         // Note: We deliberately create new section objects (transplanting content)
         // rather than reusing IDs, consistent with 'copy' semantics suitable for import.

@@ -366,7 +366,7 @@ struct AIAdvisorPanel: View {
         if !appSettings.aiEnabled {
             return "AI is turned off in Settings. Turn on \"Enable On-Device AI\" to use Advisor."
         }
-        return "AI Advisor is unavailable on this device."
+        return "Advisor is unavailable on this device."
     }
 
     private var availableModes: [AdvisorMode] {
@@ -659,7 +659,7 @@ struct AIAdvisorPanel: View {
                             .font(.largeTitle)
                             .foregroundStyle(useImmersive ? DSColor.goldLight : .accentColor)
 
-                        Text("Add On-Device AI")
+                        Text("Add On-Device Advisor")
                             .font(DSFont.heading2)
                             .foregroundStyle(useImmersive ? DSColor.textPrimary : .primary)
 
@@ -681,7 +681,7 @@ struct AIAdvisorPanel: View {
                             Button {
                                 showPrimaryAIInstallSheet = true
                             } label: {
-                                Text("Download AI Advisor")
+                                    Text("Download Advisor")
                                     .font(DSFont.heading2)
                                     .frame(maxWidth: .infinity)
                                     .padding()
@@ -811,7 +811,7 @@ struct AIAdvisorPanel: View {
                             .padding(.horizontal)
                         
                         Button(action: analyze) {
-                            Text("Analyze Statement")
+                            Text("Analyze Writing")
                                 .font(DSFont.heading2)
                                 .frame(maxWidth: .infinity)
                                 .padding()
@@ -856,11 +856,11 @@ struct AIAdvisorPanel: View {
             NavigationStack {
                 VStack(alignment: .leading, spacing: 20) {
                     VStack(alignment: .leading, spacing: 10) {
-                        Text("Add On-Device AI")
+                        Text("Add On-Device Advisor")
                             .font(DSFont.heading1)
                             .foregroundStyle(DSColor.textPrimary)
 
-                        Text("The AI Advisor works privately on your device. To keep the main app download lighter, this model installs only if you choose it.")
+                        Text("Advisor works privately on your device. To keep the main app download lighter, this model installs only if you choose it.")
                             .font(DSFont.body)
                             .foregroundStyle(DSColor.textSecondary)
 
@@ -881,7 +881,7 @@ struct AIAdvisorPanel: View {
                             Button {
                                 startPrimaryAIDownload()
                             } label: {
-                                Text("Download AI Advisor")
+                                Text("Download Advisor")
                                     .frame(maxWidth: .infinity)
                             }
                             .buttonStyle(SacredButtonStyle())
@@ -897,7 +897,7 @@ struct AIAdvisorPanel: View {
                     Spacer()
                 }
                 .padding()
-                .navigationTitle("Add On-Device AI")
+                .navigationTitle("Add On-Device Advisor")
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .topBarTrailing) {

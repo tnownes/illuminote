@@ -16,6 +16,7 @@ struct ProfileView: View {
     @Query private var sessions: [ExamenSession]
     
     @State private var showResetConfirmation = false
+    @State private var persistenceAlert: PersistenceAlertContext?
     
     // Computed property to aggregate statistics
     private var experienceStats: [(type: ExperienceType, hours: Double)] {
@@ -59,11 +60,18 @@ struct ProfileView: View {
                                 Text(intent.displayName).tag(intent)
                             }
                         }
-                        
+
                         Toggle("Applying to Texas Schools?", isOn: Binding(
                             get: { profile.isTexasApplicant },
                             set: { profile.isTexasApplicant = $0 }
                         ))
+
+                        if profile.degreeIntent != .doDetail {
+                            Toggle("Applying MD-PhD?", isOn: Binding(
+                                get: { profile.isMDPhDApplicant },
+                                set: { profile.isMDPhDApplicant = $0 }
+                            ))
+                        }
                     }
                 }
                 
@@ -103,12 +111,24 @@ struct ProfileView: View {
         } message: {
             Text("Are you sure you want to reset your profile? This action cannot be undone.")
         }
+        .persistenceFailureAlert($persistenceAlert)
     }
     
     private func resetProfile() {
         if let profile = profiles.first {
             modelContext.delete(profile)
-            try? modelContext.save()
+            do {
+                try modelContext.persistIfNeeded(for: "reset your profile")
+            } catch let error as PersistenceOperationError {
+                persistenceAlert = error.alertContext
+                return
+            } catch {
+                persistenceAlert = PersistenceAlertContext.saveFailure(
+                    for: "reset your profile",
+                    details: error.localizedDescription
+                )
+                return
+            }
             // Dismissing will take us back to Settings, but ContentView will detect no profile and show onboarding
             // We might want to pop to root or let ContentView handle it.
             // Since ContentView observes the query, it should switch to onboarding automatically.

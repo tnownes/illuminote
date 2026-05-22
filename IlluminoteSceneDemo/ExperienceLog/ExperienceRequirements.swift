@@ -38,6 +38,10 @@ protocol ExperienceEntryRequirementsService {
     func requirements(for profile: UserProfile?) -> [ExperienceEntryRequirement]
 }
 
+protocol ApplicationEntryCatalogService {
+    func entries(for profile: UserProfile?) -> [ApplicationEntryDefinition]
+}
+
 final class LocalExperienceEntryRequirementsService: ExperienceEntryRequirementsService {
     static let shared = LocalExperienceEntryRequirementsService()
 
@@ -73,6 +77,37 @@ final class LocalExperienceEntryRequirementsService: ExperienceEntryRequirements
             cached = []
             return []
         }
+    }
+}
+
+final class LocalApplicationEntryCatalogService: ApplicationEntryCatalogService {
+    private let requirementsService: ExperienceEntryRequirementsService
+
+    init(requirementsService: ExperienceEntryRequirementsService = LocalExperienceEntryRequirementsService.shared) {
+        self.requirementsService = requirementsService
+    }
+
+    func entries(for profile: UserProfile?) -> [ApplicationEntryDefinition] {
+        requirementsService
+            .requirements(for: profile)
+            .map { requirement in
+                ApplicationEntryDefinition(
+                    id: "entry.\(requirement.serviceCode.rawValue)",
+                    serviceCode: requirement.serviceCode,
+                    title: requirement.title,
+                    summary: requirement.guidanceNotes.first ?? "Keep the structured application entry details organized and ready to export.",
+                    maxEntries: requirement.maxExperiences,
+                    entryCharacterLimit: requirement.descriptionCharacterLimit,
+                    maxHighlights: requirement.maxHighlights,
+                    highlightLabel: requirement.highlightLabel
+                )
+            }
+            .sorted { lhs, rhs in
+                if lhs.serviceLabel == rhs.serviceLabel {
+                    return lhs.title < rhs.title
+                }
+                return lhs.serviceLabel < rhs.serviceLabel
+            }
     }
 }
 

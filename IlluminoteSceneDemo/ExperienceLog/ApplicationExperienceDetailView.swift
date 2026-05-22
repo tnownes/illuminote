@@ -11,6 +11,7 @@ struct ApplicationExperienceDetailView: View {
     let experience: ApplicationExperience
 
     @State private var copyMessage: String?
+    @State private var persistenceAlert: PersistenceAlertContext?
 
     private let requirementsService = LocalExperienceEntryRequirementsService.shared
 
@@ -34,11 +35,11 @@ struct ApplicationExperienceDetailView: View {
 
                     CardView(backgroundColor: DSColor.backgroundSecondary) {
                         VStack(alignment: .leading, spacing: 12) {
-                            Text("Experience Details")
+                            Text("Application Record Details")
                                 .font(DSFont.heading2)
                                 .foregroundStyle(.white)
 
-                            TextField("Experience title", text: $bindableExperience.title)
+                            TextField("Record title", text: $bindableExperience.title)
                                 .textFieldStyle(.roundedBorder)
                             Picker("Category", selection: Binding(
                                 get: { bindableExperience.category },
@@ -286,6 +287,7 @@ struct ApplicationExperienceDetailView: View {
         .onDisappear {
             saveContext()
         }
+        .persistenceFailureAlert($persistenceAlert)
     }
 
     private var summaryCard: some View {
@@ -357,9 +359,14 @@ struct ApplicationExperienceDetailView: View {
     private func saveContext() {
         experience.touch()
         do {
-            try modelContext.save()
+            try modelContext.persistIfNeeded(for: "save that experience")
+        } catch let error as PersistenceOperationError {
+            persistenceAlert = error.alertContext
         } catch {
-            print("⚠️ Failed to save experience details: \(error)")
+            persistenceAlert = PersistenceAlertContext.saveFailure(
+                for: "save that experience",
+                details: error.localizedDescription
+            )
         }
     }
 
@@ -452,6 +459,7 @@ private struct ServiceReadinessCard: View {
 
     let experience: ApplicationExperience
     let evaluation: ExperienceReadinessEvaluation
+    @State private var persistenceAlert: PersistenceAlertContext?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -475,7 +483,16 @@ private struct ServiceReadinessCard: View {
                             get: { experience.isHighlighted(for: evaluation.service.serviceCode) },
                             set: {
                                 experience.setHighlighted($0, for: evaluation.service.serviceCode)
-                                try? modelContext.save()
+                                do {
+                                    try modelContext.persistIfNeeded(for: "update that experience highlight")
+                                } catch let error as PersistenceOperationError {
+                                    persistenceAlert = error.alertContext
+                                } catch {
+                                    persistenceAlert = PersistenceAlertContext.saveFailure(
+                                        for: "update that experience highlight",
+                                        details: error.localizedDescription
+                                    )
+                                }
                             }
                         )
                     )

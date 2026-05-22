@@ -7,36 +7,68 @@ import SwiftData
 
 struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
-    @State private var settings = AppSettings()
+    @Environment(AppSettings.self) private var settings
     @Query(sort: \UserProfile.id) private var profiles: [UserProfile]
     @State private var showOnboarding = false
+    @State private var showUITestCompletion = ProcessInfo.processInfo.arguments.contains("-ui-testing-show-completion")
 
     var body: some View {
-        TabView {
+        @Bindable var bindableSettings = settings
+
+        TabView(selection: $bindableSettings.selectedTab) {
             LandingView()
+                .tag(AppRootTab.home)
                 .tabItem {
                     Label("Home", systemImage: "house")
                 }
 
             JournalView()
+                .tag(AppRootTab.journal)
                 .tabItem {
                     Label("Journal", systemImage: "book")
                 }
 
-            StatementListView()
+            InsightsView()
+                .tag(AppRootTab.insights)
                 .tabItem {
-                    Label("Statement", systemImage: "square.and.pencil")
+                    Label("Insights", systemImage: "sparkles.rectangle.stack")
+                }
+
+            StatementListView()
+                .tag(AppRootTab.statement)
+                .tabItem {
+                    Label("Writing", systemImage: "square.and.pencil")
                 }
 
             SettingsView()
+                .tag(AppRootTab.settings)
                 .tabItem {
                     Label("Settings", systemImage: "gearshape")
                 }
         }
-        .environment(settings)  // <— Using @Observable pattern
         .fullScreenCover(isPresented: $showOnboarding) {
             OnboardingFlowView()
                 .interactiveDismissDisabled()
+        }
+        .fullScreenCover(isPresented: $showUITestCompletion) {
+            ExamenCompletionView(
+                onViewJournal: {
+                    settings.selectedTab = .journal
+                    showUITestCompletion = false
+                },
+                onOpenInsights: {
+                    settings.selectedTab = .insights
+                    showUITestCompletion = false
+                },
+                onGoToWriting: {
+                    settings.selectedTab = .statement
+                    showUITestCompletion = false
+                },
+                onReturnHome: {
+                    settings.selectedTab = .home
+                    showUITestCompletion = false
+                }
+            )
         }
         .task {
             if let profile = profiles.first {
@@ -62,6 +94,11 @@ struct ContentView_Previews: PreviewProvider {
             for: UserProfile.self,
             ExamenSession.self,
             StepResponse.self,
+            ApplicationExperience.self,
+            ExperiencePeriod.self,
+            InsightNode.self,
+            InsightEntryLink.self,
+            InsightWorkspaceEntry.self,
             configurations: ModelConfiguration(isStoredInMemoryOnly: true)
         )
         let context = container.mainContext

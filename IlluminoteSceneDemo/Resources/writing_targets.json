@@ -1,0 +1,74 @@
+[
+  {
+    "id": "supplemental.amcas.otherImpactful",
+    "category": "supplementalEssay",
+    "title": "Other Impactful Experiences",
+    "summary": "A distinct AMCAS response for meaningful life context that shaped your path.",
+    "prompt_text": "Other impactful experiences are defined as lived experiences that have communicated to you a broader understanding of yourself, others, or the world. This question is intended for applicants who have overcome major challenges or obstacles. Some examples may include lived experiences related to family background, financial background, community setting, educational experiences, or other life circumstances. Please use this space to describe how these experiences have impacted your journey to medical school.",
+    "service_code": "amcas",
+    "track": "preMedicine",
+    "character_limit_max": 1325,
+    "allows_custom_prompt": false,
+    "official_link": "https://students-residents.aamc.org/applying-medical-school-amcas/publication-chapters/other-impactful-experiences"
+  },
+  {
+    "id": "supplemental.amcas.mdphdEssay",
+    "category": "supplementalEssay",
+    "title": "MD-PhD Essay",
+    "summary": "A separate AMCAS response for applicants pursuing the physician-scientist path.",
+    "prompt_text": "Why are you interested in pursuing a combined MD-PhD degree, and how do your previous research experiences support this goal?",
+    "service_code": "amcas",
+    "track": "preMedicine",
+    "character_limit_max": 3000,
+    "allows_custom_prompt": false,
+    "official_link": "https://students-residents.aamc.org/applying-medical-school-amcas/publication-chapters/md-phd-and-significant-research-essays"
+  },
+  {
+    "id": "supplemental.amcas.significantResearch",
+    "category": "supplementalEssay",
+    "title": "Significant Research Experience Essay",
+    "summary": "A distinct AMCAS research narrative for applicants with substantial research involvement.",
+    "prompt_text": "Please specify your research experience, including the total number of hours, and describe the impact of the research on your motivation for a career in medicine and/or research.",
+    "service_code": "amcas",
+    "track": "preMedicine",
+    "character_limit_max": 10000,
+    "allows_custom_prompt": false,
+    "official_link": "https://students-residents.aamc.org/applying-medical-school-amcas/publication-chapters/significant-research-experience-essay"
+  },
+  {
+    "id": "supplemental.tmdsas.personalCharacteristics",
+    "category": "supplementalEssay",
+    "title": "TMDSAS Personal Characteristics",
+    "summary": "A distinct TMDSAS essay focused on qualities, background, and lived experience.",
+    "prompt_text": "Learning from others is enhanced in educational settings that include individuals from diverse backgrounds and experiences. Please describe any personal qualities, characteristics, and/or lived experiences that would add to the educational experience of others or that would enhance the educational experience of your classmates.",
+    "service_code": "tmdsas",
+    "track": "preMedicine",
+    "character_limit_max": 2500,
+    "allows_custom_prompt": false,
+    "official_link": "https://www.tmdsas.com/apply-now/application-handbook.html"
+  },
+  {
+    "id": "supplemental.tmdsas.optionalEssay",
+    "category": "supplementalEssay",
+    "title": "TMDSAS Optional Essay",
+    "summary": "A space for context that does not fit cleanly elsewhere in the application.",
+    "prompt_text": "Briefly discuss any unique circumstances or life experiences that are relevant to your application which have not previously been presented.",
+    "service_code": "tmdsas",
+    "track": "preMedicine",
+    "character_limit_max": 2500,
+    "allows_custom_prompt": false,
+    "official_link": "https://www.tmdsas.com/apply-now/application-handbook.html"
+  },
+  {
+    "id": "supplemental.tmdsas.personalCharacteristics.dental",
+    "category": "supplementalEssay",
+    "title": "TMDSAS Personal Characteristics",
+    "summary": "A distinct TMDSAS essay focused on qualities, background, and lived experience.",
+    "prompt_text": "Learning from others is enhanced in educational settings that include individuals from diverse backgrounds and experiences. Please describe any personal qualities, characteristics, and/or lived experiences that would add to the educational experience of others or that would enhance the educational experience of your classmates.",
+    "service_code": "tmdsas",
+    "track": "preDentistry",
+    "character_limit_max": 2500,
+    "allows_custom_prompt": false,
+    "official_link": "https://www.tmdsas.com/apply-now/application-handbook.html"
+  }
+]

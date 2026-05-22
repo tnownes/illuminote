@@ -11,10 +11,10 @@ import SwiftData
 // ExamenModel.swift
 @Model
 final class UserProfile {
-    @Attribute(.unique) var id: UUID
+    var id: UUID = UUID()
     @Attribute(originalName: "preProfessionalInterest") var preProfessionalTrack: PreProfessionalTrack?
     var recentPromptIDs: [UUID] = []
-    
+
     // Preferences
     var examenFrequency: ExamenFrequency = ExamenFrequency.daily
     var preferredTimeOfDay: PreferredTimeOfDay = PreferredTimeOfDay.evening
@@ -35,7 +35,8 @@ final class UserProfile {
          notificationTime: Date? = nil,
          hasSeenOnboarding: Bool = false,
          degreeIntent: DegreeIntent = DegreeIntent.md,
-         isTexasApplicant: Bool = false)
+         isTexasApplicant: Bool = false,
+         isMDPhDApplicant: Bool = false)
     {
         self.id = id
         self.preProfessionalTrack = preProfessionalTrack
@@ -49,11 +50,13 @@ final class UserProfile {
         self.hasSeenOnboarding = hasSeenOnboarding
         self.degreeIntent = degreeIntent
         self.isTexasApplicant = isTexasApplicant
+        self.isMDPhDApplicant = isMDPhDApplicant
     }
-    
+
     // New fields for Phase 1 Knowledge Base
     var degreeIntent: DegreeIntent = DegreeIntent.md
     var isTexasApplicant: Bool = false
+    var isMDPhDApplicant: Bool = false
 }
 
 
@@ -316,10 +319,11 @@ extension ExperienceType {
 
 @Model
 final class ExamenSession {
-    @Attribute(.unique) var id: UUID
-    var sessionType: ExamenType
-    var date: Date
-    @Relationship(deleteRule: .cascade, inverse: \StepResponse.session) var responses: [StepResponse]
+    var id: UUID = UUID()
+    var sessionType: ExamenType = ExamenType.daily
+    var date: Date = Date.now
+    var examenModeRaw: String?
+    @Relationship(deleteRule: .cascade, inverse: \StepResponse.session) private var responseStorage: [StepResponse]?
     var personalStatement: String = ""
 
     /// Optional title (primarily for personal statement drafts; unused for typical journal entries)
@@ -354,9 +358,30 @@ final class ExamenSession {
 
     var isFavorite: Bool = false
 
+    var responses: [StepResponse] {
+        get { responseStorage ?? [] }
+        set { responseStorage = newValue }
+    }
+
+    var examenMode: ExamenMode {
+        get {
+            if let examenModeRaw, let persisted = ExamenMode(rawValue: examenModeRaw) {
+                return persisted
+            }
+            if experienceType == .discernment {
+                return .vocation
+            }
+            return .deep
+        }
+        set {
+            examenModeRaw = newValue.rawValue
+        }
+    }
+
     init(id: UUID = UUID(),
          sessionType: ExamenType,
          date: Date = Date.now,
+         examenMode: ExamenMode? = nil,
          responses: [StepResponse] = [],
          personalStatement: String = "",
          title: String = "",
@@ -379,7 +404,8 @@ final class ExamenSession {
         self.id = id
         self.sessionType = sessionType
         self.date = date
-        self.responses = responses
+        self.examenModeRaw = examenMode?.rawValue
+        self.responseStorage = responses
         self.personalStatement = personalStatement
         self.title = title
         self.experienceType = experienceType
@@ -404,7 +430,7 @@ enum ExamenType: String, CaseIterable, Codable {
     case daily, retreat, vocation, statementDraft
 }
 
-enum ExamenMode: String, Codable, CaseIterable, Identifiable {
+enum ExamenMode: String, Codable, CaseIterable, Identifiable, Hashable {
     case quick, deep, vocation, spiritual
     
     var id: String { self.rawValue }
@@ -457,15 +483,15 @@ enum ExamenMode: String, Codable, CaseIterable, Identifiable {
 
 @Model
 final class StepResponse {
-    @Attribute(.unique) var id: UUID
-    var stepIndex: Int
-    var answerText: String
+    var id: UUID = UUID()
+    var stepIndex: Int = 0
+    var answerText: String = ""
     var additionalNotes: String?
     @Relationship var session: ExamenSession?
 
     // New fields for Deep Reflection
-    var promptID: UUID
-    var stage: String
+    var promptID: UUID = UUID()
+    var stage: String = "unknown"
 
     init(id: UUID = UUID(),
          stepIndex: Int,
@@ -494,6 +520,7 @@ struct ExamenSessionDraft: Hashable {
     var type: ExperienceType
     var date: Date = Date.now
     var hours: Double = 0.0
+    var examenMode: ExamenMode? = nil
 
 
 
@@ -646,21 +673,26 @@ enum ThemeLabelSource: String, Codable {
 
 @Model
 final class ThemeCluster {
-    @Attribute(.unique) var id: UUID
-    var label: String
-    var normalizedLabel: String
-    var scopeRaw: String
-    var labelSourceRaw: String
+    var id: UUID = UUID()
+    var label: String = ""
+    var normalizedLabel: String = ""
+    var scopeRaw: String = ThemeClusterScope.acrossExperiences.rawValue
+    var labelSourceRaw: String = ThemeLabelSource.emergent.rawValue
     var experienceTypeRaw: String?
-    var score: Double
-    var confidence: Double
-    var isAccepted: Bool
-    var isHidden: Bool
-    var createdAt: Date
-    var updatedAt: Date
+    var score: Double = 0
+    var confidence: Double = 0
+    var isAccepted: Bool = false
+    var isHidden: Bool = false
+    var createdAt: Date = Date.now
+    var updatedAt: Date = Date.now
 
-    @Relationship(deleteRule: .cascade)
-    var links: [ThemeEntryLink] = []
+    @Relationship(deleteRule: .cascade, inverse: \ThemeEntryLink.cluster)
+    private var linkStorage: [ThemeEntryLink]?
+
+    var links: [ThemeEntryLink] {
+        get { linkStorage ?? [] }
+        set { linkStorage = newValue }
+    }
 
     var scope: ThemeClusterScope {
         get { ThemeClusterScope(rawValue: scopeRaw) ?? .acrossExperiences }
@@ -709,7 +741,7 @@ final class ThemeCluster {
         self.isHidden = isHidden
         self.createdAt = createdAt
         self.updatedAt = updatedAt
-        self.links = links
+        self.linkStorage = links
     }
 
     static func normalize(_ label: String) -> String {
@@ -722,10 +754,10 @@ final class ThemeCluster {
 
 @Model
 final class ThemeEntryLink {
-    @Attribute(.unique) var id: UUID
-    var entryID: UUID
-    var evidenceSnippet: String
-    var confidence: Double
+    var id: UUID = UUID()
+    var entryID: UUID = UUID()
+    var evidenceSnippet: String = ""
+    var confidence: Double = 0
 
     var cluster: ThemeCluster?
 
@@ -746,13 +778,13 @@ final class ThemeEntryLink {
 
 @Model
 final class ThemeBundle {
-    @Attribute(.unique) var id: UUID
-    var title: String
-    var themeLabel: String
+    var id: UUID = UUID()
+    var title: String = ""
+    var themeLabel: String = ""
     var sourceClusterID: UUID?
-    var entryIDStrings: [String]
-    var createdAt: Date
-    var updatedAt: Date
+    var entryIDStrings: [String] = []
+    var createdAt: Date = Date.now
+    var updatedAt: Date = Date.now
 
     var entryIDs: [UUID] {
         get { entryIDStrings.compactMap(UUID.init(uuidString:)) }
@@ -774,6 +806,26 @@ final class ThemeBundle {
         self.sourceClusterID = sourceClusterID
         self.entryIDStrings = entryIDs.map(\.uuidString)
         self.createdAt = createdAt
+        self.updatedAt = updatedAt
+    }
+}
+
+@Model
+final class SemanticVectorCache {
+    var id: UUID
+    var entryID: UUID
+    var values: [Double]
+    var updatedAt: Date
+
+    init(
+        id: UUID = UUID(),
+        entryID: UUID,
+        values: [Double],
+        updatedAt: Date = .now
+    ) {
+        self.id = id
+        self.entryID = entryID
+        self.values = values
         self.updatedAt = updatedAt
     }
 }

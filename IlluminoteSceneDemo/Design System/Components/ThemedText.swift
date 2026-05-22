@@ -11,9 +11,15 @@ import SwiftUI
 
 struct ThemedText: View {
     enum Style {
+        case display
+        case screenTitle
+        case sectionTitle
         case heading1
         case heading2
         case body
+        case supporting
+        case meta
+        case eyebrow
         case subtext
         case caption
     }
@@ -22,6 +28,9 @@ struct ThemedText: View {
         case onDark
         case onLight
         case onGlass
+        case immersive
+        case supporting
+        case quiet
     }
 
     let text: String
@@ -36,12 +45,24 @@ struct ThemedText: View {
 
     private var font: Font {
         switch style {
+        case .display:
+            return DSFont.display
+        case .screenTitle:
+            return DSFont.screenTitle
+        case .sectionTitle:
+            return DSFont.sectionTitle
         case .heading1:
             return DSFont.heading1
         case .heading2:
             return DSFont.heading2
         case .body:
             return DSFont.body
+        case .supporting:
+            return DSFont.supporting
+        case .meta:
+            return DSFont.meta
+        case .eyebrow:
+            return DSFont.eyebrow
         case .subtext:
             return DSFont.subtext
         case .caption:
@@ -56,7 +77,13 @@ struct ThemedText: View {
         case .onLight:
             return DSColor.lightText
         case .onGlass:
-            return Color.white.opacity(0.9)
+            return DSColor.textPrimary
+        case .immersive:
+            return DSColor.textPrimary
+        case .supporting:
+            return DSColor.textPrimary
+        case .quiet:
+            return DSColor.quietText
         }
     }
 }

@@ -231,8 +231,40 @@ enum AIModelRuntimePolicy {
         ProcessInfo.processInfo.physicalMemory
     }
 
+    static var supportsCurrentRuntimeForAI: Bool {
+        guard !AppRuntimeFlags.isMLXDisabledForTesting else {
+            return false
+        }
+
+        #if targetEnvironment(simulator)
+        return false
+        #else
+        return true
+        #endif
+    }
+
+    static var availabilityMessage: String? {
+        guard AppSettings.aiFeaturesAllowedInThisBuild else {
+            return "AI features are disabled for this build."
+        }
+
+        guard supportsCurrentRuntimeForAI else {
+            if AppRuntimeFlags.isMLXDisabledForTesting {
+                return "On-device AI is disabled for this test run."
+            }
+            return "On-device AI is not available in the iOS Simulator. Use a physical iPhone to test local model features."
+        }
+
+        guard physicalMemory < AIModelProfile.qwen35_2b.minimumPhysicalMemoryBytes else {
+            return nil
+        }
+
+        return "This device does not currently meet the memory requirements for on-device AI."
+    }
+
     static var isDeviceEligibleForAnyAI: Bool {
-        physicalMemory >= AIModelProfile.qwen35_2b.minimumPhysicalMemoryBytes
+        supportsCurrentRuntimeForAI
+            && physicalMemory >= AIModelProfile.qwen35_2b.minimumPhysicalMemoryBytes
     }
 
     static var isDeviceEligibleForExperimental4B: Bool {
@@ -274,7 +306,7 @@ enum AIModelRuntimePolicy {
     }
 
     static func canRun(profile: AIModelProfile, on memory: UInt64 = physicalMemory) -> Bool {
-        memory >= profile.minimumPhysicalMemoryBytes
+        supportsCurrentRuntimeForAI && memory >= profile.minimumPhysicalMemoryBytes
     }
 
     static func resolutionOrder(preferredKind: AIModelProfile.Kind? = nil) -> [AIModelProfile] {

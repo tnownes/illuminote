@@ -8,13 +8,11 @@ struct Luminous: ViewModifier {
     func body(content: Content) -> some View {
         if reduceMotion {
             content
-                .shadow(color: .white.opacity(0.3), radius: 8)
+                .shadow(color: DSColor.brandAccent.opacity(0.22), radius: 6)
         } else {
             content
-                .shadow(color: .white.opacity(0.4 * glow), radius: 4 * glow)
-                .shadow(color: .white.opacity(0.2 * glow), radius: 12 * glow)
-                .shadow(color: .white.opacity(0.1 * glow), radius: 30 * glow)
-                .blendMode(.plusLighter)
+                .shadow(color: DSColor.brandAccent.opacity(0.22 * glow), radius: 4 * glow)
+                .shadow(color: DSColor.brandAccent.opacity(0.12 * glow), radius: 12 * glow)
                 .onAppear {
                     withAnimation(.easeInOut(duration: 2.0).repeatForever(autoreverses: true)) {
                         glow = 1
@@ -32,15 +30,35 @@ extension View {
     /// Glass card with optional luminous glow. Luminous is off by default to reduce visual noise and GPU load.
     func glassCardStyle(luminous: Bool = false) -> some View {
         self
-            .background(Color.black.opacity(0.3))
-            .background(.ultraThinMaterial)
-            .clipShape(RoundedRectangle(cornerRadius: 16))
-            .shadow(color: Color.black.opacity(0.25), radius: 10, x: 0, y: 4)
+            .background(DSColor.interactiveSurface.opacity(0.92))
+            .background(.ultraThinMaterial.opacity(0.12))
+            .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+            .shadow(color: Color.black.opacity(0.18), radius: 14, x: 0, y: 8)
             .overlay(
-                RoundedRectangle(cornerRadius: 16)
-                    .stroke(Color.white.opacity(0.1), lineWidth: 1)
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    .stroke(DSColor.dividerSoft, lineWidth: 1)
             )
             .modifier(ConditionalLuminous(isEnabled: luminous))
+    }
+
+    func appCircleControl(active: Bool = false, emphasized: Bool = false) -> some View {
+        self
+            .foregroundStyle(active ? DSColor.textOnBrandAccent : DSColor.textPrimary)
+            .frame(width: 44, height: 44)
+            .background(
+                Circle()
+                    .fill(active ? DSColor.brandAccent : DSColor.interactiveSurface.opacity(0.95))
+            )
+            .overlay(
+                Circle()
+                    .stroke(active || emphasized ? DSColor.brandAccent.opacity(0.35) : DSColor.dividerSoft, lineWidth: 1)
+            )
+            .shadow(
+                color: active ? DSColor.brandAccent.opacity(0.22) : Color.black.opacity(0.16),
+                radius: active ? 10 : 8,
+                x: 0,
+                y: 4
+            )
     }
 }
 
@@ -57,34 +75,34 @@ private struct ConditionalLuminous: ViewModifier {
 
 // MARK: - Sacred Button Style
 struct SacredButtonStyle: ButtonStyle {
-    @State private var glow = false
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
     func makeBody(configuration: Configuration) -> some View {
         HStack {
             configuration.label
         }
-        .font(.title3)
-        .foregroundColor(.white)
+        .font(DSFont.body.weight(.semibold))
+        .foregroundStyle(DSColor.textOnBrandAccent)
         .frame(maxWidth: .infinity)
-        .padding()
+        .padding(.vertical, DSSpacing.md)
+        .padding(.horizontal, DSSpacing.lg)
         .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(.ultraThinMaterial)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 16)
-                        .stroke(DSColor.goldLight, lineWidth: 2)
-                        .luminous()
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            DSColor.brandAccent.opacity(configuration.isPressed ? 0.90 : 0.98),
+                            DSColor.brandAccent.opacity(configuration.isPressed ? 0.82 : 0.88)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
                 )
         )
-        .shadow(color: DSColor.goldLight.opacity(0.6), radius: 15, x: 0, y: 6)
-        .scaleEffect(configuration.isPressed ? 0.98 : (reduceMotion ? 1.0 : (glow ? 1.02 : 1.0)))
-        .animation(.easeInOut(duration: 0.2), value: configuration.isPressed)
-        .onAppear {
-            guard !reduceMotion else { return }
-            withAnimation(.easeInOut(duration: 1.8).repeatForever(autoreverses: true)) {
-                glow.toggle()
-            }
-        }
+        .overlay(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .stroke(DSColor.brandAccent.opacity(0.22), lineWidth: 1)
+        )
+        .shadow(color: DSColor.brandAccent.opacity(configuration.isPressed ? 0.14 : 0.24), radius: configuration.isPressed ? 8 : 14, x: 0, y: configuration.isPressed ? 3 : 8)
+        .scaleEffect(configuration.isPressed ? 0.985 : 1.0)
+        .animation(AnimationConfig.confirmation, value: configuration.isPressed)
     }
 }

@@ -8,23 +8,45 @@
 import SwiftUI
 
 enum DSColor {
-    // MARK: - Semantic Surface Tokens (dark-first, matching app aesthetic)
-    static let backgroundPrimary = Color(hex: "#1A0108")     // Near-black (Sacred Void base)
-    static let backgroundSecondary = Color(hex: "#2A1018")    // Slightly lighter dark
-    static let surfaceElevated = Color(hex: "#3A1828")        // Cards and elevated surfaces
+    // MARK: - Brand Foundation
+    static let nearBlack = Color(hex: "#120B10")
+    static let deepMaroon = Color(hex: "#3D1624")
+    static let goldLight = Color(hex: "#E3B464")
+    static let silverBlue = Color(hex: "#A8B6C8")
+
+    // MARK: - Semantic Surface Tokens
+    static let appBackground = Color(hex: "#130D11")
+    static let appBackgroundSecondary = Color(hex: "#1A1318")
+    static let appBackgroundTertiary = Color(hex: "#21181E")
+    static let backgroundPrimary = appBackground
+    static let backgroundSecondary = Color(hex: "#23191F")
+    static let surfaceElevated = Color(hex: "#2D2128")
+    static let readingSurface = Color(hex: "#1D161A")
+    static let interactiveSurface = Color(hex: "#281E24")
+    static let quietSurface = Color(hex: "#171115")
+    static let immersiveOverlay = Color.black.opacity(0.30)
+    static let overlaySoft = Color.black.opacity(0.18)
 
     // MARK: - Semantic Text Tokens
-    static let textPrimary = Color.white
-    static let textSecondary = Color.white.opacity(0.7)
-    static let textTertiary = Color.white.opacity(0.5)
+    static let textPrimary = Color(hex: "#F7F1EC")
+    static let textSecondary = Color(hex: "#D8CCC4")
+    static let textTertiary = Color(hex: "#A99B94")
+    static let quietText = Color(hex: "#C3B5AD")
+    static let quietTextMuted = Color(hex: "#8E7F79")
 
     // MARK: - Accent Colors
     static let accentPrimary = Color(hex: "#4A90E2")
     static let accentPrimaryLight = Color(hex: "#DCEEFF")
     static let accentPrimaryDark = Color(hex: "#357ABD")
+    static let brandAccent = goldLight
+    static let brandAccentSoft = goldLight.opacity(0.18)
+    static let brandAccentMuted = Color(hex: "#8B6B39")
+    static let textOnBrandAccent = nearBlack
 
     // MARK: - Dividers & Borders
-    static let divider = Color.white.opacity(0.1)
+    static let divider = Color.white.opacity(0.10)
+    static let dividerSoft = Color.white.opacity(0.07)
+    static let dividerStrong = Color.white.opacity(0.16)
 
     // MARK: - Status Colors
     static let success = Color(hex: "#2ECC71")
@@ -41,14 +63,8 @@ enum DSColor {
     static let reflectiveAccentSubtle = Color(hex: "#B0C9D9")
     static let reflectiveDivider = Color(hex: "#2A2A2A")
 
-    // MARK: - Sacred Void Aesthetic
-    static let nearBlack = Color(hex: "#1A0108")
-    static let deepMaroon = Color(hex: "#4A041A")
-    static let goldLight = Color(hex: "#EAAA00")
-    static let silverBlue = Color(hex: "#A0A0B0")
-
     // MARK: - Light Context (for forms/settings that need light backgrounds)
-    static let lightBackground = Color(hex: "#FFFFFF")
+    static let lightBackground = Color(hex: "#F7F4F0")
     static let lightText = Color(hex: "#1F1F1F")
     static let lightTextSecondary = Color(hex: "#666666")
     static let lightDivider = Color(hex: "#E5E5E5")

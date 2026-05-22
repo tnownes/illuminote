@@ -29,6 +29,8 @@ final class ExamenSessionViewModel {
 
     // Answers stored by Prompt UUID so it stays stable
     private var answersByPromptID: [UUID: String] = [:]
+    private(set) var lastSavedSessionID: UUID?
+    private(set) var lastApplicationRecordOutcomeText: String?
 
     // MARK: - Computed Helpers
 
@@ -95,6 +97,10 @@ final class ExamenSessionViewModel {
         self.prompts = newPrompts
         currentPhase = phases.first ?? 0
         phasePromptIndex = 0
+    }
+
+    func recordActiveMode(_ mode: ExamenMode) {
+        draft.examenMode = mode
     }
     
     // MARK: - Phase 2: AI Enhancement
@@ -213,6 +219,7 @@ final class ExamenSessionViewModel {
 
     func finishSession() {
         stage = .done
+        lastApplicationRecordOutcomeText = nil
     }
 
     func answerForCurrentPrompt() -> String {
@@ -281,12 +288,14 @@ final class ExamenSessionViewModel {
     // MARK: - Persistence
     
     func saveSession(context: ModelContext) {
+        lastApplicationRecordOutcomeText = nil
         let linkedExperience = resolveApplicationExperience(in: context)
 
         // 1. Create the persistent session object
         let newSession = ExamenSession(
             sessionType: .daily,
             date: draft.date,
+            examenMode: draft.examenMode,
             personalStatement: draft.personalStatement,
             experienceType: draft.type,
             physician: draft.physician?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == true ? nil : draft.physician,
@@ -326,8 +335,10 @@ final class ExamenSessionViewModel {
         
         do {
             try context.save()
+            lastSavedSessionID = newSession.id
             print("✅ Examen Session Saved Successfully: \(newSession.id)")
         } catch {
+            lastSavedSessionID = nil
             print("❌ Failed to save Examen Session: \(error)")
         }
     }
@@ -342,6 +353,7 @@ final class ExamenSessionViewModel {
 
             if let existing = try? context.fetch(descriptor).first {
                 existing.touch()
+                lastApplicationRecordOutcomeText = "Connected Application Record: \(existing.exportTitle)"
                 return existing
             }
         }
@@ -349,6 +361,7 @@ final class ExamenSessionViewModel {
         if let pending = draft.pendingApplicationExperience {
             let experience = pending.buildModel()
             context.insert(experience)
+            lastApplicationRecordOutcomeText = "Created Application Record: \(experience.exportTitle)"
             return experience
         }
 

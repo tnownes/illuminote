@@ -1,8 +1,11 @@
 import Foundation
 import SwiftUI
+
+#if !ILLUMINOTE_DISABLE_MLX_LINK
 import MLX
 import MLXLMCommon
 import Darwin.Mach
+#endif
 
 struct AIMemoryCheckpoint: Codable, Identifiable, Hashable {
     let id: UUID
@@ -33,6 +36,113 @@ struct AILastCompletedRun: Codable, Equatable {
     }
 }
 
+#if ILLUMINOTE_DISABLE_MLX_LINK
+@Observable
+@MainActor
+final class MLXManager {
+    static let shared = MLXManager()
+
+    struct GenerationOverride {
+        var maxTokens: Int?
+        var temperature: Float?
+        var topP: Float?
+        var topK: Int?
+        var minP: Float?
+        var repetitionPenalty: Float?
+        var repetitionContextSize: Int?
+        var presencePenalty: Float?
+        var presenceContextSize: Int?
+        var frequencyPenalty: Float?
+        var frequencyContextSize: Int?
+        var maxKVSize: Int?
+        var kvBits: Int?
+        var prefillStepSize: Int?
+    }
+
+    var isModelLoaded = false
+    var isGenerating = false
+    var currentResponse: String = ""
+    var loadErrorMessage: String?
+    var loadedProfile: AIModelProfile?
+    var loadedModelDescriptor: String?
+    var lastPromptTokenCount = 0
+    var lastGenerationTokenCount = 0
+    var lastPromptTokensPerSecond: Double = 0
+    var lastGenerationTokensPerSecond: Double = 0
+    var memoryCheckpoints: [AIMemoryCheckpoint] = []
+    var lastOperationState: AIOperationState?
+    var lastCompletedRun: AILastCompletedRun?
+
+    private init() {
+        applyDisabledState(profile: AIModelRuntimePolicy.requestedProfile, phase: "AI disabled for fast test build")
+    }
+
+    var unexpectedTerminationSummary: String? {
+        nil
+    }
+
+    var lastCompletedRunSummary: String? {
+        nil
+    }
+
+    func loadModelIfNeeded(preferredProfile: AIModelProfile = AIModelRuntimePolicy.requestedProfile) async {
+        applyDisabledState(profile: preferredProfile, phase: "AI disabled for fast test build")
+    }
+
+    func generate(
+        systemPrompt: String,
+        userPrompt: String,
+        requestedProfile: AIModelProfile,
+        override: GenerationOverride? = nil
+    ) async {
+        currentResponse = ""
+        applyDisabledState(profile: requestedProfile, phase: "Generation skipped for fast test build")
+    }
+
+    func generate(prompt: String, maxTokens: Int = 320) async {
+        await generate(
+            systemPrompt: "",
+            userPrompt: prompt,
+            requestedProfile: AIModelRuntimePolicy.requestedProfile
+        )
+    }
+
+    func reset() {
+        currentResponse = ""
+        isGenerating = false
+        applyDisabledState(profile: AIModelRuntimePolicy.requestedProfile, phase: "Advisor state reset")
+    }
+
+    func unloadModel(releasingResourceAccess: Bool = false) {
+        applyDisabledState(profile: AIModelRuntimePolicy.requestedProfile, phase: "Model unload skipped for fast test build")
+    }
+
+    func clearPersistedDiagnostics() {
+        memoryCheckpoints.removeAll()
+        lastOperationState = nil
+        lastCompletedRun = nil
+    }
+
+    func clearMLXCache() {
+        applyDisabledState(profile: AIModelRuntimePolicy.requestedProfile, phase: "MLX cache clear skipped for fast test build")
+    }
+
+    private func applyDisabledState(profile: AIModelProfile, phase: String) {
+        isModelLoaded = false
+        isGenerating = false
+        loadedProfile = nil
+        loadedModelDescriptor = nil
+        loadErrorMessage = "On-device AI is disabled for this fast test build."
+        lastOperationState = AIOperationState(
+            phase: phase,
+            timestamp: Date(),
+            profileName: profile.displayName,
+            inProgress: false,
+            details: loadErrorMessage
+        )
+    }
+}
+#else
 @Observable
 @MainActor
 class MLXManager {
@@ -105,12 +215,29 @@ class MLXManager {
     
     /// Called when the view appears or when the user explicitly requests to load the model into memory.
     func loadModelIfNeeded(preferredProfile: AIModelProfile = AIModelRuntimePolicy.requestedProfile) async {
+        if AppRuntimeFlags.isMLXDisabledForTesting {
+            applyMLXDisabledForTestingState(profile: preferredProfile, phase: "AI disabled for testing")
+            return
+        }
+
         if isModelLoaded, loadedProfile == preferredProfile {
             return
         }
 
         if isModelLoaded, loadedProfile != preferredProfile {
             unloadModel()
+        }
+
+        guard AIModelRuntimePolicy.supportsCurrentRuntimeForAI else {
+            let message = AIModelRuntimePolicy.availabilityMessage ?? "On-device AI is unavailable on this runtime."
+            loadErrorMessage = message
+            updateOperationState(
+                phase: "AI unavailable",
+                profileName: preferredProfile.displayName,
+                inProgress: false,
+                details: message
+            )
+            return
         }
 
         loadErrorMessage = nil
@@ -239,6 +366,12 @@ class MLXManager {
         requestedProfile: AIModelProfile,
         override: GenerationOverride? = nil
     ) async {
+        if AppRuntimeFlags.isMLXDisabledForTesting {
+            currentResponse = ""
+            applyMLXDisabledForTestingState(profile: requestedProfile, phase: "Generation skipped for testing")
+            return
+        }
+
         guard let context = self.context, isModelLoaded else {
             loadErrorMessage = loadErrorMessage ?? "Model is not loaded."
             updateOperationState(
@@ -410,6 +543,20 @@ class MLXManager {
     }
 
     func unloadModel(releasingResourceAccess: Bool = false) {
+        if AppRuntimeFlags.isMLXDisabledForTesting {
+            context = nil
+            isModelLoaded = false
+            loadedProfile = nil
+            loadedModelDescriptor = nil
+            updateOperationState(
+                phase: "Model unload skipped for testing",
+                profileName: nil,
+                inProgress: false,
+                details: "MLX is disabled for this test run."
+            )
+            return
+        }
+
         let unloadedProfile = loadedProfile
         if releasingResourceAccess, let unloadedProfile, case .onDemand = unloadedProfile.deliveryMode {
             OnDemandModelManager.shared.release(profile: unloadedProfile)
@@ -441,6 +588,16 @@ class MLXManager {
     }
 
     func clearMLXCache() {
+        if AppRuntimeFlags.isMLXDisabledForTesting {
+            updateOperationState(
+                phase: "MLX cache clear skipped for testing",
+                profileName: nil,
+                inProgress: false,
+                details: "MLX is disabled for this test run."
+            )
+            return
+        }
+
         Stream().synchronize()
         Memory.clearCache()
         recordMemoryCheckpoint("after cache clear")
@@ -487,6 +644,8 @@ class MLXManager {
     }
 
     private func recordMemoryCheckpoint(_ label: String) {
+        guard !AppRuntimeFlags.isMLXDisabledForTesting else { return }
+
         let snapshot = MLX.Memory.snapshot()
         let checkpoint = AIMemoryCheckpoint(
             id: UUID(),
@@ -508,6 +667,21 @@ class MLXManager {
         formatter.countStyle = .memory
         let footprint = formatter.string(fromByteCount: Int64(checkpoint.physicalFootprintBytes))
         print("AI memory checkpoint [\(checkpoint.label)] footprint=\(footprint) active=\(snapshot.activeMemory) cache=\(snapshot.cacheMemory) peak=\(snapshot.peakMemory)")
+    }
+
+    private func applyMLXDisabledForTestingState(profile: AIModelProfile, phase: String) {
+        context = nil
+        isModelLoaded = false
+        isGenerating = false
+        loadedProfile = nil
+        loadedModelDescriptor = nil
+        loadErrorMessage = "On-device AI is disabled for this test run."
+        updateOperationState(
+            phase: phase,
+            profileName: profile.displayName,
+            inProgress: false,
+            details: loadErrorMessage
+        )
     }
 
     private func updateOperationState(
@@ -582,3 +756,4 @@ class MLXManager {
         return info.phys_footprint
     }
 }
+#endif

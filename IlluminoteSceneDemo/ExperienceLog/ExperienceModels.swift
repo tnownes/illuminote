@@ -70,9 +70,9 @@ enum ApplicationExperienceCategory: String, Codable, CaseIterable, Identifiable 
 
 @Model
 final class ApplicationExperience {
-    @Attribute(.unique) var id: UUID
-    var title: String
-    var categoryRaw: String
+    var id: UUID = UUID()
+    var title: String = ""
+    var categoryRaw: String = ApplicationExperienceCategory.other.rawValue
     var organizationName: String?
     var roleTitle: String?
     var location: String?
@@ -81,16 +81,26 @@ final class ApplicationExperience {
     var contactEmail: String?
     var contactPhone: String?
     var contactPermissionAuthorized: Bool?
-    var applicationDescription: String
-    var highlightServiceCodes: [String]
-    var dateCreated: Date
-    var dateModified: Date
+    var applicationDescription: String = ""
+    var highlightServiceCodes: [String] = []
+    var dateCreated: Date = Date.now
+    var dateModified: Date = Date.now
 
     @Relationship(deleteRule: .cascade, inverse: \ExperiencePeriod.experience)
-    var periods: [ExperiencePeriod] = []
+    private var periodStorage: [ExperiencePeriod]?
 
     @Relationship(inverse: \ExamenSession.applicationExperience)
-    var linkedSessions: [ExamenSession] = []
+    private var linkedSessionStorage: [ExamenSession]?
+
+    var periods: [ExperiencePeriod] {
+        get { periodStorage ?? [] }
+        set { periodStorage = newValue }
+    }
+
+    var linkedSessions: [ExamenSession] {
+        get { linkedSessionStorage ?? [] }
+        set { linkedSessionStorage = newValue }
+    }
 
     var category: ApplicationExperienceCategory {
         get { ApplicationExperienceCategory(rawValue: categoryRaw) ?? .other }
@@ -131,19 +141,19 @@ final class ApplicationExperience {
         self.highlightServiceCodes = highlightServiceCodes
         self.dateCreated = dateCreated
         self.dateModified = dateModified
-        self.periods = periods
-        self.linkedSessions = linkedSessions
+        self.periodStorage = periods
+        self.linkedSessionStorage = linkedSessions
     }
 }
 
 @Model
 final class ExperiencePeriod {
-    @Attribute(.unique) var id: UUID
-    var startDate: Date
+    var id: UUID = UUID()
+    var startDate: Date = Date.now
     var endDate: Date?
-    var isOngoing: Bool
-    var isPlanned: Bool
-    var totalHours: Double
+    var isOngoing: Bool = false
+    var isPlanned: Bool = false
+    var totalHours: Double = 0
     var averageHoursPerWeek: Double?
 
     var experience: ApplicationExperience?

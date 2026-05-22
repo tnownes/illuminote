@@ -39,3 +39,82 @@ struct SessionHelpers {
         }
     }
 }
+
+struct PersistenceAlertContext: Identifiable, Equatable {
+    let id = UUID()
+    let title: String
+    let message: String
+
+    static func saveFailure(for operation: String, details: String? = nil) -> PersistenceAlertContext {
+        let trimmedOperation = operation.trimmingCharacters(in: .whitespacesAndNewlines)
+        let baseMessage: String
+        if trimmedOperation.isEmpty {
+            baseMessage = "Illuminote couldn't save your latest changes. Please try again."
+        } else {
+            baseMessage = "Illuminote couldn't \(trimmedOperation). Please try again."
+        }
+
+        if let details, !details.isEmpty {
+            return PersistenceAlertContext(
+                title: "Couldn't Save Changes",
+                message: "\(baseMessage)\n\n\(details)"
+            )
+        }
+
+        return PersistenceAlertContext(
+            title: "Couldn't Save Changes",
+            message: baseMessage
+        )
+    }
+}
+
+struct PersistenceOperationError: LocalizedError {
+    let operation: String
+    let underlyingError: Error
+
+    var alertContext: PersistenceAlertContext {
+        PersistenceAlertContext.saveFailure(for: operation, details: underlyingError.localizedDescription)
+    }
+
+    var errorDescription: String? {
+        alertContext.message
+    }
+}
+
+extension ModelContext {
+    @discardableResult
+    func persistIfNeeded(for operation: String) throws -> Bool {
+        guard hasChanges else { return false }
+
+        do {
+            try save()
+            return true
+        } catch {
+            throw PersistenceOperationError(operation: operation, underlyingError: error)
+        }
+    }
+}
+
+extension View {
+    func persistenceFailureAlert(_ context: Binding<PersistenceAlertContext?>) -> some View {
+        let isPresented = Binding(
+            get: { context.wrappedValue != nil },
+            set: { isPresented in
+                if !isPresented {
+                    context.wrappedValue = nil
+                }
+            }
+        )
+
+        return alert(
+            context.wrappedValue?.title ?? "Couldn't Save Changes",
+            isPresented: isPresented
+        ) {
+            Button("OK", role: .cancel) {
+                context.wrappedValue = nil
+            }
+        } message: {
+            Text(context.wrappedValue?.message ?? "Please try again.")
+        }
+    }
+}

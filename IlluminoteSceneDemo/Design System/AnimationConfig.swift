@@ -3,6 +3,14 @@ import SwiftUI
 /// Centralized animation configuration for Examen transitions.
 /// Changing durations here will adjust the pace of Examen animations app-wide.
 enum AnimationConfig {
+    // MARK: - Semantic Motion Roles
+    static let screenTransition: Animation = .easeInOut(duration: 0.32)
+    static let contentReveal: Animation = .easeOut(duration: 0.42)
+    static let confirmation: Animation = .easeInOut(duration: 0.18)
+
+    static func reducedMotionAware(_ reduceMotion: Bool, normal: Animation, reduced: Animation = .linear(duration: 0.01)) -> Animation {
+        reduceMotion ? reduced : normal
+    }
 
     /// Slow, reflective, gentle animation for immersive transitions.
     static let slow: Animation = .easeInOut(duration: 0.85)
@@ -20,19 +28,19 @@ enum AnimationConfig {
     static let breathing: Animation = .easeInOut(duration: 4.0)
     
     /// Standard transition for entering views (slow and meditative).
-    static let transitionIn: Animation = .easeInOut(duration: 3.2)
+    static let transitionIn: Animation = contentReveal
     
     /// Standard transition for exiting views.
-    static let transitionOut: Animation = .easeInOut(duration: 2.0)
+    static let transitionOut: Animation = screenTransition
 
     /// Calm handoff for Examen interstitials and screen changes.
-    static let examenScreenChange: Animation = .easeInOut(duration: 0.30)
+    static let examenScreenChange: Animation = screenTransition
 
     /// Slightly quicker animation for moving between prompts.
     static let examenPromptAdvance: Animation = .easeInOut(duration: 0.22)
 
     /// Lightweight feedback animation for small control state changes.
-    static let examenControl: Animation = .easeInOut(duration: 0.18)
+    static let examenControl: Animation = confirmation
 
     /// Calm handoff from prayer posture into the first reflective prompt.
     static let examenPostureHandoff: Animation = .easeInOut(duration: 1.0)

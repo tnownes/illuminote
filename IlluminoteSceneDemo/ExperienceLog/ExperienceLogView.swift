@@ -1,6 +1,11 @@
 import SwiftUI
 import SwiftData
 
+enum ExperienceLogPresentation {
+    case standalone
+    case embedded
+}
+
 struct ExperienceLogView: View {
     @Environment(AppSettings.self) private var settings
     @Environment(\.modelContext) private var modelContext
@@ -13,8 +18,15 @@ struct ExperienceLogView: View {
     @State private var showSuggestionsSheet = false
     @State private var exportDocument: ApplicationExperienceCSVDocument?
     @State private var showExporter = false
+    @State private var persistenceAlert: PersistenceAlertContext?
+
+    let presentation: ExperienceLogPresentation
 
     private let requirementsService = LocalExperienceEntryRequirementsService.shared
+
+    init(presentation: ExperienceLogPresentation = .standalone) {
+        self.presentation = presentation
+    }
 
     private var relevantRequirements: [ExperienceEntryRequirement] {
         requirementsService.requirements(for: profiles.first)
@@ -32,49 +44,22 @@ struct ExperienceLogView: View {
         dynamicTypeSize.isAccessibilitySize
     }
 
+    private var isEmbedded: Bool {
+        presentation == .embedded
+    }
+
     var body: some View {
-        ZStack {
-            SacredScreenBackground(settings: settings)
-
-            ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
-                    headerCard
-
-                    if experiences.isEmpty {
-                        emptyStateCard
-                    } else {
-                        readinessCard
-                        experienceList
-                    }
-                }
-                .padding()
-            }
-        }
-        .navigationTitle("Experience Log")
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItemGroup(placement: .topBarTrailing) {
-                if !suggestionCandidates.isEmpty {
-                    Button {
-                        showSuggestionsSheet = true
-                    } label: {
-                        Image(systemName: "wand.and.stars")
-                    }
-                    .accessibilityLabel("Review suggested experience groupings")
-                }
-
-                Button {
-                    showNewExperienceSheet = true
-                } label: {
-                    Image(systemName: "plus")
-                }
-                .accessibilityLabel("Add application experience")
+        Group {
+            if isEmbedded {
+                embeddedWorkspace
+            } else {
+                standaloneWorkspace
             }
         }
         .sheet(isPresented: $showNewExperienceSheet) {
             NavigationStack {
                 ApplicationExperienceSeedEditor(
-                    title: "New Application Experience",
+                    title: "New Application Record",
                     seed: .init(),
                     includeCancel: true
                 ) { seed in
@@ -104,21 +89,87 @@ struct ExperienceLogView: View {
             isPresented: $showExporter,
             document: exportDocument,
             contentType: .commaSeparatedText,
-            defaultFilename: "Illuminote-Experience-Log"
+            defaultFilename: "Illuminote-Application-Records"
         ) { result in
             if case .failure(let error) = result {
-                print("⚠️ Failed to export experience CSV: \(error)")
+                persistenceAlert = PersistenceAlertContext(
+                    title: "Couldn't Export Application Records",
+                    message: "Illuminote couldn't export the application records. \(error.localizedDescription)"
+                )
+            }
+        }
+        .persistenceFailureAlert($persistenceAlert)
+    }
+
+    private var standaloneWorkspace: some View {
+        ZStack {
+            SacredScreenBackground(settings: settings)
+
+            AppPageScrollView(spacing: 20) {
+                standaloneTopChrome
+                contentStack
+            }
+        }
+        .navigationTitle("")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private var embeddedWorkspace: some View {
+        AppPageScrollView(spacing: 20, horizontalPadding: 0, topPadding: 0, bottomPadding: 0) {
+            contentStack
+        }
+    }
+
+    private var standaloneTopChrome: some View {
+        AppPageHeader(
+            title: "Application Records",
+            eyebrow: "Evidence",
+            subtitle: "Turn reflection into application-ready records while keeping your original notes intact."
+        ) {
+            HStack(spacing: DSSpacing.sm) {
+                if !suggestionCandidates.isEmpty {
+                    Button {
+                        showSuggestionsSheet = true
+                    } label: {
+                        Image(systemName: "wand.and.stars")
+                            .font(.headline)
+                            .appCircleControl()
+                    }
+                    .accessibilityLabel("Review suggested experience groupings")
+                }
+
+                Button {
+                    showNewExperienceSheet = true
+                } label: {
+                    Image(systemName: "plus")
+                        .font(.headline)
+                        .appCircleControl(emphasized: true)
+                }
+                .accessibilityLabel("Add application record")
+            }
+        }
+    }
+
+    private var contentStack: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            headerCard
+
+            if experiences.isEmpty {
+                emptyStateCard
+            } else {
+                readinessCard
+                experienceList
             }
         }
     }
 
     private var headerCard: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text("Application-ready experiences")
+            Text("Application-ready records")
                 .font(DSFont.heading2)
                 .foregroundStyle(DSColor.textPrimary)
 
-            Text("Keep application records separate from reflection notes. Link journal entries to experiences so you can preserve insight while building clean AMCAS, TMDSAS, AADSAS, CASPA, and other pre-health entries.")
+            Text("Keep application records separate from reflection notes. Link journal entries to records so you can preserve insight while building clean AMCAS, TMDSAS, AADSAS, CASPA, and other pre-health entries.")
                 .font(DSFont.body)
                 .foregroundStyle(DSColor.textSecondary)
 
@@ -187,7 +238,7 @@ struct ExperienceLogView: View {
 
     private var emptyStateCard: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text("No application experiences yet")
+            Text("No application records yet")
                 .font(DSFont.heading2)
                 .foregroundStyle(.white)
 
@@ -291,7 +342,7 @@ struct ExperienceLogView: View {
 
     private var experienceList: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text("Experience Log")
+            Text("Application Records")
                 .font(DSFont.heading2)
                 .foregroundStyle(.white)
 
@@ -324,9 +375,14 @@ struct ExperienceLogView: View {
 
     private func saveContext() {
         do {
-            try modelContext.save()
+            try modelContext.persistIfNeeded(for: "save those application records")
+        } catch let error as PersistenceOperationError {
+            persistenceAlert = error.alertContext
         } catch {
-            print("⚠️ Failed to save application experiences: \(error)")
+            persistenceAlert = PersistenceAlertContext.saveFailure(
+                for: "save those application records",
+                details: error.localizedDescription
+            )
         }
     }
 }
@@ -423,7 +479,7 @@ struct ApplicationExperienceSeedEditor: View {
     var body: some View {
         Form {
             Section("Basic Information") {
-                TextField("Experience title", text: $seed.title)
+                TextField("Record title", text: $seed.title)
                 Picker("Category", selection: $seed.category) {
                     ForEach(ApplicationExperienceCategory.allCases) { category in
                         Text(category.displayName).tag(category)

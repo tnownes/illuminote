@@ -2,7 +2,7 @@
   {
     "id": "amcas_experiences_2026",
     "service_code": "amcas",
-    "title": "AMCAS Work and Activities",
+    "title": "Work and Activities",
     "max_experiences": 15,
     "max_highlights": 3,
     "highlight_label": "Most Meaningful",
@@ -21,7 +21,7 @@
   {
     "id": "aacomas_experiences_2026",
     "service_code": "aacomas",
-    "title": "AACOMAS Experiences",
+    "title": "Experiences",
     "max_experiences": null,
     "max_highlights": 3,
     "highlight_label": "Most Meaningful",
@@ -40,7 +40,7 @@
   {
     "id": "tmdsas_experiences_2026",
     "service_code": "tmdsas",
-    "title": "TMDSAS Activities",
+    "title": "Activities",
     "max_experiences": null,
     "max_highlights": 3,
     "highlight_label": "Most Meaningful",
@@ -59,7 +59,7 @@
   {
     "id": "aadsas_experiences_2026",
     "service_code": "aadsas",
-    "title": "ADEA AADSAS Experiences",
+    "title": "Experiences",
     "max_experiences": null,
     "max_highlights": 6,
     "highlight_label": "Most Important",
@@ -78,7 +78,7 @@
   {
     "id": "caspa_experiences_2026",
     "service_code": "caspa",
-    "title": "CASPA Experiences",
+    "title": "Experiences",
     "max_experiences": null,
     "max_highlights": null,
     "highlight_label": null,
@@ -97,7 +97,7 @@
   {
     "id": "pharmcas_experiences_2026",
     "service_code": "pharmcas",
-    "title": "PharmCAS Experiences",
+    "title": "Experiences",
     "max_experiences": null,
     "max_highlights": null,
     "highlight_label": null,
@@ -116,7 +116,7 @@
   {
     "id": "otcas_experiences_2026",
     "service_code": "otcas",
-    "title": "OTCAS Experiences",
+    "title": "Experiences",
     "max_experiences": null,
     "max_highlights": null,
     "highlight_label": null,
@@ -135,7 +135,7 @@
   {
     "id": "ptcas_experiences_2026",
     "service_code": "ptcas",
-    "title": "PTCAS Experiences",
+    "title": "Experiences",
     "max_experiences": null,
     "max_highlights": null,
     "highlight_label": null,
@@ -154,7 +154,7 @@
   {
     "id": "vmcas_experiences_2026",
     "service_code": "vmcas",
-    "title": "VMCAS Experiences",
+    "title": "Experiences",
     "max_experiences": null,
     "max_highlights": null,
     "highlight_label": null,
@@ -173,7 +173,7 @@
   {
     "id": "optomcas_experiences_2026",
     "service_code": "optomcas",
-    "title": "OptomCAS Experiences",
+    "title": "Experiences",
     "max_experiences": null,
     "max_highlights": null,
     "highlight_label": null,

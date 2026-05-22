@@ -3,35 +3,52 @@ import SwiftUI
 struct StatementRequirementsCard: View {
     @Environment(AppSettings.self) private var settings
     let requirements: [StatementRequirement]
+    var compact: Bool = false
     @State private var isExpanded: Bool = false
 
     private var useImmersive: Bool {
         settings.appThemeMode == .core
     }
+
+    private var requirementCountText: String {
+        "\(requirements.count) prompt\(requirements.count == 1 ? "" : "s")"
+    }
+
+    private var tightestCharacterLimit: Int? {
+        requirements.map(\.characterLimitMax).min()
+    }
     
     var body: some View {
-        Group {
-            if useImmersive {
-                cardBody
-                    .padding()
-                    .sacredCardStyle(highlighted: isExpanded)
-            } else {
-                cardBody
-                    .padding()
-                    .background(Color(UIColor.secondarySystemGroupedBackground))
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                    .shadow(color: Color.black.opacity(0.05), radius: 2, x: 0, y: 1)
-            }
-        }
+        cardBody
+            .padding(compact ? DSSpacing.md : DSSpacing.lg)
+            .appSurfaceStyle(role: isExpanded ? .reading : .quiet, highlighted: isExpanded && useImmersive)
     }
 
     @ViewBuilder
     private var cardBody: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: DSSpacing.sm) {
             DisclosureGroup(isExpanded: $isExpanded) {
                 VStack(alignment: .leading, spacing: 16) {
                     Divider()
                         .background(useImmersive ? DSColor.divider : Color(uiColor: .separator))
+
+                    if !requirements.isEmpty {
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: DSSpacing.sm) {
+                                AppInfoChip(
+                                    text: requirementCountText,
+                                    icon: "number"
+                                )
+                                if let tightestCharacterLimit {
+                                    AppInfoChip(
+                                        text: "\(tightestCharacterLimit) char limit",
+                                        icon: "textformat",
+                                        emphasized: true
+                                    )
+                                }
+                            }
+                        }
+                    }
                     
                     if requirements.isEmpty {
                         Text("No specific requirements found for your profile settings.")
@@ -50,25 +67,22 @@ struct StatementRequirementsCard: View {
                 }
                 .padding(.top, 4)
             } label: {
-                HStack {
-                    Image(systemName: "info.circle.fill")
-                        .foregroundStyle(useImmersive ? DSColor.goldLight : Color.accentColor)
-                    Text("Statement Requirements")
-                        .font(DSFont.heading2)
-                        .foregroundStyle(useImmersive ? DSColor.textPrimary : .primary)
-                    Spacer()
-                    if !isExpanded && !requirements.isEmpty {
-                        Text("\(requirements.count) Services")
-                            .font(DSFont.caption)
-                            .foregroundStyle(useImmersive ? DSColor.textSecondary : .secondary)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(useImmersive ? DSColor.surfaceElevated : Color.secondary.opacity(0.1))
-                            .clipShape(Capsule())
-                            .overlay(
-                                Capsule()
-                                    .stroke(useImmersive ? DSColor.goldLight.opacity(0.65) : Color.clear, lineWidth: 1)
-                            )
+                VStack(alignment: .leading, spacing: DSSpacing.sm) {
+                    HStack(alignment: .center, spacing: DSSpacing.sm) {
+                        Image(systemName: "doc.text.magnifyingglass")
+                            .foregroundStyle(useImmersive ? DSColor.goldLight : Color.accentColor)
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Application requirements")
+                                .font(DSFont.heading2)
+                                .foregroundStyle(useImmersive ? DSColor.textPrimary : .primary)
+                            if !compact {
+                                Text("Keep the prompt, limits, and official notes close by without crowding the draft list.")
+                                    .font(DSFont.supporting)
+                                    .foregroundStyle(useImmersive ? DSColor.quietText : .secondary)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                        }
+                        Spacer()
                     }
                 }
             }
@@ -84,10 +98,16 @@ struct RequirementRow: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Text(req.serviceCode.displayName)
-                    .font(DSFont.subtext)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(useImmersive ? DSColor.textPrimary : .primary)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(req.officialTitle)
+                        .font(DSFont.subtext)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(useImmersive ? DSColor.textPrimary : .primary)
+
+                    Text(req.serviceCode.displayName)
+                        .font(DSFont.caption)
+                        .foregroundStyle(useImmersive ? DSColor.textSecondary : .secondary)
+                }
                 
                 Spacer()
                 
@@ -188,6 +208,7 @@ struct LimitBadge: View {
             StatementRequirement(
                 id: "amcas_2026",
                 serviceCode: .amcas,
+                officialTitle: "Personal Comments Essay",
                 cycleYear: 2026,
                 effectiveStartDate: Date(),
                 effectiveEndDate: Date(),
@@ -203,6 +224,7 @@ struct LimitBadge: View {
             StatementRequirement(
                 id: "tmdsas_2026",
                 serviceCode: .tmdsas,
+                officialTitle: "Personal Statement",
                 cycleYear: 2026,
                 effectiveStartDate: Date(),
                 effectiveEndDate: Date(),

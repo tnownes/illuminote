@@ -6,121 +6,120 @@ struct OnboardingFlowView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(AppSettings.self) private var settings
     
-    // State machine for onboarding steps
     enum OnboardingStep: Int, CaseIterable {
-        case splash, welcome, aboutExamen, examenSteps, howItWorks, setup, done
+        case welcome, appMap, setup, done
+
+        var progressIndex: Int? {
+            switch self {
+            case .welcome:
+                return 1
+            case .appMap:
+                return 2
+            case .setup:
+                return 3
+            case .done:
+                return nil
+            }
+        }
     }
     
-    @State private var currentStep: OnboardingStep = .splash
-    @State private var opacity: Double = 0
-    @State private var showSettingsSheet = false // For "Learn More"
+    @State private var currentStep: OnboardingStep = .welcome
+    @State private var persistenceAlert: PersistenceAlertContext?
     
     var body: some View {
         ZStack {
-            // Background: Dynamic Theme
-            if settings.selectedTheme == .sacredVoid {
-                RadialGradient(
-                    gradient: Gradient(colors: [DSColor.nearBlack, DSColor.deepMaroon]),
-                    center: .center,
-                    startRadius: 50,
-                    endRadius: 350
-                )
-                .ignoresSafeArea()
-            } else if settings.selectedTheme == .gradient {
-                AnimatedMeshGradientBackground()
-            } else {
-                 // Fallback/Standard dark theme
-                Color.black.ignoresSafeArea()
-            }
-            
-            switch currentStep {
-            case .splash:
-                splashScreen
-            case .welcome:
-                OnboardingWelcomeView(onNext: { advance(to: .aboutExamen) })
-                    .transition(.opacity.combined(with: .move(edge: .trailing)))
-            case .aboutExamen:
-                OnboardingAboutView(
-                    onNext: { advance(to: .examenSteps) },
-                    onLearnMore: { showSettingsSheet = true }
-                )
-                .transition(.opacity.combined(with: .move(edge: .trailing)))
-            case .examenSteps:
-                OnboardingExamenStepsView(onNext: { advance(to: .howItWorks) })
-                    .transition(.opacity.combined(with: .move(edge: .trailing)))
-            case .howItWorks:
-                OnboardingHowItWorksView(onNext: { advance(to: .setup) })
-                    .transition(.opacity.combined(with: .move(edge: .trailing)))
-            case .setup:
-                OnboardingSetupView(onComplete: { profile in
-                    saveProfile(profile)
-                    advance(to: .done)
-                })
-                .transition(.opacity.combined(with: .move(edge: .trailing)))
-            case .done:
-                OnboardingCompletionView(onDismiss: { dismiss() })
-                    .transition(.opacity.combined(with: .scale))
-            }
-        }
-        .animation(.easeInOut, value: currentStep)
-        .sheet(isPresented: $showSettingsSheet) {
-            NavigationStack {
-                ExamenExplainerView()
-                    .toolbar {
-                        ToolbarItem(placement: .cancellationAction) {
-                            Button("Done") { showSettingsSheet = false }
-                        }
+            SacredScreenBackground(settings: settings)
+
+            VStack(spacing: 0) {
+                if let progressIndex = currentStep.progressIndex {
+                    OnboardingProgressHeader(
+                        stepIndex: progressIndex,
+                        totalSteps: 3,
+                        onSkip: completeWithDefaultsAndDismiss
+                    )
+                    .padding(.horizontal, DSSpacing.lg)
+                    .padding(.top, DSSpacing.md)
+                }
+
+                Group {
+                    switch currentStep {
+                    case .welcome:
+                        OnboardingWelcomeView(onNext: { advance(to: .appMap) })
+                            .transition(.opacity.combined(with: .move(edge: .trailing)))
+                    case .appMap:
+                        OnboardingAppMapView(onNext: { advance(to: .setup) })
+                            .transition(.opacity.combined(with: .move(edge: .trailing)))
+                    case .setup:
+                        OnboardingSetupView(onComplete: { profile in
+                            saveProfile(profile)
+                            advance(to: .done)
+                        })
+                        .transition(.opacity.combined(with: .move(edge: .trailing)))
+                    case .done:
+                        OnboardingCompletionView(onDismiss: finishAndDismiss)
+                            .transition(.opacity.combined(with: .scale))
                     }
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
-        .onAppear {
-            if currentStep == .splash {
-                // Auto-advance splash
-                withAnimation(.easeIn(duration: 1.0)) {
-                    opacity = 1.0
-                }
-                DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-                    advance(to: .welcome)
-                }
-            }
-        }
+        .animation(AnimationConfig.screenTransition, value: currentStep)
+        .persistenceFailureAlert($persistenceAlert)
+        .interactiveDismissDisabled()
     }
     
-    // MARK: - Splash Screen
-    private var splashScreen: some View {
-        VStack(spacing: 16) {
-            Image(systemName: "sun.haze.fill") // Brand icon placeholder
-                .font(.system(size: 80))
-                .foregroundStyle(DSColor.goldLight)
-                .luminous()
-                .symbolEffect(.pulse, value: opacity)
-            
-            Text("Reflect. Connect. Grow.")
-                .font(.title2)
-                .fontWeight(.medium)
-                .foregroundStyle(.white.opacity(0.9))
-        }
-        .opacity(opacity)
-    }
-    
-    // MARK: - Helpers
     private func advance(to step: OnboardingStep) {
-        withAnimation {
+        withAnimation(AnimationConfig.screenTransition) {
             currentStep = step
         }
     }
+
+    private func finishAndDismiss() {
+        settings.selectedTab = .home
+        dismiss()
+    }
+
+    private func completeWithDefaultsAndDismiss() {
+        let existing = try? modelContext.fetch(FetchDescriptor<UserProfile>())
+        if let first = existing?.first {
+            first.hasSeenOnboarding = true
+            do {
+                try modelContext.persistIfNeeded(for: "save your onboarding progress")
+            } catch let error as PersistenceOperationError {
+                persistenceAlert = error.alertContext
+                return
+            } catch {
+                persistenceAlert = PersistenceAlertContext.saveFailure(
+                    for: "save your onboarding progress",
+                    details: error.localizedDescription
+                )
+                return
+            }
+        } else {
+            let profile = UserProfile(hasSeenOnboarding: true)
+            modelContext.insert(profile)
+            do {
+                try modelContext.persistIfNeeded(for: "save your onboarding defaults")
+            } catch let error as PersistenceOperationError {
+                persistenceAlert = error.alertContext
+                return
+            } catch {
+                persistenceAlert = PersistenceAlertContext.saveFailure(
+                    for: "save your onboarding defaults",
+                    details: error.localizedDescription
+                )
+                return
+            }
+        }
+
+        finishAndDismiss()
+    }
     
     private func saveProfile(_ profile: UserProfile) {
-        // If there's an existing profile (re-run case), update it?
-        // Or assume single profile.
-        // For now, simpler to just insert. SwiftData handles ID conflicts if ID matches, but we created new UUID.
-        // We should probably check if one exists and update it, to avoid duplicates if re-running.
-        
         let existing = try? modelContext.fetch(FetchDescriptor<UserProfile>())
         let persistedProfile: UserProfile
         
         if let first = existing?.first {
-            // Update existing
             first.preProfessionalTrack = profile.preProfessionalTrack
             first.defaultMode = profile.defaultMode
             first.notificationsEnabled = profile.notificationsEnabled
@@ -130,11 +129,21 @@ struct OnboardingFlowView: View {
             first.hasSeenOnboarding = true
             persistedProfile = first
         } else {
-            // Insert new
             modelContext.insert(profile)
             persistedProfile = profile
         }
-        try? modelContext.save()
+        do {
+            try modelContext.persistIfNeeded(for: "save your onboarding profile")
+        } catch let error as PersistenceOperationError {
+            persistenceAlert = error.alertContext
+            return
+        } catch {
+            persistenceAlert = PersistenceAlertContext.saveFailure(
+                for: "save your onboarding profile",
+                details: error.localizedDescription
+            )
+            return
+        }
         
         if persistedProfile.notificationsEnabled {
             NotificationManager.shared.requestPermission { granted in
@@ -143,7 +152,16 @@ struct OnboardingFlowView: View {
                 } else {
                     persistedProfile.notificationsEnabled = false
                     NotificationManager.shared.cancelNotifications()
-                    try? modelContext.save()
+                    do {
+                        try modelContext.persistIfNeeded(for: "update your onboarding notification preference")
+                    } catch let error as PersistenceOperationError {
+                        persistenceAlert = error.alertContext
+                    } catch {
+                        persistenceAlert = PersistenceAlertContext.saveFailure(
+                            for: "update your onboarding notification preference",
+                            details: error.localizedDescription
+                        )
+                    }
                 }
             }
         } else {
@@ -152,8 +170,48 @@ struct OnboardingFlowView: View {
     }
 }
 
-/// Targeted explainer for the Examen practice, shown from onboarding "Learn More".
-private struct ExamenExplainerView: View {
+private struct OnboardingProgressHeader: View {
+    let stepIndex: Int
+    let totalSteps: Int
+    let onSkip: () -> Void
+
+    var body: some View {
+        HStack(alignment: .center, spacing: DSSpacing.md) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Step \(stepIndex) of \(totalSteps)")
+                    .font(DSFont.meta.weight(.semibold))
+                    .foregroundStyle(DSColor.quietTextMuted)
+
+                ProgressView(value: Double(stepIndex), total: Double(totalSteps))
+                    .tint(DSColor.brandAccent)
+                    .frame(maxWidth: 160)
+            }
+
+            Spacer()
+
+            Button(action: onSkip) {
+                Text("Skip for now")
+                    .font(DSFont.meta.weight(.semibold))
+                    .foregroundStyle(DSColor.quietText)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 10)
+                    .background(
+                        Capsule()
+                            .fill(DSColor.quietSurface.opacity(0.78))
+                    )
+                    .overlay(
+                        Capsule()
+                            .stroke(DSColor.dividerSoft, lineWidth: 1)
+                    )
+            }
+            .buttonStyle(.plain)
+            .accessibilityHint("Uses default settings and opens the app.")
+        }
+    }
+}
+
+/// Targeted explainer for the Examen practice, replayable from Home and Settings.
+struct ExamenExplainerView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: DSSpacing.lg) {

@@ -16,15 +16,13 @@ struct JournalEntrySelectionView: View {
         allSessions.filter { $0.sessionType != .statementDraft }
     }
     
-    // Existing drafts for "Add to Existing"
-    @Query(sort: \StatementDraft.dateModified, order: .reverse)
-    private var drafts: [StatementDraft]
-    
     @State private var selectedIDs = Set<UUID>()
     @State private var searchText = ""
-    @State private var showDraftPicker = false
+    @State private var showDestinationChooser = false
+    @State private var persistenceAlert: PersistenceAlertContext?
     
     var targetDraft: StatementDraft? = nil // If set, we are adding to this draft specifically
+    var initialWritingTargetID: String? = nil
     var onDraftCreated: ((StatementDraft) -> Void)?
     var onRefreshed: (() -> Void)? // Callback when changes made so caller can update if needed
 
@@ -38,118 +36,61 @@ struct JournalEntrySelectionView: View {
                 if useImmersive {
                     SacredScreenBackground(settings: settings)
                 }
-                List(selection: $selectedIDs) {
-                    ForEach(filteredEntries) { entry in
-                        VStack(alignment: .leading) {
-                            Text(entry.date.formatted(date: .abbreviated, time: .shortened))
-                                .font(DSFont.heading2)
-                                .foregroundStyle(useImmersive ? DSColor.textPrimary : .primary)
-                            
-                            let excerpt = entry.responses.sorted(by: { $0.stepIndex < $1.stepIndex }).first?.answerText ?? "No content"
-                            Text(excerpt)
-                                .lineLimit(2)
-                                .font(DSFont.subtext)
-                                .foregroundStyle(useImmersive ? DSColor.textSecondary : .secondary)
+                if showDestinationChooser {
+                    AddToDraftDestinationView(
+                        selectedEntries: selectedEntries,
+                        selectedWorkspaceEntries: [],
+                        preselectedTargetID: initialWritingTargetID,
+                        onDraftCreated: onDraftCreated,
+                        onCancel: { showDestinationChooser = false },
+                        onComplete: {
+                            onRefreshed?()
+                            dismiss()
                         }
-                        .padding(.horizontal, DSSpacing.md)
-                        .padding(.vertical, DSSpacing.sm)
-                        .background {
-                            if useImmersive {
-                                RoundedRectangle(cornerRadius: 16)
-                                    .fill(.ultraThinMaterial)
-                            }
+                    )
+                } else {
+                    List(selection: $selectedIDs) {
+                        ForEach(filteredEntries) { entry in
+                            DraftSelectionEntryRow(
+                                entry: entry,
+                                isSelected: selectedIDs.contains(entry.id)
+                            )
+                            .tag(entry.id)
+                            .listRowBackground(Color.clear)
                         }
-                        .overlay {
-                            if useImmersive {
-                                RoundedRectangle(cornerRadius: 16)
-                                    .stroke(selectedIDs.contains(entry.id) ? DSColor.goldLight : Color.white.opacity(0.12), lineWidth: selectedIDs.contains(entry.id) ? 2 : 1)
-                            }
-                        }
-                        .clipShape(RoundedRectangle(cornerRadius: 16))
-                        .shadow(color: useImmersive && selectedIDs.contains(entry.id) ? DSColor.goldLight.opacity(0.25) : .clear, radius: 10, x: 0, y: 3)
-                        .tag(entry.id)
-                        .listRowBackground(useImmersive ? Color.clear : Color(uiColor: .secondarySystemGroupedBackground))
                     }
-                }
-                .listRowSeparatorTint(useImmersive ? .clear : Color(uiColor: .separator))
-                .darkListStyle(enabled: useImmersive, baseBackground: nil)
-                .background(Color.clear)
-                .toolbarColorScheme(useImmersive ? .dark : nil, for: .navigationBar)
-                .navigationTitle("Select Entries")
-                .searchable(text: $searchText, prompt: "Search journal...")
-                .environment(\.editMode, .constant(.active))
-                .toolbar {
-                    ToolbarItem(placement: .cancellationAction) {
-                        Button("Cancel") { dismiss() }
-                    }
-                    
-                    ToolbarItem(placement: .confirmationAction) {
-                        if let target = targetDraft {
-                            Button("Add") {
-                                addToDraft(target)
-                                onRefreshed?()
-                                dismiss()
-                            }
-                            .disabled(selectedIDs.isEmpty)
-                        } else {
-                            Menu("Add") {
-                                Menu("Create New Draft") {
-                                    ForEach(StatementDraftScope.allCases) { scope in
-                                        Button(scope.displayName) {
-                                            createNewDraft(scope: scope)
-                                        }
+                    .listRowSeparatorTint(useImmersive ? .clear : Color(uiColor: .separator))
+                    .darkListStyle(enabled: useImmersive, baseBackground: nil)
+                    .background(Color.clear)
+                    .toolbarColorScheme(useImmersive ? .dark : nil, for: .navigationBar)
+                    .navigationTitle("Choose Reflections")
+                    .searchable(text: $searchText, prompt: "Search reflections")
+                    .environment(\.editMode, .constant(.active))
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button("Cancel") { dismiss() }
+                        }
+
+                        ToolbarItem(placement: .confirmationAction) {
+                            if let target = targetDraft {
+                                Button("Add to Draft") {
+                                    if addToDraft(target) {
+                                        onRefreshed?()
+                                        dismiss()
                                     }
                                 }
-                                
-                                Button("Add to Existing Draft") {
-                                    showDraftPicker = true
+                                .disabled(selectedIDs.isEmpty)
+                            } else {
+                                Button("Use in Draft") {
+                                    showDestinationChooser = true
                                 }
-                                .disabled(drafts.isEmpty)
-                            }
-                            .disabled(selectedIDs.isEmpty)
-                        }
-                    }
-                }
-                .sheet(isPresented: $showDraftPicker) {
-                    NavigationStack {
-                        List(drafts) { draft in
-                            Button {
-                                addToDraft(draft)
-                                showDraftPicker = false
-                                dismiss()
-                            } label: {
-                                HStack {
-                                    VStack(alignment: .leading) {
-                                        Text(draft.title)
-                                            .foregroundStyle(useImmersive ? DSColor.textPrimary : .primary)
-                                        Text("v\(draft.version) • \(draft.dateModified.formatted())")
-                                            .font(DSFont.caption)
-                                            .foregroundStyle(useImmersive ? DSColor.textSecondary : .secondary)
-                                    }
-                                    Spacer()
-                                    if draft.isFinal {
-                                        Image(systemName: "lock.fill")
-                                            .font(DSFont.caption)
-                                            .foregroundStyle(useImmersive ? DSColor.textTertiary : .secondary)
-                                    }
-                                }
-                            }
-                            .foregroundStyle(useImmersive ? DSColor.textPrimary : .primary)
-                            .listRowBackground(useImmersive ? Color.clear : Color(uiColor: .secondarySystemGroupedBackground))
-                        }
-                        .listRowSeparatorTint(useImmersive ? .clear : Color(uiColor: .separator))
-                        .darkListStyle(enabled: useImmersive, baseBackground: nil)
-                        .navigationTitle("Choose Draft")
-                        .toolbar {
-                            ToolbarItem(placement: .cancellationAction) {
-                                Button("Cancel") { showDraftPicker = false }
+                                .disabled(selectedIDs.isEmpty)
                             }
                         }
                     }
-                    .presentationDetents([.medium, .large])
-                    .presentationBackground(useImmersive ? DSColor.backgroundPrimary : Color(uiColor: .systemBackground))
                 }
             }
+            .persistenceFailureAlert($persistenceAlert)
         }
     }
     
@@ -158,47 +99,40 @@ struct JournalEntrySelectionView: View {
             return journalEntries
         } else {
             return journalEntries.filter { session in
-                let text = session.responses.map(\.answerText).joined(separator: " ")
-                return text.localizedCaseInsensitiveContains(searchText)
+                searchHaystack(for: session).localizedCaseInsensitiveContains(searchText)
             }
         }
     }
-    
-    private func createNewDraft(scope: StatementDraftScope = .full) {
-        let title = "Draft \(Date.now.formatted(date: .numeric, time: .omitted))"
-        let newDraft = StatementDraft(title: title, draftScope: scope)
-        
-        let sortedSelection = journalEntries.filter { selectedIDs.contains($0.id) }
+
+    private var selectedEntries: [ExamenSession] {
+        journalEntries
+            .filter { selectedIDs.contains($0.id) }
             .sorted(by: { $0.date < $1.date })
-        
-        for (index, session) in sortedSelection.enumerated() {
-            let content = session.mergedDraftContent()
-            
-            let section = StatementSection(
-                source: .journalEntry,
-                content: content,
-                order: index,
-                sourceID: session.id
-            )
-            newDraft.sections.append(section)
-        }
-        
-        modelContext.insert(newDraft)
-        
-        // 🛠 Persist immediately
-        do {
-            try modelContext.save()
-        } catch {
-            print("Failed to save new draft from journal selection: \(error)")
-        }
-        
-        onDraftCreated?(newDraft)
-        dismiss()
+    }
+
+    private func searchHaystack(for session: ExamenSession) -> String {
+        let metadataFields: [String] = [
+            session.resolvedPrimaryDetail,
+            session.resolvedSecondaryDetail,
+            session.resolvedFocusDetail,
+            session.location,
+            session.notes
+        ].compactMap { $0 }
+
+        return """
+        \(session.normalizedResponseTexts().joined(separator: "\n\n"))
+        \(session.personalStatement)
+        \(metadataFields.joined(separator: " "))
+        \(session.date.formatted(date: .abbreviated, time: .shortened))
+        """
     }
     
-    private func addToDraft(_ draft: StatementDraft) {
+    @discardableResult
+    private func addToDraft(_ draft: StatementDraft) -> Bool {
         let selectedSessions = journalEntries.filter { selectedIDs.contains($0.id) }
         let startOrder = (draft.sections.map { $0.order }.max() ?? -1) + 1
+        let originalModifiedDate = draft.dateModified
+        var appendedSections: [StatementSection] = []
         
         for (index, session) in selectedSessions.sorted(by: { $0.date < $1.date }).enumerated() {
             let content = session.mergedDraftContent()
@@ -210,15 +144,111 @@ struct JournalEntrySelectionView: View {
                 sourceID: session.id
             )
             draft.sections.append(section)
+            appendedSections.append(section)
         }
         
         draft.dateModified = Date()
-        
-        // 🛠 Persist the update
+
         do {
-            try modelContext.save()
+            try modelContext.persistIfNeeded(for: "add those reflections to the draft")
+            return true
+        } catch let error as PersistenceOperationError {
+            persistenceAlert = error.alertContext
         } catch {
-            print("Failed to save draft after adding journal entries: \(error)")
+            persistenceAlert = PersistenceAlertContext.saveFailure(
+                for: "add those reflections to the draft",
+                details: error.localizedDescription
+            )
         }
+
+        draft.sections.removeAll { section in
+            appendedSections.contains(where: { $0.id == section.id })
+        }
+        draft.dateModified = originalModifiedDate
+        return false
+    }
+}
+
+private struct DraftSelectionEntryRow: View {
+    let entry: ExamenSession
+    let isSelected: Bool
+
+    private let journalDateStyle = Date.FormatStyle(date: .abbreviated, time: .shortened)
+
+    private var previewSourceText: String? {
+        [
+            entry.personalStatement,
+            entry.notes ?? "",
+            entry.normalizedResponseTexts().first ?? ""
+        ]
+        .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+        .first { !$0.isEmpty }
+    }
+
+    private var headlineText: String {
+        if let primary = entry.resolvedPrimaryDetail {
+            return primary
+        }
+        if let secondary = entry.resolvedSecondaryDetail {
+            return secondary
+        }
+        if let previewSourceText {
+            return previewSourceText
+        }
+        return "Reflection"
+    }
+
+    private var previewText: String? {
+        guard let previewSourceText else { return nil }
+        guard previewSourceText != headlineText else { return nil }
+        return previewSourceText
+    }
+
+    private var metadataLine: String {
+        var items: [String] = [entry.date.formatted(journalDateStyle)]
+
+        if let type = entry.experienceType?.canonical, type != .other {
+            items.insert(type.displayName, at: 0)
+        } else {
+            items.insert("Reflection", at: 0)
+        }
+
+        if let secondary = entry.resolvedSecondaryDetail, secondary != headlineText {
+            items.append(secondary)
+        }
+
+        if let focus = entry.resolvedFocusDetail {
+            items.append(focus)
+        }
+
+        return items.joined(separator: " • ")
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: DSSpacing.sm) {
+            Text(metadataLine)
+                .font(DSFont.eyebrow)
+                .foregroundStyle(DSColor.quietTextMuted)
+                .textCase(.uppercase)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Text(headlineText)
+                .font(DSFont.heading2)
+                .foregroundStyle(DSColor.textPrimary)
+                .lineLimit(2)
+                .fixedSize(horizontal: false, vertical: true)
+
+            if let previewText {
+                Text(previewText)
+                    .font(DSFont.supporting)
+                    .foregroundStyle(DSColor.quietText)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, DSSpacing.md)
+        .padding(.vertical, DSSpacing.md)
+        .appSurfaceStyle(role: isSelected ? .reading : .interactive, highlighted: isSelected)
     }
 }

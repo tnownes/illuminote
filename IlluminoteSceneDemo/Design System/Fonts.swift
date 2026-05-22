@@ -8,14 +8,22 @@
 import SwiftUI
 
 enum DSFont {
-    // Uses TextStyle-relative sizing for Dynamic Type support
-    static let heading1 = Font.system(.title, weight: .bold)
-    static let heading2 = Font.system(.title3, weight: .semibold)
-    static let body     = Font.body
-    static let subtext  = Font.subheadline
-    static let caption  = Font.caption
+    // MARK: - Semantic Typography Roles
+    static let display = Font.system(size: 34, weight: .semibold, design: .serif)
+    static let screenTitle = Font.system(size: 28, weight: .semibold, design: .default)
+    static let sectionTitle = Font.system(size: 21, weight: .semibold, design: .default)
+    static let body = Font.body
+    static let supporting = Font.subheadline
+    static let meta = Font.caption
+    static let eyebrow = Font.system(size: 12, weight: .semibold, design: .rounded)
 
-    // Specialized styles
-    static let promptDisplay = Font.system(.largeTitle, weight: .light)
-    static let sectionHeader = Font.system(.title2, weight: .semibold)
+    // MARK: - Backward-Compatible Aliases
+    static let heading1 = screenTitle
+    static let heading2 = sectionTitle
+    static let subtext = supporting
+    static let caption = meta
+
+    // MARK: - Specialized Styles
+    static let promptDisplay = Font.system(size: 34, weight: .regular, design: .serif)
+    static let sectionHeader = sectionTitle
 }

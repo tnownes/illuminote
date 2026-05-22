@@ -48,7 +48,11 @@ struct PromptSeeder {
             context.insert(template)
         }
 
-        try? context.save()
+        do {
+            try context.save()
+        } catch {
+            print("⚠️ Failed to save seeded prompts: \(error)")
+        }
         print("Seeding complete.")
     }
 }

@@ -8,7 +8,6 @@ import AVFoundation
 struct PrayerPostureView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @Environment(AppSettings.self) private var settings // Inject settings for theme
 
     /// Callbacks to continue the prelude.
     let onConfirm: () -> Void
@@ -23,63 +22,44 @@ struct PrayerPostureView: View {
 
     var body: some View {
         ZStack {
-            // Dynamic Theme Background (Restored)
-            settings.selectedTheme.anySceneView
-                .ignoresSafeArea()
-                .overlay(Color.black.opacity(0.2)) // Slightly dim background for better contrast
-            
             if contentVisible {
                 VStack(spacing: DSSpacing.xl) {
                     Spacer(minLength: DSSpacing.xl)
-                    
-                    // Glass Text Container for Readability
-                    VStack(spacing: DSSpacing.md) {
-                        // Updated to match ExamenStepView Immersive Style
-                        Text("Assume a Prayerful Posture. Center yourself. Slow your breathing.")
-                            .font(DSFont.promptDisplay)
-                            .multilineTextAlignment(.center)
-                            .accessibilityAddTraits(.isHeader)
-                            .foregroundStyle(.white)
-                            .shadow(color: .black.opacity(0.4), radius: 2, x: 0, y: 1)
 
-                        Text("Clear your mind of intrusive thoughts. Tap when ready.")
-                            .font(.body)
-                            .multilineTextAlignment(.center)
-                            .foregroundStyle(.white.opacity(0.8))
-                            .shadow(color: .black.opacity(0.4), radius: 2, x: 0, y: 1)
+                    AppPanel(
+                        title: nil,
+                        subtitle: nil,
+                        role: .reading,
+                        highlighted: true
+                    ) {
+                        VStack(spacing: DSSpacing.md) {
+                            Text("Settle into a prayerful posture.")
+                                .font(DSFont.display)
+                                .multilineTextAlignment(.center)
+                                .accessibilityAddTraits(.isHeader)
+                                .foregroundStyle(DSColor.textPrimary)
+
+                            Text("Slow your breathing. Let the noise of the day quiet down. When you are ready, begin with honesty and attention.")
+                                .font(DSFont.supporting)
+                                .multilineTextAlignment(.center)
+                                .foregroundStyle(DSColor.quietText)
+                        }
                     }
-                    .padding(DSSpacing.lg)
-                    .padding(DSSpacing.lg)
                     .transition(.opacity)
 
                     Button {
                         didConfirm.toggle()
                         onConfirm()
                     } label: {
-                        Text("Tap to Begin")
-                            .font(.title3)
-                            .fontWeight(.semibold)
-                            .foregroundStyle(.white)
-                            .padding(.vertical, 16)
-                            .padding(.horizontal, 48)
-                            .background(
-                                Capsule() // Keep it round as requested
-                                    .fill(.ultraThinMaterial)
-                                    .overlay(
-                                        Capsule()
-                                            .stroke(DSColor.goldLight, lineWidth: 2)
-                                            .luminous()
-                                    )
-                            )
+                        Text("Begin")
                     }
-                    .buttonStyle(ScaleButtonStyle())
-                    // Apply distinct breathing pulse to scale AND shadow (light)
+                    .buttonStyle(SacredButtonStyle())
                     .phaseAnimator([false, true], trigger: contentVisible) { content, phase in
                         content
-                            .scaleEffect(reduceMotion ? 1.0 : (phase ? 1.015 : 0.985))
+                            .scaleEffect(reduceMotion ? 1.0 : (phase ? 1.01 : 0.99))
                             .shadow(
-                                color: DSColor.goldLight.opacity(reduceMotion ? 0.25 : (phase ? 0.55 : 0.28)),
-                                radius: reduceMotion ? 8 : (phase ? 14 : 8),
+                                color: DSColor.brandAccent.opacity(reduceMotion ? 0.14 : (phase ? 0.22 : 0.12)),
+                                radius: reduceMotion ? 6 : (phase ? 12 : 8),
                                 x: 0, y: 0
                             )
                     } animation: { phase in
@@ -92,10 +72,9 @@ struct PrayerPostureView: View {
                     Button {
                         onSkip?() ?? onConfirm()
                     } label: {
-                        Text("Skip")
-                            .font(.subheadline)
-                            .foregroundStyle(.white.opacity(0.6))
+                        Text("Skip for now")
                     }
+                    .buttonStyle(.appQuiet)
                     .padding(.top, DSSpacing.sm)
                     .accessibilityLabel("Skip prayerful posture")
 
@@ -111,17 +90,15 @@ struct PrayerPostureView: View {
                     showExitAlert = true
                 } label: {
                     Image(systemName: "xmark.circle.fill")
-                        .font(.title2)
-                        .foregroundStyle(Color.white.opacity(0.82))
-                        .padding(DSSpacing.md)
-                        .contentShape(Rectangle())
+                        .font(.headline)
+                        .appCircleControl()
                 }
                 .accessibilityLabel("Exit")
             }
             .padding(.horizontal, DSSpacing.sm)
             .background(
                 LinearGradient(
-                    colors: [Color.black.opacity(0.32), Color.black.opacity(0.10), .clear],
+                    colors: [Color.black.opacity(0.28), Color.black.opacity(0.08), .clear],
                     startPoint: .top,
                     endPoint: .bottom
                 )

@@ -88,14 +88,24 @@ extension ExamenSession {
         return lines
     }
 
+    func normalizedResponseTexts() -> [String] {
+        let ordered = responses
+            .sorted { $0.stepIndex < $1.stepIndex }
+            .map(\.answerText)
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+
+        return ordered.reduce(into: []) { result, answer in
+            if result.last != answer {
+                result.append(answer)
+            }
+        }
+    }
+
     /// Builds a single, merged text block representing all relevant journal content.
     func mergedDraftContent() -> String {
         // 1) Step responses (sorted by step index)
-        let sortedResponses = responses
-            .sorted { $0.stepIndex < $1.stepIndex }
-        let responsesText = sortedResponses
-            .map { $0.answerText }
-            .filter { !$0.isEmpty }
+        let responsesText = normalizedResponseTexts()
             .joined(separator: "\n\n")
             
         // 2) Experience detail groups
@@ -122,9 +132,7 @@ extension ExamenSession {
 
     /// Flattened entry text used for search/theme extraction.
     func themeAnalysisText() -> String {
-        let responseText = responses
-            .sorted(by: { $0.stepIndex < $1.stepIndex })
-            .map(\.answerText)
+        let responseText = normalizedResponseTexts()
             .joined(separator: "\n")
 
         let metadata = [

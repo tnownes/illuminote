@@ -13,7 +13,6 @@ struct FiltersRow: View {
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: DSSpacing.sm) {
-                // Experience Filter
                 Menu {
                     Button("All Experiences") { selectedExperience = nil }
                     Divider()
@@ -87,20 +86,22 @@ struct FilterChip: View {
     var body: some View {
         HStack(spacing: 4) {
             Image(systemName: icon)
-                .font(.caption)
-                .foregroundStyle(isActive ? DSColor.goldLight : DSColor.textPrimary)
+                .font(DSFont.meta)
+                .foregroundStyle(isActive ? DSColor.brandAccent : DSColor.quietText)
             Text(title)
-                .font(DSFont.caption)
+                .font(DSFont.meta)
                 .foregroundStyle(DSColor.textPrimary)
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
-        .background(.ultraThinMaterial)
+        .background(
+            Capsule()
+                .fill(isActive ? DSColor.brandAccentSoft : DSColor.quietSurface)
+        )
         .clipShape(Capsule())
         .overlay(
-            Capsule().strokeBorder(isActive ? DSColor.goldLight : DSColor.divider, lineWidth: isActive ? 2 : 1)
+            Capsule().strokeBorder(isActive ? DSColor.brandAccent.opacity(0.4) : DSColor.dividerSoft, lineWidth: 1)
         )
-        .shadow(color: isActive ? DSColor.goldLight.opacity(0.35) : .clear, radius: isActive ? 10 : 0, x: 0, y: 2)
     }
 }
 
@@ -112,24 +113,23 @@ struct FilterPill: View {
     var body: some View {
         HStack(spacing: 6) {
             Text(text)
-                .font(DSFont.caption)
+                .font(DSFont.meta)
                 .foregroundStyle(DSColor.textPrimary)
                 .lineLimit(1)
             Button(action: onClear) {
                 Image(systemName: "xmark.circle.fill")
                     .imageScale(.small)
-                    .foregroundStyle(DSColor.textTertiary)
+                    .foregroundStyle(DSColor.quietTextMuted)
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Clear \(text)")
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 6)
-        .background(.ultraThinMaterial)
+        .background(DSColor.brandAccentSoft)
         .clipShape(Capsule())
         .overlay(
-            Capsule().stroke(DSColor.goldLight, lineWidth: 1.5)
+            Capsule().stroke(DSColor.brandAccent.opacity(0.4), lineWidth: 1)
         )
-        .shadow(color: DSColor.goldLight.opacity(0.28), radius: 8, x: 0, y: 2)
     }
 }

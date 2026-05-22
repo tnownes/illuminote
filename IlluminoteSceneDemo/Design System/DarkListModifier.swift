@@ -33,12 +33,12 @@ struct DarkListModifier: ViewModifier {
 
 extension View {
     /// Applies the app's dark immersive list styling in one call.
-    func darkListStyle(enabled: Bool, baseBackground: Color? = DSColor.backgroundPrimary) -> some View {
+    func darkListStyle(enabled: Bool, baseBackground: Color? = DSColor.appBackground) -> some View {
         modifier(DarkListModifier(enabled: enabled, baseBackground: baseBackground))
     }
 
     func darkListStyle() -> some View {
-        modifier(DarkListModifier(enabled: true, baseBackground: DSColor.backgroundPrimary))
+        modifier(DarkListModifier(enabled: true, baseBackground: DSColor.appBackground))
     }
 }
 
@@ -75,7 +75,7 @@ struct DarkEmptyState: View {
 
             Image(systemName: systemImage)
                 .font(.system(size: 48))
-                .foregroundStyle(DSColor.textTertiary)
+                .foregroundStyle(DSColor.quietTextMuted)
 
             VStack(spacing: DSSpacing.sm) {
                 Text(title)
@@ -93,10 +93,10 @@ struct DarkEmptyState: View {
                 Button(action: action) {
                     Text(actionTitle)
                         .font(DSFont.body.weight(.semibold))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(DSColor.textOnBrandAccent)
                         .padding(.horizontal, DSSpacing.xl)
                         .padding(.vertical, DSSpacing.md)
-                        .background(DSColor.goldLight)
+                        .background(DSColor.brandAccent)
                         .clipShape(Capsule())
                 }
                 .padding(.top, DSSpacing.sm)
@@ -107,7 +107,7 @@ struct DarkEmptyState: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background {
             if fillBackground {
-                DSColor.backgroundPrimary
+                DSColor.appBackground
             }
         }
     }

@@ -15,6 +15,9 @@ struct StatementDraftFilePayload: Codable {
     let title: String
     let version: Int
     let draftScopeRaw: String?
+    let writingTargetID: String?
+    let writingTargetCategoryRaw: String?
+    let customPromptText: String?
     let isFinal: Bool
     let isLocked: Bool
     let dateCreated: Date

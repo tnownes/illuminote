@@ -9,7 +9,7 @@
 // DesignSystem/Themes.swift
 import SwiftUI
 
-enum AppTheme {
+enum AppTheme: Hashable {
     case core
     case reflective
 }

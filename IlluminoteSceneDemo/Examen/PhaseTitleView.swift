@@ -89,10 +89,9 @@ struct PhaseTitleView: View {
 
     private func titleText(lineLimit: Int) -> some View {
         Text(state.titleText)
-            .font(.title3)
-            .fontWeight(.semibold)
+            .font(DSFont.sectionTitle)
             .multilineTextAlignment(.leading)
-            .foregroundStyle(.white)
+            .foregroundStyle(DSColor.textPrimary)
             .lineLimit(lineLimit)
             .minimumScaleFactor(0.78)
             .allowsTightening(true)
@@ -101,16 +100,16 @@ struct PhaseTitleView: View {
 
     private var phaseBadge: some View {
         Text(state.phaseText)
-            .font(.caption.weight(.medium))
-            .foregroundStyle(Color.white.opacity(0.75))
+            .font(DSFont.meta.weight(.medium))
+            .foregroundStyle(DSColor.quietText)
             .padding(.horizontal, DSSpacing.sm)
             .padding(.vertical, 6)
             .background(
                 Capsule()
-                    .fill(Color.white.opacity(0.10))
+                    .fill(DSColor.quietSurface)
                     .overlay(
                         Capsule()
-                            .stroke(Color.white.opacity(0.12), lineWidth: 1)
+                            .stroke(DSColor.dividerSoft, lineWidth: 1)
                     )
             )
             .lineLimit(1)

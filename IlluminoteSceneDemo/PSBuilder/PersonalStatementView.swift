@@ -20,6 +20,7 @@ struct PersonalStatementView: View {
 
     /// Local draft to prevent saving on every keystroke.
     @State private var draft: String = ""
+    @State private var persistenceAlert: PersistenceAlertContext?
 
     var body: some View {
         NavigationStack {
@@ -38,7 +39,7 @@ struct PersonalStatementView: View {
 
                 Button("Save") {
                     session.personalStatement = draft
-                    do { try modelContext.save() } catch { print("Save failed: \(error)") }
+                    persistStatement()
                 }
                 .buttonStyle(.borderedProminent)
                 .disabled(draft == session.personalStatement)
@@ -48,6 +49,7 @@ struct PersonalStatementView: View {
             .padding()
             .navigationTitle("Statement")
         }
+        .persistenceFailureAlert($persistenceAlert)
         .onAppear {
             // Initialize the draft from the saved value
             draft = session.personalStatement
@@ -56,8 +58,21 @@ struct PersonalStatementView: View {
             // Gentle autosave if user navigates away with unsaved changes
             if draft != session.personalStatement {
                 session.personalStatement = draft
-                try? modelContext.save()
+                persistStatement()
             }
+        }
+    }
+
+    private func persistStatement() {
+        do {
+            try modelContext.persistIfNeeded(for: "save that statement")
+        } catch let error as PersistenceOperationError {
+            persistenceAlert = error.alertContext
+        } catch {
+            persistenceAlert = PersistenceAlertContext.saveFailure(
+                for: "save that statement",
+                details: error.localizedDescription
+            )
         }
     }
 }

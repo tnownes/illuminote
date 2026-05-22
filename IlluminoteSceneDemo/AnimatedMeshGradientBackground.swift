@@ -2,12 +2,25 @@ import SwiftUI
 
 @available(iOS 18.0, *)
 struct AnimatedMeshGradientBackground: View {
+    @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(AppSettings.self) private var settings
+    var motionPolicy: ReflectiveMotionPolicy? = nil
+
     // Smaller numbers = slower animation
     var pointSpeed: Double = 0.25
     var colorSpeed: Double = 0.15
+
+    private var effectiveMotionPolicy: ReflectiveMotionPolicy {
+        motionPolicy ?? ReflectiveMotionPolicy(
+            scenePhase: scenePhase,
+            reduceMotion: reduceMotion,
+            backgroundAnimationEnabled: settings.backgroundAnimationEnabled
+        )
+    }
     
     var body: some View {
-        TimelineView(.animation) { context in
+        TimelineView(.animation(minimumInterval: 1.0 / 30.0, paused: effectiveMotionPolicy.isPaused)) { context in
             let phase = context.date.timeIntervalSinceReferenceDate
             MeshGradient(
                 width: 3,
@@ -68,4 +81,3 @@ struct AnimatedMeshGradientBackground: View {
         }
     }
 }
-

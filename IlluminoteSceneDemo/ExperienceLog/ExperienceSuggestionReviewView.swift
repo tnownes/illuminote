@@ -15,7 +15,7 @@ struct ExperienceSuggestionReviewView: View {
     var body: some View {
         List {
             Section {
-                Text("Review suggested groupings based on existing notes. Nothing converts automatically; each suggestion becomes a new application experience only if you accept it.")
+                Text("Review suggested groupings based on existing notes. Nothing converts automatically; each suggestion becomes a new Application Record only if you accept it.")
                     .font(DSFont.body)
                     .foregroundStyle(.secondary)
             }
@@ -53,7 +53,7 @@ struct ExperienceSuggestionReviewView: View {
                         .tint(DSColor.goldLight)
                         .disabled(acceptedCandidateIDs.contains(candidate.id))
                         .accessibilityLabel(acceptedCandidateIDs.contains(candidate.id) ? "Experience added" : "Create experience from suggestion")
-                        .accessibilityHint("Creates a new application experience using this suggested grouping.")
+                        .accessibilityHint("Creates a new application record using this suggested grouping.")
                     }
                     .padding(.vertical, 6)
                     .accessibilityElement(children: .combine)
