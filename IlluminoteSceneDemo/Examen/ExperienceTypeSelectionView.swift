@@ -3,45 +3,88 @@ import SwiftUI
 struct ExperienceTypeSelectionView: View {
     var onSelect: (ExperienceType) -> Void
     var onCancel: () -> Void
+
+    @State private var selectedType: ExperienceType?
+
+    private var isCoreMode: Bool {
+        AppSettings.featurePolicy.mode == .core
+    }
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("Pick your experience type")
-                .font(.headline)
-                .padding(.top)
+        ZStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: DSSpacing.lg) {
+                    if isCoreMode {
+                        AppSectionHeader(
+                            eyebrow: "Begin",
+                            title: "What are you bringing today?",
+                            subtitle: nil
+                        )
+                    } else {
+                        AppSectionHeader(
+                            eyebrow: "Before you begin",
+                            title: "What kind of experience are you reflecting on?",
+                            subtitle: "Choose the closest fit. The prompts will adapt from there."
+                        )
+                    }
 
-            ExperienceTypeGridView(
-                types: ExperienceType.allCases,
-                counts: [:] // TODO: Connect to real stats if desired
-            ) { tapped in
-                onSelect(tapped)
+                    AppPanel(role: .reading) {
+                        ExperienceTypeGridView(
+                            types: ExperienceType.allCases,
+                            counts: [:],
+                            selectedType: selectedType,
+                            showsHints: isCoreMode
+                        ) { tapped in
+                            if isCoreMode {
+                                selectedType = tapped
+                            } else {
+                                onSelect(tapped)
+                            }
+                        }
+                    }
+
+                    if isCoreMode {
+                        VStack(spacing: DSSpacing.md) {
+                            if let selectedType {
+                                Button {
+                                    onSelect(selectedType)
+                                } label: {
+                                    Label("Begin", systemImage: "chevron.right")
+                                        .frame(maxWidth: .infinity)
+                                }
+                                .buttonStyle(SacredButtonStyle())
+                                .accessibilityIdentifier("examen.type.begin")
+                            }
+
+                            Button("Not sure yet") {
+                                onSelect(.other)
+                            }
+                            .buttonStyle(.appSecondary)
+                            .accessibilityIdentifier("examen.type.notSure")
+                        }
+                        .frame(maxWidth: 328)
+                        .frame(maxWidth: .infinity)
+                    }
+                }
+                .padding(.horizontal, DSSpacing.lg)
+                .padding(.top, DSSpacing.md)
+                .padding(.bottom, DSSpacing.xl)
             }
-            .padding(.horizontal)
-
-            Spacer(minLength: 0)
         }
-        .navigationTitle("Before you begin")
+        .navigationTitle("")
+        .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
-                Button("Cancel") {
+                Button {
                     onCancel()
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.headline)
+                        .appCircleControl()
                 }
             }
         }
-        .background(
-            ZStack {
-                // Sacred Void Radial Gradient
-                RadialGradient(
-                    gradient: Gradient(colors: [DSColor.nearBlack, DSColor.deepMaroon]),
-                    center: .center,
-                    startRadius: 50,
-                    endRadius: 500
-                )
-                .ignoresSafeArea()
-            }
-        )
-        // Ensure white header text for contrast
-        .foregroundStyle(.white)
+        .toolbarColorScheme(.dark, for: .navigationBar)
     }
 }
 
@@ -49,4 +92,5 @@ struct ExperienceTypeSelectionView: View {
     NavigationStack {
         ExperienceTypeSelectionView(onSelect: { _ in }, onCancel: {})
     }
+    .environment(AppSettings())
 }

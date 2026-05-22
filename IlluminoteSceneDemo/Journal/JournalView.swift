@@ -4,8 +4,24 @@ import NaturalLanguage
 
 struct JournalView: View {
     private let journalDateStyle = Date.FormatStyle(date: .abbreviated, time: .shortened)
+    private static let monthHeaderFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.calendar = Calendar.current
+        formatter.locale = Locale.current
+        formatter.dateFormat = "LLLL yyyy"
+        return formatter
+    }()
+
+    private static let customRangeFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .short
+        return formatter
+    }()
+
     @Environment(\.modelContext) private var modelContext
     @Environment(AppSettings.self) private var settings // reserved if you later style rows by theme
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
     // Environment editMode removed in favor of local state management
 
@@ -27,6 +43,10 @@ struct JournalView: View {
         allSessions.filter { $0.sessionType == ExamenType.statementDraft }
     }
 
+    private var isCoreMode: Bool {
+        AppSettings.featurePolicy.mode == .core
+    }
+
     // Multi-selection like Photos app
     @State private var selectedIDs: Set<UUID> = []
     
@@ -41,78 +61,100 @@ struct JournalView: View {
     
     // Date filter state
     enum DatePreset: String, CaseIterable { case all, last7, last30, last365, custom }
+
+    private enum JournalSheetRoute: Identifiable {
+        case editDetails(UUID)
+        case viewEntry(UUID)
+        case editText(UUID)
+        case bulkTagging
+        case dateRange
+        case addToStatement([UUID])
+
+        var id: String {
+            switch self {
+            case .editDetails(let entryID):
+                return "editDetails-\(entryID.uuidString)"
+            case .viewEntry(let entryID):
+                return "viewEntry-\(entryID.uuidString)"
+            case .editText(let entryID):
+                return "editText-\(entryID.uuidString)"
+            case .bulkTagging:
+                return "bulkTagging"
+            case .dateRange:
+                return "dateRange"
+            case .addToStatement(let entryIDs):
+                return "addToStatement-" + entryIDs.map(\.uuidString).joined(separator: "-")
+            }
+        }
+    }
+
+    private enum JournalCoverRoute: Identifiable {
+        case quickNote(ExperienceType)
+
+        var id: String {
+            switch self {
+            case .quickNote(let type):
+                return "quickNote-\(type.rawValue)"
+            }
+        }
+    }
     @State private var datePreset: DatePreset = .all
     @State private var customStart: Date = Calendar.current.date(byAdding: .day, value: -30, to: .now) ?? .now
     @State private var customEnd: Date = .now
-    @State private var showDateRangeSheet = false
+    @State private var activeSheet: JournalSheetRoute?
+    @State private var activeCover: JournalCoverRoute?
     
-    @State private var showEditDetails = false
-    @State private var editingEntry: ExamenSession? = nil
     @State private var tempExperience: ExperienceType? = nil
     @State private var tempTags: [String] = []
     @State private var newTagText: String = ""
 
-    @State private var showBulkTagSheet = false
     @State private var bulkTags: [String] = []
     @State private var bulkNewTagText: String = ""
-
-    // Entry viewer/editor state
-    @State private var viewingEntry: ExamenSession? = nil
-    
-    // Edit Mode State (Notes only)
-    @State private var showEditTextSheet = false
-    @State private var editStatementText: String = ""
-    @State private var editingTextEntry: ExamenSession? = nil
     
     // Quick Note
     @State private var showQuickNoteTypePicker = false
-    @State private var showQuickNoteFlow = false
-    @State private var quickNoteType: ExperienceType = .other
-    
-    // Add to Statement Sheet
-    @State private var showAddToStatementSheet = false
-    @State private var entriesToAdd: [ExamenSession] = []
 
-    // Theme Finder
-    @State private var showThemeFinder = false
-    
     // File Export State
     @State private var showFileExporter = false
     @State private var exportDocument: RTFDocument?
+    @State private var showFilterControls = false
+    @State private var persistenceAlert: PersistenceAlertContext?
 
-    // Cached filter results to avoid recomputation on every body evaluation
-    @State private var cachedFilteredSessions: [ExamenSession] = []
-    @State private var needsFilterUpdate = true
+    // Cached presentation data so large lists are only regrouped when inputs change.
+    @State private var availableTags: [String] = []
+    @State private var filteredSessionsCache: [ExamenSession] = []
+    @State private var groupedSessionsByMonth: [(month: Date, items: [ExamenSession])] = []
+    @State private var favoriteSessionCountCache = 0
 
     private var allTags: [String] {
-        let set = Set(sessions.flatMap { $0.tags })
-        return Array(set).sorted()
+        availableTags
     }
 
     private var filtersAreClear: Bool {
-        query.isEmpty && selectedExperience == nil && selectedTag == nil && datePreset == .all
+        query.isEmpty && selectedExperience == nil && selectedTag == nil && datePreset == .all && !onlyFavorites
     }
 
     private var filteredSessions: [ExamenSession] {
-        cachedFilteredSessions
+        filteredSessionsCache
     }
 
     private func refilter() {
-        cachedFilteredSessions = sessions.filter { entry in
+        let filtered = sessions.filter { entry in
             passesExperienceAndTagFilters(entry: entry, experience: selectedExperience, tag: selectedTag)
             && passesSearchFilter(entry: entry, query: query)
             && isWithinDateRange(entry: entry, preset: datePreset)
             && (!onlyFavorites || entry.isFavorite)
         }
+
+        filteredSessionsCache = filtered
+        groupedSessionsByMonth = groupedSessions(filtered)
+        availableTags = Array(Set(sessions.flatMap(\.tags))).sorted()
+        favoriteSessionCountCache = sessions.filter(\.isFavorite).count
     }
 
     // Grouping helpers
     private var monthFormatter: DateFormatter {
-        let f = DateFormatter()
-        f.calendar = Calendar.current
-        f.locale = Locale.current
-        f.dateFormat = "LLLL yyyy" // e.g., September 2025
-        return f
+        Self.monthHeaderFormatter
     }
 
     private func monthStart(for date: Date) -> Date {
@@ -122,13 +164,7 @@ struct JournalView: View {
     }
 
     private var groupedByMonth: [(month: Date, items: [ExamenSession])] {
-        let groups = Dictionary(grouping: filteredSessions) { monthStart(for: $0.date) }
-        // Sort months descending (newest first), and items descending by date
-        return groups
-            .map { (key, value) in
-                (month: key, items: value.sorted { $0.date > $1.date })
-            }
-            .sorted { $0.month > $1.month }
+        groupedSessionsByMonth
     }
 
     private var datePresetLabel: String {
@@ -140,14 +176,40 @@ struct JournalView: View {
         case .custom:
             let s = customStart
             let e = customEnd
-            let fmt = DateFormatter()
-            fmt.dateStyle = .short
-            return "Date: \(fmt.string(from: min(s,e)))–\(fmt.string(from: max(s,e)))"
+            return "Date: \(Self.customRangeFormatter.string(from: min(s,e)))–\(Self.customRangeFormatter.string(from: max(s,e)))"
         }
     }
 
     private var useImmersive: Bool {
         settings.appThemeMode == .core
+    }
+
+    private var favoriteSessionCount: Int {
+        favoriteSessionCountCache
+    }
+
+    private var hasActiveSelection: Bool {
+        editMode == .active && !selectedIDs.isEmpty
+    }
+
+    private var headerSummaryText: String {
+        if filtersAreClear {
+            return "\(sessions.count) reflection\(sessions.count == 1 ? "" : "s")"
+        }
+        return "\(filteredSessions.count) of \(sessions.count) shown"
+    }
+
+    private var journalCanvasMaxWidth: CGFloat {
+        horizontalSizeClass == .regular && !dynamicTypeSize.isAccessibilitySize ? 1280 : .infinity
+    }
+
+    private var usesJournalSidebar: Bool {
+        horizontalSizeClass == .regular && !dynamicTypeSize.isAccessibilitySize && !sessions.isEmpty
+    }
+
+    private var selectionModeCaption: String? {
+        guard editMode == .active else { return nil }
+        return "Selection mode is on. Choose reflections, then add them to Insights or use the menu for bulk actions."
     }
 
     var body: some View {
@@ -156,102 +218,79 @@ struct JournalView: View {
                 if useImmersive {
                     SacredScreenBackground(settings: settings)
                 }
-                Group {
+                VStack(spacing: DSSpacing.xs) {
+                    AppPageHeader(title: "Journal")
+                        .padding(.horizontal, DSSpacing.lg)
+                        .padding(.top, DSSpacing.md)
+                        .padding(.bottom, DSSpacing.xs)
+
                     if sessions.isEmpty {
-                        if useImmersive {
-                            DarkEmptyState(
-                                title: "No Sessions Yet",
-                                systemImage: "book",
-                                description: "Your reflections will appear here once you complete an Examen. Tap the Home tab to start.",
-                                actionTitle: "Start Your First Examen",
-                                action: {},
-                                fillBackground: false
-                            )
-                        } else {
-                            ContentUnavailableView {
-                                Label("No Sessions Yet", systemImage: "book")
-                            } description: {
-                                Text("Your reflections will appear here once you complete an Examen. Tap the Home tab to start.")
+                        JournalFirstUseState(
+                            useImmersive: useImmersive,
+                            onCaptureQuickNote: { showQuickNoteTypePicker = true },
+                            onGoHome: { settings.selectedTab = .home }
+                        )
+                    } else if usesJournalSidebar {
+                        HStack(alignment: .top, spacing: 0) {
+                            journalFilterSidebar
+                                .frame(width: 310)
+                                .padding(.leading, DSSpacing.lg)
+                                .padding(.trailing, DSSpacing.md)
+                                .padding(.bottom, DSSpacing.md)
+
+                            Rectangle()
+                                .fill(DSColor.dividerSoft)
+                                .frame(width: 1)
+                                .padding(.bottom, DSSpacing.sm)
+
+                            VStack(spacing: DSSpacing.xs) {
+                                selectionInsightsButton
+                                journalResultsContent
                             }
+                            .padding(.leading, DSSpacing.md)
+                            .padding(.trailing, DSSpacing.lg)
                         }
                     } else {
-                        VStack(spacing: 8) {
-                            // Filters row
-                            FiltersRow(selectedExperience: $selectedExperience,
-                                       selectedTag: $selectedTag,
-                                       datePreset: $datePreset,
-                                       showDateRangeSheet: $showDateRangeSheet,
-                                       onlyFavorites: $onlyFavorites,
-                                       allTags: allTags,
-                                       datePresetLabel: datePresetLabel)
-                                .padding(.horizontal)
-
-                            // Active filter pills
-                            if !filtersAreClear {
-                                ScrollView(.horizontal, showsIndicators: false) {
-                                    HStack(spacing: 8) {
-                                        if let kind = selectedExperience {
-                                            FilterPill(text: "Experience: \(kind.displayName)") { selectedExperience = nil }
-                                        }
-                                        if let tag = selectedTag {
-                                            FilterPill(text: "Tag: \(tag)") { selectedTag = nil }
-                                        }
-                                        if !query.isEmpty {
-                                            FilterPill(text: "Search: \(query)") { query = "" }
-                                        }
-                                        if datePreset != .all {
-                                            FilterPill(text: datePresetLabel) {
-                                                datePreset = .all
-                                            }
-                                        }
-                                        if onlyFavorites {
-                                            FilterPill(text: "Favorites") { onlyFavorites = false }
-                                        }
-                                    }
-                                    .padding(.horizontal)
-                                }
-                            }
-
-                            // Results list (multi-select)
-                            List(selection: $selectedIDs) {
-                                ForEach(groupedByMonth, id: \.month) { section in
-                                    Section(
-                                        header: Group {
-                                            if useImmersive {
-                                                DarkSectionHeader(title: monthFormatter.string(from: section.month))
-                                            } else {
-                                                Text(monthFormatter.string(from: section.month))
-                                            }
-                                        }
-                                    ) {
-                                        ForEach(section.items) { session in
-                                            journalRow(for: session)
-                                                .listRowBackground(useImmersive ? Color.clear : Color(uiColor: .secondarySystemGroupedBackground))
-                                        }
-                                    }
-                                }
-                            }
-                            .environment(\.editMode, $editMode) // Inject local state
-                            .listRowSeparatorTint(useImmersive ? .clear : Color(uiColor: .separator))
-                            .darkListStyle(enabled: useImmersive, baseBackground: nil)
-                        }
+                        compactJournalControls
+                        journalResultsContent
                     }
                 }
+                .frame(maxWidth: journalCanvasMaxWidth, maxHeight: .infinity)
+                .frame(maxWidth: .infinity)
             }
-            .navigationTitle("Journal")
+            .navigationTitle("")
+            .navigationBarTitleDisplayMode(.inline)
             .toolbarColorScheme(useImmersive ? .dark : nil, for: .navigationBar)
             .onChange(of: query) { _, _ in refilter() }
             .onChange(of: selectedExperience) { _, _ in refilter() }
             .onChange(of: selectedTag) { _, _ in refilter() }
             .onChange(of: datePreset) { _, _ in refilter() }
             .onChange(of: onlyFavorites) { _, _ in refilter() }
-            .onChange(of: allSessions.count) { _, _ in refilter() }
-            .onAppear { refilter() }
+            .onChange(of: customStart) { _, _ in
+                guard datePreset == .custom else { return }
+                refilter()
+            }
+            .onChange(of: customEnd) { _, _ in
+                guard datePreset == .custom else { return }
+                refilter()
+            }
+            .onChange(of: allSessions.count) { _, _ in
+                refilter()
+                presentPendingJournalEntryIfNeeded()
+            }
+            .onChange(of: settings.pendingJournalEntryID) { _, _ in
+                presentPendingJournalEntryIfNeeded()
+            }
+            .onAppear {
+                refilter()
+                presentPendingJournalEntryIfNeeded()
+            }
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button(editMode == .active ? "Cancel" : "Select") {
                         withAnimation { toggleEditMode() }
                     }
+                    .accessibilityIdentifier("journal.selection.toggle")
                 }
                 
                 ToolbarItemGroup(placement: .topBarTrailing) {
@@ -262,50 +301,72 @@ struct JournalView: View {
                     }
                     .tint(useImmersive ? DSColor.goldLight : .accentColor)
 
-                    Button {
-                        showThemeFinder = true
+                    Menu {
+                        Button {
+                            let chosen = filteredSessions.filter { selectedIDs.contains($0.id) }
+                            openInsights(with: chosen)
+                        } label: {
+                            Label("Open in Insights", systemImage: "sparkles.rectangle.stack")
+                        }
+                        .disabled(!(editMode == .active && !selectedIDs.isEmpty))
+
+                        Button {
+                            clearFilters()
+                        } label: {
+                            Label("Clear Filters", systemImage: "xmark.circle")
+                        }
+                        .disabled(filtersAreClear)
+
+                        if !isCoreMode {
+                            Divider()
+
+                            Button {
+                                seedBulkTagsFromSelection()
+                                activeSheet = .bulkTagging
+                            } label: {
+                                Label("Tag Selected", systemImage: "tag")
+                            }
+                            .disabled(!(editMode == .active && !selectedIDs.isEmpty))
+
+                            Button {
+                                exportSelectedNotes()
+                            } label: {
+                                Label("Export Selected", systemImage: "square.and.arrow.up")
+                            }
+                            .disabled(!(editMode == .active && !selectedIDs.isEmpty))
+
+                            Button {
+                                let chosen = filteredSessions.filter { selectedIDs.contains($0.id) }
+                                presentAddToStatement(with: chosen)
+                            } label: {
+                                Label("Use in Writing", systemImage: "square.and.pencil")
+                            }
+                            .disabled(!(editMode == .active && !selectedIDs.isEmpty))
+                        }
                     } label: {
-                        Label("Theme Finder", systemImage: "sparkles.rectangle.stack")
+                        Image(systemName: "ellipsis.circle")
                     }
                     .tint(useImmersive ? DSColor.goldLight : .accentColor)
-                    
-                    Button {
-                        clearFilters()
-                    } label: {
-                        Label("Clear Filters", systemImage: "xmark.circle")
+                    .accessibilityIdentifier("journal.bulkMenu")
+                }
+
+                ToolbarItem(placement: .bottomBar) {
+                    if editMode == .active {
+                        Button {
+                            let chosen = filteredSessions.filter { selectedIDs.contains($0.id) }
+                            openInsights(with: chosen)
+                        } label: {
+                            Label("Open in Insights", systemImage: "sparkles.rectangle.stack")
+                        }
+                        .disabled(selectedIDs.isEmpty)
+                        .accessibilityIdentifier("journal.selection.addToInsights")
                     }
-                    .disabled(filtersAreClear)
-                    .tint(useImmersive ? DSColor.goldLight : .accentColor)
-                    
-                    Button {
-                        seedBulkTagsFromSelection()
-                        showBulkTagSheet = true
-                    } label: {
-                        Label("Tag Selected", systemImage: "tag")
-                    }
-                    .disabled(!(editMode == .active && !selectedIDs.isEmpty))
-                    .tint(useImmersive ? DSColor.goldLight : .accentColor)
-                    
-                    Button {
-                        exportSelectedNotes()
-                    } label: {
-                        Label("Export", systemImage: "square.and.arrow.up")
-                    }
-                    .disabled(!(editMode == .active && !selectedIDs.isEmpty))
-                    .tint(useImmersive ? DSColor.goldLight : .accentColor)
-                    
-                    Button {
-                        let chosen = filteredSessions.filter { selectedIDs.contains($0.id) }
-                        entriesToAdd = chosen
-                        showAddToStatementSheet = true
-                    } label: {
-                        Label("Add to Statement", systemImage: "square.and.pencil")
-                    }
-                    .disabled(!(editMode == .active && !selectedIDs.isEmpty))
-                    .tint(useImmersive ? DSColor.goldLight : .accentColor)
                 }
             }
-            .searchable(text: $query, placement: .toolbar, prompt: "Search journal entries")
+            .if(!usesJournalSidebar) { view in
+                view.searchable(text: $query, placement: .toolbar, prompt: "Search journal entries")
+            }
+            .persistenceFailureAlert($persistenceAlert)
         }
         .fileExporter(
             isPresented: $showFileExporter,
@@ -316,11 +377,14 @@ struct JournalView: View {
             if case .success(let url) = result {
                 print("Exported to: \(url)")
             } else if case .failure(let error) = result {
-                print("Export failed: \(error.localizedDescription)")
+                persistenceAlert = PersistenceAlertContext(
+                    title: "Couldn't Export Notes",
+                    message: "Illuminote couldn't export those notes. \(error.localizedDescription)"
+                )
             }
         }
         .confirmationDialog(
-            "New Note: Choose Experience Type",
+            "Quick Note",
             isPresented: $showQuickNoteTypePicker,
             titleVisibility: .visible
         ) {
@@ -331,73 +395,14 @@ struct JournalView: View {
             }
             Button("Cancel", role: .cancel) { }
         } message: {
-            Text("This opens the Session Details form directly without running a full Examen.")
+            Text("Choose the kind of experience you want to capture. You can add the details right away.")
         }
-        .fullScreenCover(isPresented: $showQuickNoteFlow) {
-            quickNoteFlow
+        .fullScreenCover(item: $activeCover) { route in
+            coverContent(for: route)
         }
-        .sheet(isPresented: $showEditDetails) {
-            editDetailsSheet
+        .sheet(item: $activeSheet, onDismiss: clearSheetScratchState) { route in
+            sheetContent(for: route)
                 .presentationBackground(useImmersive ? DSColor.backgroundPrimary : Color(uiColor: .systemBackground))
-        }
-        .sheet(item: $viewingEntry) { entry in
-            JournalEntryViewer(
-                entry: entry,
-                onClose: { viewingEntry = nil },
-                onEdit: {
-                    // Slight delay to allow sheet to dismiss if we want smoother transition,
-                    // but usually we can swap.
-                    // Original logic: "View & Edit" meant View, then click Edit button.
-                    // Here we are inside the viewer.
-                    // To edit, we dismiss viewer and show edit sheet?
-                    // The original 'beginEditingEntry' sets 'showEditTextSheet = true'.
-                    // If we do that while this sheet is presented, we need unrelated sheets.
-                    // JournalView has them as siblings.
-                    viewingEntry = nil
-                    // Defer slightly to allow dismiss?
-                    // Or rely on SwiftUI handling sibling sheet swap.
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                         beginEditingEntry(entry)
-                    }
-                },
-                onAddToStatement: {
-                    viewingEntry = nil
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                        entriesToAdd = [entry]
-                        showAddToStatementSheet = true
-                    }
-                }
-            )
-            .presentationBackground(useImmersive ? DSColor.backgroundPrimary : Color(uiColor: .systemBackground))
-        }
-        .sheet(isPresented: $showEditTextSheet) {
-            editTextSheet
-                .presentationBackground(useImmersive ? DSColor.backgroundPrimary : Color(uiColor: .systemBackground))
-        }
-        .sheet(isPresented: $showBulkTagSheet) {
-            bulkTagSheet
-                .presentationBackground(useImmersive ? DSColor.backgroundPrimary : Color(uiColor: .systemBackground))
-        }
-        .sheet(isPresented: $showDateRangeSheet) {
-            dateRangeSheet
-                .presentationBackground(useImmersive ? DSColor.backgroundPrimary : Color(uiColor: .systemBackground))
-        }
-        .sheet(isPresented: $showAddToStatementSheet) {
-            addToStatementSheetContent
-                .presentationBackground(useImmersive ? DSColor.backgroundPrimary : Color(uiColor: .systemBackground))
-        }
-        .sheet(isPresented: $showThemeFinder) {
-            ThemeFinderView(
-                defaultScope: .acrossExperiences,
-                onSendToStatement: { entries in
-                    showThemeFinder = false
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                        entriesToAdd = entries
-                        showAddToStatementSheet = !entries.isEmpty
-                    }
-                }
-            )
-            .presentationBackground(useImmersive ? DSColor.backgroundPrimary : Color(uiColor: .systemBackground))
         }
     }
 
@@ -437,10 +442,7 @@ struct JournalView: View {
     }
     
     private func searchHaystack(for entry: ExamenSession) -> String {
-        let sortedResponses = entry.responses
-            .sorted { $0.stepIndex < $1.stepIndex }
-        let answerTexts = sortedResponses.map { $0.answerText }
-        let combinedAnswers = answerTexts.joined(separator: "\n\n")
+        let combinedAnswers = entry.normalizedResponseTexts().joined(separator: "\n\n")
 
         let metadataFields: [String] = [
             entry.resolvedPrimaryDetail,
@@ -462,6 +464,33 @@ struct JournalView: View {
         """
     }
 
+    private func groupedSessions(_ sessions: [ExamenSession]) -> [(month: Date, items: [ExamenSession])] {
+        let groups = Dictionary(grouping: sessions) { monthStart(for: $0.date) }
+        return groups
+            .map { key, value in
+                (month: key, items: value.sorted { $0.date > $1.date })
+            }
+            .sorted { $0.month > $1.month }
+    }
+
+    private func presentPendingJournalEntryIfNeeded() {
+        guard let targetID = settings.pendingJournalEntryID else { return }
+        guard let entry = sessions.first(where: { $0.id == targetID }) else { return }
+        settings.pendingJournalEntryID = nil
+        activeSheet = .viewEntry(entry.id)
+    }
+
+    @MainActor
+    private func refreshJournalList() async {
+        // CloudKit sync is system-driven; fetching refreshes the local SwiftData snapshot
+        // after incoming changes have landed.
+        _ = try? modelContext.fetch(FetchDescriptor<ExamenSession>())
+        _ = try? modelContext.fetch(FetchDescriptor<StatementDraft>())
+        refilter()
+        presentPendingJournalEntryIfNeeded()
+        try? await Task.sleep(nanoseconds: 350_000_000)
+    }
+
     // MARK: - Helpers
 
     private func toggleEditMode() {
@@ -479,18 +508,63 @@ struct JournalView: View {
         selectedTag = nil
         selectedIDs.removeAll()
         datePreset = .all
+        onlyFavorites = false
+        showFilterControls = false
+    }
+
+    private func openInsights(with entries: [ExamenSession]) {
+        let ids = entries.map(\.id)
+        guard !ids.isEmpty else { return }
+        settings.pendingJournalEntryID = nil
+        settings.pendingInsightEntryIDs = ids
+        settings.pendingInsightsLens = .themes
+        withAnimation {
+            clearSelectionAndExitEditMode()
+        }
+        DispatchQueue.main.async {
+            settings.selectedTab = .insights
+        }
     }
     
     private func delete(_ entries: [ExamenSession]) {
         for entry in entries {
             modelContext.delete(entry)
         }
-        try? modelContext.save()
+        if persistChanges("delete those reflections") {
+            refilter()
+        }
     }
 
     private func clearSelectionAndExitEditMode() {
         selectedIDs.removeAll()
         editMode = .inactive
+    }
+
+    private func toggleSelection(for entryID: UUID) {
+        if selectedIDs.contains(entryID) {
+            selectedIDs.remove(entryID)
+        } else {
+            selectedIDs.insert(entryID)
+        }
+    }
+
+    @ViewBuilder
+    private var selectionInsightsButton: some View {
+        if hasActiveSelection {
+            Button {
+                let chosen = filteredSessions.filter { selectedIDs.contains($0.id) }
+                openInsights(with: chosen)
+            } label: {
+                SelectionInsightsCard(
+                    count: selectedIDs.count,
+                    useImmersiveAccent: useImmersive
+                )
+            }
+            .buttonStyle(.plain)
+            .padding(.horizontal)
+            .padding(.bottom, DSSpacing.xs)
+            .accessibilityIdentifier("journal.selection.primaryAddToInsights")
+        }
     }
 
     private func referencingDrafts(
@@ -502,17 +576,121 @@ struct JournalView: View {
                 .map { (draft, $0.date) }
         }
     }
-    
-    private func presentViewer(for entry: ExamenSession) {
-        viewingEntry = entry
+
+    private var isDateRangeSheetPresented: Binding<Bool> {
+        Binding(
+            get: {
+                if case .dateRange = activeSheet {
+                    return true
+                }
+                return false
+            },
+            set: { isPresented in
+                if isPresented {
+                    activeSheet = .dateRange
+                } else if case .dateRange = activeSheet {
+                    activeSheet = nil
+                }
+            }
+        )
     }
-    
+
+    private func journalEntry(for entryID: UUID) -> ExamenSession? {
+        sessions.first { $0.id == entryID }
+    }
+
+    private func journalEntries(for entryIDs: [UUID]) -> [ExamenSession] {
+        let lookup = Dictionary(uniqueKeysWithValues: sessions.map { ($0.id, $0) })
+        return entryIDs.compactMap { lookup[$0] }
+    }
+
+    private func presentViewer(for entry: ExamenSession) {
+        activeSheet = .viewEntry(entry.id)
+    }
+
     private func beginEditDetails(_ entry: ExamenSession) {
-        editingEntry = entry
         tempExperience = entry.experienceType
         tempTags = entry.tags
         newTagText = ""
-        showEditDetails = true
+        activeSheet = .editDetails(entry.id)
+    }
+
+    private func beginEditingEntry(_ entry: ExamenSession) {
+        activeSheet = .editText(entry.id)
+    }
+
+    private func presentAddToStatement(with entries: [ExamenSession]) {
+        let entryIDs = entries.map(\.id)
+        guard !entryIDs.isEmpty else { return }
+        activeSheet = .addToStatement(entryIDs)
+    }
+
+    private func clearSheetScratchState() {
+        tempExperience = nil
+        tempTags = []
+        newTagText = ""
+        bulkTags = []
+        bulkNewTagText = ""
+    }
+
+    @ViewBuilder
+    private func sheetContent(for route: JournalSheetRoute) -> some View {
+        switch route {
+        case .editDetails(let entryID):
+            if let entry = journalEntry(for: entryID) {
+                editDetailsSheet(for: entry)
+            } else {
+                unavailableEntrySheet
+            }
+        case .viewEntry(let entryID):
+            if let entry = journalEntry(for: entryID) {
+                JournalEntryViewer(
+                    entry: entry,
+                    onClose: { activeSheet = nil },
+                    onEdit: { beginEditingEntry(entry) },
+                    onAddToStatement: { presentAddToStatement(with: [entry]) }
+                )
+            } else {
+                unavailableEntrySheet
+            }
+        case .editText(let entryID):
+            if let entry = journalEntry(for: entryID) {
+                editTextSheet(for: entry)
+            } else {
+                unavailableEntrySheet
+            }
+        case .bulkTagging:
+            bulkTagSheet
+        case .dateRange:
+            dateRangeSheet
+        case .addToStatement(let entryIDs):
+            addToStatementSheetContent(for: journalEntries(for: entryIDs))
+        }
+    }
+
+    @ViewBuilder
+    private func coverContent(for route: JournalCoverRoute) -> some View {
+        switch route {
+        case .quickNote(let type):
+            quickNoteFlow(for: type)
+        }
+    }
+
+    private var unavailableEntrySheet: some View {
+        NavigationStack {
+            ContentUnavailableView(
+                "Reflection Unavailable",
+                systemImage: "exclamationmark.triangle",
+                description: Text("That reflection is no longer available.")
+            )
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Close") {
+                        activeSheet = nil
+                    }
+                }
+            }
+        }
     }
 
     // MARK: - UI Builders
@@ -521,17 +699,23 @@ struct JournalView: View {
     private func journalRow(for session: ExamenSession) -> some View {
         // Strict branching to ensure no gesture interference in Edit Mode
         if editMode == .active {
-            // Edit Mode: Pure Content.
-            // We disable the row content so internal buttons (like Favorite) don't eat the selection tap.
-            // The List cell handles the selection touch.
-            JournalRow(
-                session: session,
-                references: referencingDrafts(for: session.id),
-                onToggleFavorite: { toggleFavorite(session) },
-                isHighlighted: selectedIDs.contains(session.id)
-            )
-            .disabled(true) 
+            Button {
+                withAnimation(AnimationConfig.screenTransition) {
+                    toggleSelection(for: session.id)
+                }
+            } label: {
+                JournalRow(
+                    session: session,
+                    references: referencingDrafts(for: session.id),
+                    onToggleFavorite: { toggleFavorite(session) },
+                    isHighlighted: selectedIDs.contains(session.id)
+                )
+                .allowsHitTesting(false)
+            }
+            .buttonStyle(.plain)
             .tag(session.id)
+            .accessibilityIdentifier("journal.entryButton")
+            .accessibilityValue(selectedIDs.contains(session.id) ? "selected" : "not selected")
         } else {
             // View Mode: Interactive
             JournalRow(
@@ -543,15 +727,22 @@ struct JournalView: View {
             .sensoryFeedback(.impact(weight: .light), trigger: session.isFavorite)
             .contentShape(Rectangle()) // Ensure tap hits spacers
             .onTapGesture {
-                print("DEBUG: Row tapped in View Mode: \(session.id)")
                 presentViewer(for: session)
             }
+            .accessibilityElement(children: .contain)
+            .accessibilityIdentifier("journal.entryRow")
+            .accessibilityAddTraits(.isButton)
             .contextMenu {
-                Button { beginEditDetails(session) } label: {
-                    Label("Edit Details", systemImage: "slider.horizontal.3")
+                if !isCoreMode {
+                    Button { beginEditDetails(session) } label: {
+                        Label("Edit Details", systemImage: "slider.horizontal.3")
+                    }
                 }
                 Button { presentViewer(for: session) } label: {
                     Label("View & Edit", systemImage: "doc.text.magnifyingglass")
+                }
+                Button { openInsights(with: [session]) } label: {
+                    Label(isCoreMode ? "Notice Patterns" : "Open in Insights", systemImage: "sparkles.rectangle.stack")
                 }
             }
             .swipeActions(edge: .trailing) {
@@ -559,21 +750,28 @@ struct JournalView: View {
                     Label("View & Edit", systemImage: "doc.text.magnifyingglass")
                 }.tint(.indigo)
                 
-                Button {
-                    entriesToAdd = [session]
-                    showAddToStatementSheet = true
-                } label: {
-                    Label("Add to Statement", systemImage: "square.and.pencil")
-                }.tint(useImmersive ? DSColor.goldLight : .accentColor)
+                if !isCoreMode {
+                    Button {
+                        presentAddToStatement(with: [session])
+                    } label: {
+                        Label("Use in Writing", systemImage: "square.and.pencil")
+                    }.tint(useImmersive ? DSColor.goldLight : .accentColor)
+                }
                 
                 Button(role: .destructive) { delete([session]) } label: {
                     Label("Delete", systemImage: "trash")
                 }
             }
             .swipeActions(edge: .leading) {
-                Button { beginEditDetails(session) } label: {
-                    Label("Edit Details", systemImage: "slider.horizontal.3")
-                }.tint(useImmersive ? DSColor.goldLight : .blue)
+                Button { openInsights(with: [session]) } label: {
+                    Label(isCoreMode ? "Notice Patterns" : "Open in Insights", systemImage: "sparkles.rectangle.stack")
+                }.tint(useImmersive ? DSColor.goldLight : .accentColor)
+
+                if !isCoreMode {
+                    Button { beginEditDetails(session) } label: {
+                        Label("Edit Details", systemImage: "slider.horizontal.3")
+                    }.tint(useImmersive ? DSColor.goldLight : .blue)
+                }
                 
                 Button { presentViewer(for: session) } label: {
                     Label("View & Edit", systemImage: "doc.text.magnifyingglass")
@@ -585,19 +783,18 @@ struct JournalView: View {
 
     // Toolbar items moved inline to Body for better layout control
     
-    private var quickNoteFlow: some View {
+    private func quickNoteFlow(for type: ExperienceType) -> some View {
         ExamenSessionContainer(
-            draft: ExamenSessionDraft(type: quickNoteType),
+            draft: ExamenSessionDraft(type: type),
             initialStage: .details
         )
     }
 
     private func launchQuickNote(for type: ExperienceType) {
-        quickNoteType = type
-        showQuickNoteFlow = true
+        activeCover = .quickNote(type)
     }
 
-    private var editDetailsSheet: some View {
+    private func editDetailsSheet(for entry: ExamenSession) -> some View {
         NavigationStack {
             Form {
                 Section("Experience Type") {
@@ -633,39 +830,82 @@ struct JournalView: View {
             .navigationTitle("Edit Details")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { showEditDetails = false } }
-                ToolbarItem(placement: .confirmationAction) { Button("Save") { saveEditDetails() } }
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        activeSheet = nil
+                    }
+                    .accessibilityIdentifier("journal.editDetails.cancel")
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") {
+                        saveEditDetails(for: entry)
+                    }
+                    .accessibilityIdentifier("journal.editDetails.save")
+                }
             }
         }
     }
 
-
-
-    private var editTextSheet: some View {
-        NavigationStack {
-            Form {
-                Section("Edit Notes") {
-                    TextEditor(text: $editStatementText)
-                        .frame(minHeight: 200)
-                        .scrollContentBackground(.hidden)
-                        .background(useImmersive ? DSColor.backgroundSecondary : Color.clear)
-                        .foregroundStyle(useImmersive ? DSColor.textPrimary : .primary)
+    private func editTextSheet(for entry: ExamenSession) -> some View {
+        JournalEntryTextEditSheet(
+            entry: entry,
+            useImmersive: useImmersive,
+            onCancel: {
+                activeSheet = nil
+            },
+            onSave: { text in
+                if saveEditedText(text, for: entry) {
+                    activeSheet = nil
                 }
             }
-            .darkListStyle(enabled: useImmersive)
-            .navigationTitle("Edit Entry")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
-                        editingTextEntry = nil
-                        showEditTextSheet = false
+        )
+    }
+
+    private struct JournalEntryTextEditSheet: View {
+        let entry: ExamenSession
+        let useImmersive: Bool
+        let onCancel: () -> Void
+        let onSave: (String) -> Void
+
+        @State private var draftText: String
+
+        init(
+            entry: ExamenSession,
+            useImmersive: Bool,
+            onCancel: @escaping () -> Void,
+            onSave: @escaping (String) -> Void
+        ) {
+            self.entry = entry
+            self.useImmersive = useImmersive
+            self.onCancel = onCancel
+            self.onSave = onSave
+            self._draftText = State(initialValue: entry.personalStatement)
+        }
+
+        var body: some View {
+            NavigationStack {
+                Form {
+                    Section("Edit Notes") {
+                        TextEditor(text: $draftText)
+                            .frame(minHeight: 200)
+                            .scrollContentBackground(.hidden)
+                            .background(useImmersive ? DSColor.backgroundSecondary : Color.clear)
+                            .foregroundStyle(useImmersive ? DSColor.textPrimary : .primary)
                     }
                 }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") {
-                        saveEditedText()
-                        showEditTextSheet = false
+                .darkListStyle(enabled: useImmersive)
+                .navigationTitle("Edit Entry")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Cancel", action: onCancel)
+                            .accessibilityIdentifier("journal.editText.cancel")
+                    }
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Save") {
+                            onSave(draftText)
+                        }
+                        .accessibilityIdentifier("journal.editText.save")
                     }
                 }
             }
@@ -700,7 +940,11 @@ struct JournalView: View {
             .navigationTitle("Tag Selected")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { showBulkTagSheet = false } }
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        activeSheet = nil
+                    }
+                }
                 ToolbarItem(placement: .confirmationAction) { Button("Apply") { applyBulkTags() } .disabled(bulkTags.isEmpty) }
             }
         }
@@ -720,25 +964,38 @@ struct JournalView: View {
             .navigationTitle("Choose Dates")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { showDateRangeSheet = false } }
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        activeSheet = nil
+                    }
+                }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Apply") {
                         datePreset = .custom
-                        showDateRangeSheet = false
+                        activeSheet = nil
                     }
                 }
             }
         }
     }
 
-    private var addToStatementSheetContent: some View {
+    @ViewBuilder
+    private func addToStatementSheetContent(for entries: [ExamenSession]) -> some View {
         Group {
-            if !entriesToAdd.isEmpty {
-                AddToStatementSheet(selectedEntries: entriesToAdd)
+            if !entries.isEmpty {
+                AddToStatementSheet(
+                    selectedEntries: entries,
+                    onComplete: {
+                        withAnimation {
+                            clearSelectionAndExitEditMode()
+                        }
+                    }
+                )
                     .onDisappear {
                         withAnimation { clearSelectionAndExitEditMode() }
-                        entriesToAdd = []
                     }
+            } else {
+                unavailableEntrySheet
             }
         }
     }
@@ -757,32 +1014,591 @@ struct JournalView: View {
     // Favorite toggle handler
     private func toggleFavorite(_ entry: ExamenSession) {
         entry.isFavorite.toggle()
-        if modelContext.hasChanges { try? modelContext.save() }
+        if persistChanges("update that reflection") {
+            refilter()
+        }
     }
     
-    private func beginEditingEntry(_ entry: ExamenSession) {
-        editingTextEntry = entry
-        editStatementText = entry.personalStatement
-        showEditTextSheet = true
-    }
-    
-    private func saveEditedText() {
-        guard let entry = editingTextEntry else { return }
-        entry.personalStatement = editStatementText
-        if modelContext.hasChanges { try? modelContext.save() }
-        editingTextEntry = nil
+    @discardableResult
+    private func saveEditedText(_ text: String, for entry: ExamenSession) -> Bool {
+        entry.personalStatement = text
+        if persistChanges("save that reflection text") {
+            refilter()
+            return true
+        }
+        return false
     }
 
 
     
-    private func saveEditDetails() {
-        guard let entry = editingEntry else { return }
+    private func saveEditDetails(for entry: ExamenSession) {
         entry.experienceType = tempExperience
         entry.tags = tempTags
-        if modelContext.hasChanges {
-            try? modelContext.save()
+        if persistChanges("save those journal details") {
+            refilter()
+            activeSheet = nil
         }
-        showEditDetails = false
+    }
+
+    @discardableResult
+    private func persistChanges(_ operation: String) -> Bool {
+        if !modelContext.hasChanges {
+            return true
+        }
+
+        do {
+            try modelContext.persistIfNeeded(for: operation)
+            return true
+        } catch let error as PersistenceOperationError {
+            persistenceAlert = error.alertContext
+        } catch {
+            persistenceAlert = PersistenceAlertContext.saveFailure(
+                for: operation,
+                details: error.localizedDescription
+            )
+        }
+
+        return false
+    }
+
+    private var compactJournalControls: some View {
+        VStack(spacing: DSSpacing.xs) {
+            JournalBrowseBar(
+                summaryText: headerSummaryText,
+                summaryIcon: filtersAreClear ? "book.closed" : "line.3.horizontal.decrease.circle",
+                emphasizeSummary: !filtersAreClear,
+                favoriteCount: favoriteSessionCount,
+                showFavoritesAsActive: onlyFavorites,
+                selectionCount: editMode == .active ? selectedIDs.count : nil,
+                emphasizeSelection: hasActiveSelection,
+                selectionCaption: selectionModeCaption,
+                showFilterControls: showFilterControls,
+                hasActiveFilters: !filtersAreClear,
+                onToggleFilters: {
+                    withAnimation(AnimationConfig.screenTransition) {
+                        showFilterControls.toggle()
+                    }
+                },
+                onClearFilters: clearFilters
+            )
+            .padding(.horizontal)
+            .padding(.bottom, DSSpacing.xs)
+
+            selectionInsightsButton
+
+            if showFilterControls || !filtersAreClear {
+                JournalFilterTray {
+                    FiltersRow(selectedExperience: $selectedExperience,
+                               selectedTag: $selectedTag,
+                               datePreset: $datePreset,
+                               showDateRangeSheet: isDateRangeSheetPresented,
+                               onlyFavorites: $onlyFavorites,
+                               allTags: allTags,
+                               datePresetLabel: datePresetLabel)
+                }
+                .padding(.horizontal)
+                .padding(.bottom, DSSpacing.xs)
+            }
+
+            if !filtersAreClear {
+                activeFilterPills
+            }
+        }
+    }
+
+    private var journalResultsContent: some View {
+        Group {
+            if filteredSessions.isEmpty {
+                JournalResultsEmptyState(
+                    useImmersive: useImmersive,
+                    clearFilters: clearFilters
+                )
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .padding(.horizontal, DSSpacing.lg)
+                .padding(.top, DSSpacing.md)
+            } else {
+                List(selection: $selectedIDs) {
+                    ForEach(groupedByMonth, id: \.month) { section in
+                        Section(
+                            header: Group {
+                                if useImmersive {
+                                    DarkSectionHeader(title: monthFormatter.string(from: section.month))
+                                } else {
+                                    Text(monthFormatter.string(from: section.month))
+                                }
+                            }
+                        ) {
+                            ForEach(section.items) { session in
+                                journalRow(for: session)
+                                    .listRowInsets(
+                                        EdgeInsets(
+                                            top: DSSpacing.xs,
+                                            leading: DSSpacing.md,
+                                            bottom: DSSpacing.xs,
+                                            trailing: DSSpacing.md
+                                        )
+                                    )
+                                    .listRowBackground(useImmersive ? Color.clear : Color(uiColor: .secondarySystemGroupedBackground))
+                            }
+                        }
+                    }
+                }
+                .environment(\.editMode, $editMode)
+                .listRowSeparatorTint(useImmersive ? .clear : Color(uiColor: .separator))
+                .darkListStyle(enabled: useImmersive, baseBackground: nil)
+                .refreshable {
+                    await refreshJournalList()
+                }
+            }
+        }
+    }
+
+    private var activeFilterPills: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                if let kind = selectedExperience {
+                    FilterPill(text: "Experience: \(kind.displayName)") { selectedExperience = nil }
+                }
+                if let tag = selectedTag {
+                    FilterPill(text: "Tag: \(tag)") { selectedTag = nil }
+                }
+                if !query.isEmpty {
+                    FilterPill(text: "Search: \(query)") { query = "" }
+                }
+                if datePreset != .all {
+                    FilterPill(text: datePresetLabel) {
+                        datePreset = .all
+                    }
+                }
+                if onlyFavorites {
+                    FilterPill(text: "Favorites") { onlyFavorites = false }
+                }
+            }
+            .padding(.horizontal)
+        }
+    }
+
+    private var journalFilterSidebar: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: DSSpacing.md) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Find reflections")
+                        .font(DSFont.sectionTitle)
+                        .foregroundStyle(DSColor.textPrimary)
+
+                    Text(headerSummaryText)
+                        .font(DSFont.supporting)
+                        .foregroundStyle(DSColor.quietText)
+                }
+
+                JournalSidebarSearchField(query: $query)
+
+                if favoriteSessionCount > 0 || editMode == .active {
+                    HStack(spacing: DSSpacing.sm) {
+                        if favoriteSessionCount > 0 {
+                            AppInfoChip(
+                                text: "\(favoriteSessionCount) favorite\(favoriteSessionCount == 1 ? "" : "s")",
+                                icon: onlyFavorites ? "star.fill" : "star",
+                                emphasized: onlyFavorites
+                            )
+                        }
+
+                        if editMode == .active {
+                            AppInfoChip(
+                                text: "\(selectedIDs.count) selected",
+                                icon: "checkmark.circle",
+                                emphasized: hasActiveSelection
+                            )
+                        }
+                    }
+                }
+
+                VStack(alignment: .leading, spacing: DSSpacing.sm) {
+                    Text("Filters")
+                        .font(DSFont.eyebrow)
+                        .foregroundStyle(DSColor.quietTextMuted)
+                        .textCase(.uppercase)
+
+                    Menu {
+                        Button("All Experiences") { selectedExperience = nil }
+                        Divider()
+                        ForEach(ExperienceType.allCases, id: \.self) { kind in
+                            Button(kind.displayName) { selectedExperience = kind }
+                        }
+                    } label: {
+                        JournalSidebarFilterLabel(
+                            title: selectedExperience?.displayName ?? "Experience",
+                            icon: "line.3.horizontal.decrease.circle",
+                            isActive: selectedExperience != nil
+                        )
+                    }
+
+                    Menu {
+                        Button("All Tags") { selectedTag = nil }
+                        Divider()
+                        ForEach(allTags, id: \.self) { tag in
+                            Button(tag) { selectedTag = tag }
+                        }
+                    } label: {
+                        JournalSidebarFilterLabel(
+                            title: selectedTag ?? "Tags",
+                            icon: "tag",
+                            isActive: selectedTag != nil
+                        )
+                    }
+
+                    Menu {
+                        Picker("Date Range", selection: $datePreset) {
+                            Text("All Time").tag(DatePreset.all)
+                            Text("Last 7 Days").tag(DatePreset.last7)
+                            Text("Last 30 Days").tag(DatePreset.last30)
+                            Text("Last Year").tag(DatePreset.last365)
+                            Text("Custom...").tag(DatePreset.custom)
+                        }
+                        if datePreset == .custom {
+                            Button("Choose Dates...") { activeSheet = .dateRange }
+                        }
+                    } label: {
+                        JournalSidebarFilterLabel(
+                            title: datePreset == .all ? "Date" : datePresetLabel.replacingOccurrences(of: "Date: ", with: ""),
+                            icon: "calendar",
+                            isActive: datePreset != .all
+                        )
+                    }
+
+                    Button {
+                        onlyFavorites.toggle()
+                    } label: {
+                        JournalSidebarFilterLabel(
+                            title: "Favorites",
+                            icon: onlyFavorites ? "star.fill" : "star",
+                            isActive: onlyFavorites
+                        )
+                    }
+                    .buttonStyle(.plain)
+                }
+
+                if !filtersAreClear {
+                    Button("Clear Filters", action: clearFilters)
+                        .buttonStyle(.appQuiet)
+                }
+
+                if let selectionModeCaption {
+                    Text(selectionModeCaption)
+                        .font(DSFont.meta)
+                        .foregroundStyle(DSColor.quietText)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            .padding(DSSpacing.md)
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .appSurfaceStyle(role: .quiet, highlighted: false)
+    }
+}
+
+private struct JournalBrowseBar: View {
+    let summaryText: String
+    let summaryIcon: String
+    let emphasizeSummary: Bool
+    let favoriteCount: Int
+    let showFavoritesAsActive: Bool
+    let selectionCount: Int?
+    let emphasizeSelection: Bool
+    let selectionCaption: String?
+    let showFilterControls: Bool
+    let hasActiveFilters: Bool
+    let onToggleFilters: () -> Void
+    let onClearFilters: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: DSSpacing.sm) {
+            ViewThatFits(in: .horizontal) {
+                HStack(alignment: .center, spacing: DSSpacing.sm) {
+                    summaryView
+                    Spacer(minLength: DSSpacing.sm)
+                    actionRow
+                }
+
+                VStack(alignment: .leading, spacing: DSSpacing.sm) {
+                    summaryView
+                    actionRow
+                }
+            }
+
+            if favoriteCount > 0 || selectionCount != nil {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: DSSpacing.sm) {
+                        if favoriteCount > 0 {
+                            AppInfoChip(
+                                text: "\(favoriteCount) favorite\(favoriteCount == 1 ? "" : "s")",
+                                icon: showFavoritesAsActive ? "star.fill" : "star",
+                                emphasized: showFavoritesAsActive
+                            )
+                        }
+
+                        if let selectionCount {
+                            AppInfoChip(
+                                text: "\(selectionCount) selected",
+                                icon: "checkmark.circle",
+                                emphasized: emphasizeSelection
+                            )
+                        }
+                    }
+                }
+            }
+
+            if let selectionCaption {
+                Text(selectionCaption)
+                    .font(DSFont.meta)
+                    .foregroundStyle(DSColor.quietText)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(.horizontal, DSSpacing.md)
+        .padding(.vertical, DSSpacing.sm)
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(DSColor.quietSurface.opacity(0.84))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(DSColor.dividerSoft, lineWidth: 1)
+        )
+    }
+
+    private var summaryView: some View {
+        HStack(spacing: 8) {
+            Image(systemName: summaryIcon)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(emphasizeSummary ? DSColor.brandAccent : DSColor.quietTextMuted)
+
+            Text(summaryText)
+                .font(DSFont.supporting.weight(.semibold))
+                .foregroundStyle(DSColor.textPrimary)
+                .lineLimit(2)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .accessibilityElement(children: .combine)
+    }
+
+    private var actionRow: some View {
+        HStack(spacing: DSSpacing.sm) {
+            Button(action: onToggleFilters) {
+                Label(
+                    "Filters",
+                    systemImage: showFilterControls ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease.circle"
+                )
+            }
+            .buttonStyle(.appQuiet)
+            .accessibilityLabel(showFilterControls ? "Hide filters" : "Show filters")
+
+            if hasActiveFilters {
+                Button("Clear", action: onClearFilters)
+                    .buttonStyle(.appQuiet)
+            }
+        }
+    }
+}
+
+private struct SelectionInsightsCard: View {
+    let count: Int
+    let useImmersiveAccent: Bool
+
+    var body: some View {
+        HStack(alignment: .center, spacing: DSSpacing.md) {
+            VStack(alignment: .leading, spacing: DSSpacing.xs) {
+                Text("Open in Insights")
+                    .font(DSFont.heading2)
+                    .foregroundStyle(DSColor.textPrimary)
+
+                Text("\(count) note\(count == 1 ? "" : "s") ready to bridge from reflection into themes and evidence.")
+                    .font(DSFont.supporting)
+                    .foregroundStyle(DSColor.quietText)
+                    .multilineTextAlignment(.leading)
+            }
+
+            Spacer(minLength: DSSpacing.sm)
+
+            Image(systemName: "sparkles.rectangle.stack")
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundStyle(useImmersiveAccent ? DSColor.goldLight : Color.accentColor)
+        }
+        .padding(DSSpacing.md)
+        .appSurfaceStyle(role: .interactive, highlighted: true)
+    }
+}
+
+private struct JournalFilterTray<Content: View>: View {
+    let content: Content
+
+    init(@ViewBuilder content: () -> Content) {
+        self.content = content()
+    }
+
+    var body: some View {
+        content
+            .padding(.vertical, DSSpacing.xs)
+            .background(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .fill(DSColor.interactiveSurface.opacity(0.92))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .stroke(DSColor.dividerSoft, lineWidth: 1)
+            )
+    }
+}
+
+private struct JournalSidebarSearchField: View {
+    @Binding var query: String
+
+    var body: some View {
+        HStack(spacing: DSSpacing.sm) {
+            Image(systemName: "magnifyingglass")
+                .font(DSFont.meta.weight(.semibold))
+                .foregroundStyle(DSColor.quietTextMuted)
+
+            TextField("Search journal entries", text: $query)
+                .font(DSFont.body)
+                .foregroundStyle(DSColor.textPrimary)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+
+            if !query.isEmpty {
+                Button {
+                    query = ""
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundStyle(DSColor.quietTextMuted)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Clear search")
+            }
+        }
+        .padding(.horizontal, DSSpacing.md)
+        .padding(.vertical, DSSpacing.sm)
+        .frame(minHeight: 44)
+        .background(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(DSColor.interactiveSurface.opacity(0.92))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(DSColor.dividerSoft, lineWidth: 1)
+        )
+        .accessibilityLabel("Search journal entries")
+    }
+}
+
+private struct JournalSidebarFilterLabel: View {
+    let title: String
+    let icon: String
+    let isActive: Bool
+
+    var body: some View {
+        HStack(spacing: DSSpacing.sm) {
+            Image(systemName: icon)
+                .font(DSFont.meta.weight(.semibold))
+                .foregroundStyle(isActive ? DSColor.brandAccent : DSColor.quietTextMuted)
+                .frame(width: 18)
+
+            Text(title)
+                .font(DSFont.body.weight(isActive ? .semibold : .regular))
+                .foregroundStyle(DSColor.textPrimary)
+                .lineLimit(1)
+
+            Spacer(minLength: DSSpacing.sm)
+
+            Image(systemName: "chevron.down")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(DSColor.quietTextMuted)
+        }
+        .padding(.horizontal, DSSpacing.md)
+        .padding(.vertical, DSSpacing.sm)
+        .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(isActive ? DSColor.brandAccentSoft : DSColor.interactiveSurface.opacity(0.84))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(isActive ? DSColor.brandAccent.opacity(0.38) : DSColor.dividerSoft, lineWidth: 1)
+        )
+        .accessibilityValue(isActive ? "Active" : "")
+    }
+}
+
+private struct JournalFirstUseState: View {
+    @AppStorage(AppCoachStorageKey.journal) private var isDismissed = false
+
+    let useImmersive: Bool
+    let onCaptureQuickNote: () -> Void
+    let onGoHome: () -> Void
+
+    var body: some View {
+        VStack(spacing: DSSpacing.lg) {
+            if useImmersive {
+                Image(systemName: "book")
+                    .font(.system(size: 48))
+                    .foregroundStyle(DSColor.quietTextMuted)
+            }
+
+            if !isDismissed {
+                AppCoachPanel(
+                    title: "No reflections yet",
+                    subtitle: "Your journal fills after your first Examen or quick note. Once you begin, this is where the details stay searchable and close at hand.",
+                    role: .quiet,
+                    highlighted: useImmersive,
+                    onDismiss: dismiss
+                ) {
+                    EmptyView()
+                }
+                .transition(.opacity.combined(with: .scale(scale: 0.98)))
+            }
+
+            AppPanel(role: .quiet, highlighted: useImmersive) {
+                VStack(spacing: DSSpacing.sm) {
+                    AppButton(title: "Capture a Quick Note", style: .primary, action: onCaptureQuickNote)
+                    AppButton(title: "Go to Home", style: .quiet, action: onGoHome)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .padding(.horizontal, DSSpacing.lg)
+        .padding(.top, DSSpacing.lg)
+    }
+
+    private func dismiss() {
+        withAnimation(AnimationConfig.screenTransition) {
+            isDismissed = true
+        }
+    }
+}
+
+private struct JournalResultsEmptyState: View {
+    let useImmersive: Bool
+    let clearFilters: () -> Void
+
+    var body: some View {
+        Group {
+            if useImmersive {
+                DarkEmptyState(
+                    title: "No reflections match these filters",
+                    systemImage: "line.3.horizontal.decrease.circle",
+                    description: "Try widening the date range, removing a tag, or clearing favorites to bring more of your journal back into view.",
+                    actionTitle: "Clear Filters",
+                    action: clearFilters,
+                    fillBackground: false
+                )
+            } else {
+                ContentUnavailableView(
+                    "No Matches",
+                    systemImage: "line.3.horizontal.decrease.circle",
+                    description: Text("Try widening the date range, removing a tag, or clearing favorites.")
+                )
+            }
+        }
     }
 }
 
@@ -838,9 +1654,11 @@ extension JournalView {
             for t in bulkTags { set.insert(t) }
             entry.tags = Array(set).sorted()
         }
-        if modelContext.hasChanges { try? modelContext.save() }
-        showBulkTagSheet = false
-        withAnimation { clearSelectionAndExitEditMode() }
+        if persistChanges("apply those tags") {
+            refilter()
+            activeSheet = nil
+            withAnimation { clearSelectionAndExitEditMode() }
+        }
     }
     
     private func exportSelectedNotes() {
@@ -862,38 +1680,47 @@ extension JournalView {
     
     // Copy of helper for export access
     private func computedViewerText(for entry: ExamenSession) -> String {
-        let header = "— Journal \(entry.date.formatted(journalDateStyle)) —\n"
-        
-        var contentParts: [String] = [header]
-        
-        // Add Metadata
-        var metadata: [String] = []
-        if let type = entry.experienceType { metadata.append("Experience: \(type.displayName)") }
-        metadata.append(contentsOf: entry.detailMetadataLines())
-        
-        if !metadata.isEmpty {
-            contentParts.append(metadata.joined(separator: "\n"))
-        }
-        
-        // Add Q&A responses
-        let responsesText = entry.responses
-            .sorted(by: { $0.stepIndex < $1.stepIndex })
-            .map { $0.answerText }
-            .joined(separator: "\n\n")
-        if !responsesText.isEmpty {
-            contentParts.append(responsesText)
-        }
-        
-        // Add Personal Statement / Notes
-        if !entry.personalStatement.isEmpty {
-            contentParts.append(entry.personalStatement)
-        }
-        
-        return contentParts.joined(separator: "\n\n")
+        formattedJournalEntryText(for: entry, dateStyle: journalDateStyle)
     }
 }
 import SwiftUI
 import SwiftData
+
+private func formattedJournalEntryText(
+    for entry: ExamenSession,
+    dateStyle: Date.FormatStyle
+) -> String {
+    var sections: [String] = []
+
+    sections.append("— Journal \(entry.date.formatted(dateStyle)) —")
+
+    var metadata: [String] = []
+    if let type = entry.experienceType {
+        metadata.append("Experience: \(type.displayName)")
+    }
+    metadata.append(contentsOf: entry.detailMetadataLines())
+
+    if !metadata.isEmpty {
+        sections.append(metadata.joined(separator: "\n"))
+    }
+
+    let responsesText = entry.normalizedResponseTexts().joined(separator: "\n\n")
+    if !responsesText.isEmpty {
+        sections.append("— Prompt Responses —\n\(responsesText)")
+    }
+
+    let finalReflection = entry.personalStatement.trimmingCharacters(in: .whitespacesAndNewlines)
+    if !finalReflection.isEmpty {
+        sections.append("— Final Reflection —\n\(finalReflection)")
+    }
+
+    let privateNotes = entry.notes?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+    if !privateNotes.isEmpty {
+        sections.append("— Private Notes —\n\(privateNotes)")
+    }
+
+    return sections.joined(separator: "\n\n")
+}
 
 struct JournalEntryViewer: View {
     @Environment(AppSettings.self) private var settings
@@ -951,6 +1778,24 @@ struct JournalEntryViewer: View {
                             .padding(.vertical, 8)
                     }
                 }
+
+                if AppSettings.featurePolicy.allowsExamenApplicationRecordDuringReflection,
+                   let applicationRecord = entry.applicationExperience {
+                    Section("Application Record") {
+                        NavigationLink {
+                            ApplicationExperienceDetailView(experience: applicationRecord)
+                        } label: {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(applicationRecord.exportTitle)
+                                    .font(DSFont.body.weight(.semibold))
+                                Text(applicationRecord.organizationName ?? applicationRecord.category.displayName)
+                                    .font(DSFont.caption)
+                                    .foregroundStyle(useImmersive ? DSColor.textSecondary : .secondary)
+                            }
+                        }
+                        .accessibilityIdentifier("journal.viewer.openApplicationRecord")
+                    }
+                }
             }
             .listStyle(.insetGrouped)
             .listRowSeparatorTint(useImmersive ? DSColor.divider : Color(uiColor: .separator))
@@ -960,16 +1805,19 @@ struct JournalEntryViewer: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Close", action: onClose)
+                        .accessibilityIdentifier("journal.viewer.close")
                 }
                 
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Edit", action: onEdit)
+                        .accessibilityIdentifier("journal.viewer.edit")
                 }
                 
                 ToolbarItem(placement: .bottomBar) {
                     Button(action: onAddToStatement) {
-                        Label("Add to Statement", systemImage: "square.and.pencil")
+                        Label("Use in Writing", systemImage: "square.and.pencil")
                     }
+                    .accessibilityIdentifier("journal.viewer.useInDraft")
                 }
             }
         }
@@ -977,36 +1825,7 @@ struct JournalEntryViewer: View {
     
     // Helper to build combined text for viewer
     private func computedViewerText(for entry: ExamenSession) -> String {
-        let header = "— Journal \(entry.date.formatted(journalDateStyle)) —\n"
-        
-        var contentParts: [String] = []
-        
-        // Add Metadata
-        var metadata: [String] = []
-        metadata.append(contentsOf: entry.detailMetadataLines())
-        
-        if !metadata.isEmpty {
-            contentParts.append(metadata.joined(separator: "\n"))
-        }
-        
-        // Add Q&A responses
-        let responsesText = entry.responses
-            .sorted(by: { $0.stepIndex < $1.stepIndex })
-            .map { $0.answerText }
-            .joined(separator: "\n\n")
-        if !responsesText.isEmpty {
-            contentParts.append(responsesText)
-        }
-        
-        // Add Personal Statement / Notes
-        if !entry.personalStatement.isEmpty {
-            if !contentParts.isEmpty {
-                contentParts.append("\n— Notes —\n")
-            }
-            contentParts.append(entry.personalStatement)
-        }
-        
-        return header + contentParts.joined(separator: "\n\n")
+        formattedJournalEntryText(for: entry, dateStyle: journalDateStyle)
     }
 }
 
@@ -1578,7 +2397,11 @@ struct ThemeFinderView: View {
 
     private func deleteBundle(_ bundle: ThemeBundle) {
         modelContext.delete(bundle)
-        try? modelContext.save()
+        do {
+            try modelContext.persistIfNeeded(for: "delete that saved theme bundle")
+        } catch {
+            print("Failed to delete theme bundle: \(error)")
+        }
     }
 }
 
@@ -1727,7 +2550,7 @@ private struct ThemeBundleRow: View {
             }
 
             HStack(spacing: DSSpacing.sm) {
-                Button("Send to PSBuilder", action: onSendToStatement)
+                Button("Use in Writing", action: onSendToStatement)
                     .buttonStyle(.borderedProminent)
                     .tint(useImmersive ? DSColor.goldLight : .accentColor)
                 Button("Delete", role: .destructive, action: onDelete)

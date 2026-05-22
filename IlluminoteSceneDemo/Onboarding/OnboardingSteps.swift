@@ -1,327 +1,192 @@
 import SwiftUI
 import SwiftData
 
-// MARK: - Welcome View
 struct OnboardingWelcomeView: View {
     let onNext: () -> Void
-    
+
     var body: some View {
-        VStack(spacing: 24) {
-            Spacer()
-            
-            Image("AppLogo") // Placeholder, or use system icon
-                .resizable()
-                .scaledToFit()
-                .frame(width: 100, height: 100)
-                .foregroundStyle(.tint)
-                .opacity(0.8)
-            
-            VStack(spacing: 12) {
-                ThemedText(text: "Welcome to Illuminote", style: .heading1)
-                    .multilineTextAlignment(.center)
-                
-                ThemedText(text: "Capture meaningful reflections, find patterns, and build stronger personal statement drafts.", style: .heading2)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal)
+        OnboardingStageScaffold {
+            AppSectionHeader(
+                eyebrow: "Welcome",
+                title: "Welcome to Illuminote",
+                subtitle: "Reflect on an experience. Save what matters. Write when ready."
+            )
+
+            OnboardingHeroCard()
+
+            AppPanel(
+                title: "Designed for thoughtful, busy days",
+                subtitle: "Start with one reflection.",
+                role: .quiet
+            ) {
+                VStack(alignment: .leading, spacing: DSSpacing.sm) {
+                    Text("You can revisit this introduction later in Settings.")
+                        .font(DSFont.supporting)
+                        .foregroundStyle(DSColor.quietText)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    AppInfoChip(text: "Home is the starting place", icon: "house", emphasized: true)
+                }
             }
-            
-            Spacer()
-            
+        } footer: {
             Button(action: onNext) {
                 Text("Get Started")
-                    .fontWeight(.bold)
             }
             .buttonStyle(SacredButtonStyle())
-            .padding(.horizontal)
-            .padding(.bottom, 40)
         }
-        .padding()
     }
 }
 
-// MARK: - About Examen View
-struct OnboardingAboutView: View {
-    let onNext: () -> Void
-    let onLearnMore: () -> Void
-    
-    var body: some View {
-        VStack(spacing: 30) {
-            Spacer()
-            
-            Image(systemName: "heart.text.square")
-                .font(.system(size: 60))
-                .foregroundStyle(DSColor.goldLight)
-                .luminous()
-            
-            VStack(spacing: 16) {
-                ThemedText(text: "What is the Examen?", style: .heading1)
-                    .multilineTextAlignment(.center)
-                
-                ThemedText(text: "The Examen is a reflective prayer practice. It helps you review your day with gratitude, honesty, and attention to where you are being called.", style: .body)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal)
-            }
-            
-            Spacer()
-            
-            VStack(spacing: 16) {
-                Button(action: onLearnMore) {
-                    Text("Learn More")
-                        .font(.subheadline)
-                        .foregroundStyle(DSColor.goldLight)
-                        .luminous()
-                }
-                
-                Button(action: onNext) {
-                    Text("Next")
-                        .fontWeight(.bold)
-                }
-                .buttonStyle(SacredButtonStyle())
-            }
-            .padding(.horizontal)
-            .padding(.bottom, 40)
-        }
-        .padding()
-    }
-}
-
-// MARK: - Examen Steps View
-struct OnboardingExamenStepsView: View {
+struct OnboardingAppMapView: View {
     let onNext: () -> Void
 
     var body: some View {
-        VStack(spacing: 28) {
-            ThemedText(text: "How the Examen Works", style: .heading1)
-                .multilineTextAlignment(.center)
-                .padding(.top, 40)
+        OnboardingStageScaffold {
+            AppSectionHeader(
+                eyebrow: "App Map",
+                title: "Choose. Reflect. Save. Notice. Write.",
+                subtitle: nil
+            )
 
-            VStack(alignment: .leading, spacing: 14) {
-                ExamenStepRow(number: 1, title: "First Principle", description: "Begin with openness and ask for clarity.")
-                ExamenStepRow(number: 2, title: "Gratitude", description: "Name what was good and life-giving today.")
-                ExamenStepRow(number: 3, title: "Presence", description: "Notice where you felt most present and engaged.")
-                ExamenStepRow(number: 4, title: "Reflection", description: "Examine tensions, patterns, and what they reveal.")
-                ExamenStepRow(number: 5, title: "Commitment", description: "Choose one concrete next step for tomorrow.")
+            AppPanel(
+                title: "One flow",
+                subtitle: nil,
+                role: .interactive,
+                highlighted: true
+            ) {
+                VStack(alignment: .leading, spacing: DSSpacing.md) {
+                    OnboardingFeatureCard(
+                        index: "01",
+                        icon: "house.fill",
+                        title: "Home",
+                        description: "Begin an Examen or capture a quick note."
+                    )
+                    OnboardingPanelDivider()
+                    OnboardingFeatureCard(
+                        index: "02",
+                        icon: "book.closed.fill",
+                        title: "Journal",
+                        description: "Return to saved reflections."
+                    )
+                    OnboardingPanelDivider()
+                    OnboardingFeatureCard(
+                        index: "03",
+                        icon: "square.grid.2x2.fill",
+                        title: "Insights",
+                        description: "Notice patterns across reflections."
+                    )
+                    OnboardingPanelDivider()
+                    OnboardingFeatureCard(
+                        index: "04",
+                        icon: "square.and.pencil",
+                        title: "Writing",
+                        description: "Shape draft material when ready."
+                    )
+                    OnboardingPanelDivider()
+                    OnboardingFeatureCard(
+                        index: "05",
+                        icon: "gearshape.fill",
+                        title: "Settings",
+                        description: "Adjust defaults and reminders."
+                    )
+                }
             }
-            .padding(.horizontal)
-
-            Spacer()
-
+        } footer: {
             Button(action: onNext) {
-                Text("Next")
-                    .fontWeight(.bold)
+                Text("Continue")
             }
             .buttonStyle(SacredButtonStyle())
-            .padding(.horizontal)
-            .padding(.bottom, 40)
-        }
-        .padding()
-    }
-
-    private struct ExamenStepRow: View {
-        let number: Int
-        let title: String
-        let description: String
-
-        var body: some View {
-            HStack(alignment: .top, spacing: 14) {
-                Text("\(number)")
-                    .font(DSFont.heading2)
-                    .foregroundStyle(DSColor.nearBlack)
-                    .frame(width: 30, height: 30)
-                    .background(Circle().fill(DSColor.goldLight))
-
-                VStack(alignment: .leading, spacing: 4) {
-                    ThemedText(text: title, style: .heading2)
-                    ThemedText(text: description, style: .subtext)
-                }
-            }
         }
     }
 }
 
-// MARK: - How It Works View
-struct OnboardingHowItWorksView: View {
-    let onNext: () -> Void
-    
-    var body: some View {
-        VStack(spacing: 32) {
-            ThemedText(text: "How Illuminote Works", style: .heading1)
-                .multilineTextAlignment(.center)
-                .padding(.top, 40)
-            
-            VStack(alignment: .leading, spacing: 24) {
-                FeatureRow(icon: "play.circle.fill", title: "Start Examen", description: "Use guided prompts to reflect on real experiences.")
-                FeatureRow(icon: "square.and.pencil", title: "Capture Notes", description: "Write short reflections during or after each session.")
-                FeatureRow(icon: "book.fill", title: "Review in Journal", description: "Search, filter, and organize entries over time.")
-                FeatureRow(icon: "doc.text.fill", title: "Build Drafts", description: "Select journal entries to build personal statement drafts.")
-                FeatureRow(icon: "tag.fill", title: "Draft Type Tip", description: "New drafts default to Full Draft. You can switch to Opening, Body, or Closing when creating or editing a draft.")
-                FeatureRow(icon: "brain.head.profile", title: "Optional AI Advisor", description: "Get on-device feedback in the Statement editor.")
-            }
-            .padding(.horizontal)
-            
-            Spacer()
-            
-            Button(action: onNext) {
-                Text("Next")
-                    .fontWeight(.bold)
-            }
-            .buttonStyle(SacredButtonStyle())
-            .padding(.horizontal)
-            .padding(.bottom, 40)
-        }
-        .padding()
-    }
-    
-    private struct FeatureRow: View {
-        let icon: String
-        let title: String
-        let description: String
-        
-        var body: some View {
-            HStack(spacing: 16) {
-                Image(systemName: icon)
-                    .font(.title2)
-                    .frame(width: 32)
-                    .foregroundStyle(DSColor.goldLight)
-                
-                VStack(alignment: .leading, spacing: 4) {
-                    ThemedText(text: title, style: .heading2)
-                    ThemedText(text: description, style: .subtext)
-                }
-            }
-        }
-    }
-}
-
-// MARK: - Setup Experience View
 struct OnboardingSetupView: View {
     let onComplete: (UserProfile) -> Void
-    
+
     @State private var selectedTrack: PreProfessionalTrack = .preMedicine
     @State private var degreeIntent: DegreeIntent = .md
-    @State private var isTexasApplicant: Bool = false
-    @State private var defaultMode: ExamenMode = .deep
+    @State private var isTexasApplicant = false
     @State private var notificationsEnabled = false
     @State private var notificationTime = Calendar.current.date(from: DateComponents(hour: 20, minute: 0)) ?? Date.now
-    
+
     var body: some View {
-        VStack(spacing: 0) {
-            ThemedText(text: "Let’s tailor your experience", style: .heading1)
-                .multilineTextAlignment(.center)
-                .padding(.vertical, 30)
-            
-            ScrollView {
-                VStack(spacing: 24) {
-                    // Profile Section
-                    VStack(alignment: .leading, spacing: 16) {
-                        ThemedText(text: "Who are you?", style: .heading2)
-                            .foregroundStyle(DSColor.textSecondary)
-                        
-                        HStack {
-                            ThemedText(text: "Track", style: .body)
-                            Spacer()
-                            Picker("Track", selection: $selectedTrack) {
-                                ForEach(PreProfessionalTrack.selectableCases, id: \.self) { track in
-                                    Text(track.displayName).tag(track)
-                                }
-                            }
-                            .tint(DSColor.goldLight)
-                        }
-                        
-                        if selectedTrack == .preMedicine {
-                            Divider().background(Color.white.opacity(0.1))
-                            HStack {
-                                ThemedText(text: "Degree Intent", style: .body)
-                                Spacer()
-                                Picker("Degree Intent", selection: $degreeIntent) {
-                                    ForEach(DegreeIntent.allCases) { intent in
-                                        Text(intent.displayName).tag(intent)
-                                    }
-                                }
-                                .tint(DSColor.goldLight)
-                            }
-                            
-                            Divider().background(Color.white.opacity(0.1))
-                            Toggle(isOn: $isTexasApplicant) {
-                                ThemedText(text: "Applying to Texas Schools?", style: .body)
-                            }
-                            .tint(DSColor.goldLight)
-                        }
-                    }
-                    .padding()
-                    .glassCardStyle()
-                    
-                    // Depth Section
-                    VStack(alignment: .leading, spacing: 16) {
-                        ThemedText(text: "Default Reflection Mode", style: .heading2)
-                            .foregroundStyle(DSColor.textSecondary)
+        OnboardingStageScaffold {
+            AppSectionHeader(
+                eyebrow: "Preferences",
+                title: "Personalize your experience",
+                subtitle: "Choose only the defaults that make first use calmer. You can change everything else later in Settings."
+            )
 
-                        ForEach(ExamenMode.allCases) { mode in
-                            Button {
-                                defaultMode = mode
-                            } label: {
-                                HStack(alignment: .top, spacing: 12) {
-                                    Image(systemName: defaultMode == mode ? "checkmark.circle.fill" : "circle")
-                                        .font(.title3)
-                                        .foregroundStyle(defaultMode == mode ? DSColor.goldLight : DSColor.textSecondary)
-
-                                    VStack(alignment: .leading, spacing: 4) {
-                                        ThemedText(text: mode.displayName, style: .body)
-                                        ThemedText(text: modeDescription(mode), style: .subtext)
-                                    }
-
-                                    Spacer()
-                                }
-                                .padding(12)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 12)
-                                        .fill(DSColor.backgroundSecondary.opacity(0.75))
-                                )
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 12)
-                                        .stroke(defaultMode == mode ? DSColor.goldLight.opacity(0.9) : DSColor.divider.opacity(0.4), lineWidth: 1)
-                                )
+            AppPanel(
+                title: "Profile",
+                subtitle: "Help Illuminote frame your reflection and writing.",
+                role: .reading
+            ) {
+                VStack(alignment: .leading, spacing: 16) {
+                    HStack {
+                        ThemedText(text: "Track", style: .body)
+                        Spacer()
+                        Picker("Track", selection: $selectedTrack) {
+                            ForEach(PreProfessionalTrack.selectableCases, id: \.self) { track in
+                                Text(track.displayName).tag(track)
                             }
-                            .buttonStyle(.plain)
-                        }
-
-                        ThemedText(text: "You can change this anytime in Settings.", style: .caption)
-                            .foregroundStyle(DSColor.textSecondary)
-                    }
-                    .padding()
-                    .glassCardStyle()
-                    
-                    // Notifications Section
-                    VStack(alignment: .leading, spacing: 16) {
-                        ThemedText(text: "Daily Reminder", style: .heading2)
-                            .foregroundStyle(DSColor.textSecondary)
-                        
-                        Toggle(isOn: $notificationsEnabled) {
-                            ThemedText(text: "Remind me to reflect", style: .body)
                         }
                         .tint(DSColor.goldLight)
-                        
-                        if notificationsEnabled {
-                            Divider().background(Color.white.opacity(0.1))
-                            DatePicker(selection: $notificationTime, displayedComponents: .hourAndMinute) {
-                                ThemedText(text: "Time", style: .body)
-                            }
-                            .colorScheme(.dark)
-                        }
                     }
-                    .padding()
-                    .glassCardStyle()
+
+                    if selectedTrack == .preMedicine {
+                        OnboardingPanelDivider()
+
+                        HStack {
+                            ThemedText(text: "Degree Intent", style: .body)
+                            Spacer()
+                            Picker("Degree Intent", selection: $degreeIntent) {
+                                ForEach(DegreeIntent.allCases) { intent in
+                                    Text(intent.displayName).tag(intent)
+                                }
+                            }
+                            .tint(DSColor.goldLight)
+                        }
+
+                        OnboardingPanelDivider()
+
+                        Toggle(isOn: $isTexasApplicant) {
+                            ThemedText(text: "Applying to Texas Schools?", style: .body)
+                        }
+                        .tint(DSColor.goldLight)
+                    }
                 }
-                .padding(.horizontal)
             }
-            
+
+            AppPanel(
+                title: "Daily reminder",
+                subtitle: "Optional and easy to change later. Keep it gentle enough to support reflection without becoming noise.",
+                role: .interactive
+            ) {
+                VStack(alignment: .leading, spacing: 16) {
+                    Toggle(isOn: $notificationsEnabled) {
+                        ThemedText(text: "Remind me to reflect", style: .body)
+                    }
+                    .tint(DSColor.goldLight)
+
+                    if notificationsEnabled {
+                        OnboardingPanelDivider()
+
+                        DatePicker(selection: $notificationTime, displayedComponents: .hourAndMinute) {
+                            ThemedText(text: "Time", style: .body)
+                        }
+                        .colorScheme(.dark)
+                    }
+                }
+            }
+        } footer: {
             Button {
                 let profile = UserProfile(
                     preProfessionalTrack: selectedTrack,
-                    examenFrequency: .daily, // Explicit default or could rely on init default
+                    examenFrequency: .daily,
                     preferredTimeOfDay: .evening,
                     sessionLength: .medium,
-                    defaultMode: defaultMode,
+                    defaultMode: .deep,
                     notificationsEnabled: notificationsEnabled,
                     notificationTime: notificationTime,
                     hasSeenOnboarding: true,
@@ -331,62 +196,246 @@ struct OnboardingSetupView: View {
                 onComplete(profile)
             } label: {
                 Text("Save & Continue")
-                    .fontWeight(.bold)
             }
             .buttonStyle(SacredButtonStyle())
-            .padding()
         }
         .background(Color.clear)
-        .colorScheme(.dark) // Force dark mode for form controls to ensure white text
+        .colorScheme(.dark)
     }
+}
 
-    private func modeDescription(_ mode: ExamenMode) -> String {
-        switch mode {
-        case .quick:
-            return "Shortest reflection for busy days."
-        case .deep:
-            return "Balanced session with broader reflection."
-        case .vocation:
-            return "Focuses on pre-professional growth and calling."
-        case .spiritual:
-            return "Faith-forward reflection emphasizing prayer and presence."
+struct OnboardingCompletionView: View {
+    let onDismiss: () -> Void
+
+    var body: some View {
+        OnboardingStageScaffold {
+            AppPanel(
+                title: "Illuminote begins with The Examen",
+                subtitle: "Choose an experience, then slow down with it.",
+                role: .reading,
+                highlighted: true
+            ) {
+                VStack(alignment: .leading, spacing: DSSpacing.md) {
+                    OnboardingCompletionRow(
+                        title: "What it is",
+                        detail: "A guided reflective practice rooted in the Ignatian Examen."
+                    )
+                    OnboardingPanelDivider()
+                    OnboardingCompletionRow(
+                        title: "Why it matters here",
+                        detail: "Writing becomes stronger when it begins in reflection."
+                    )
+                    OnboardingPanelDivider()
+                    OnboardingCompletionRow(
+                        title: "Where to begin",
+                        detail: "Home starts the Examen. Quick Note catches a moment."
+                    )
+                }
+            }
+        } footer: {
+            Button(action: onDismiss) {
+                Text("Go to Home")
+            }
+            .buttonStyle(SacredButtonStyle())
         }
     }
 }
 
-// MARK: - Completion View
-struct OnboardingCompletionView: View {
-    let onDismiss: () -> Void
-    
+private struct OnboardingStageScaffold<Content: View, Footer: View>: View {
+    let content: Content
+    let footer: Footer
+
+    init(
+        @ViewBuilder content: () -> Content,
+        @ViewBuilder footer: () -> Footer
+    ) {
+        self.content = content()
+        self.footer = footer()
+    }
+
     var body: some View {
-        VStack(spacing: 32) {
-            Spacer()
-            
-            Image(systemName: "checkmark.circle.fill")
-                .font(.system(size: 80))
-                .foregroundStyle(DSColor.goldLight)
-                .luminous()
-                .symbolEffect(.bounce, value: true)
-            
-            VStack(spacing: 16) {
-                ThemedText(text: "You’re ready to reflect", style: .heading1)
-                    .multilineTextAlignment(.center)
-                
-                ThemedText(text: "Take a moment each day to connect with yourself and your goals.", style: .body)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal)
+        VStack(spacing: 0) {
+            ScrollView {
+                VStack(alignment: .leading, spacing: DSSpacing.xl) {
+                    content
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, DSSpacing.lg)
+                .padding(.top, DSSpacing.xl)
+                .padding(.bottom, DSSpacing.lg)
             }
-            
-            Spacer()
-            
-            Button(action: onDismiss) {
-                Text("Go to Home")
-                    .fontWeight(.bold)
+            .scrollIndicators(.hidden)
+
+            VStack(spacing: DSSpacing.sm) {
+                footer
             }
-            .buttonStyle(SacredButtonStyle())
-            .padding(.horizontal)
+            .padding(.horizontal, DSSpacing.lg)
+            .padding(.top, DSSpacing.md)
             .padding(.bottom, 40)
+            .background(
+                LinearGradient(
+                    colors: [
+                        DSColor.backgroundPrimary.opacity(0),
+                        DSColor.backgroundPrimary.opacity(0.94),
+                        DSColor.backgroundPrimary
+                    ],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .ignoresSafeArea(edges: .bottom)
+            )
         }
-        .padding()
+    }
+}
+
+private struct OnboardingHeroCard: View {
+    var body: some View {
+        ZStack(alignment: .topLeading) {
+            RoundedRectangle(cornerRadius: 30, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            DSColor.interactiveSurface.opacity(0.96),
+                            DSColor.quietSurface.opacity(0.98)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+
+            RoundedRectangle(cornerRadius: 30, style: .continuous)
+                .stroke(
+                    LinearGradient(
+                        colors: [
+                            DSColor.brandAccent.opacity(0.45),
+                            DSColor.dividerSoft
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 1
+                )
+
+            Circle()
+                .fill(DSColor.brandAccent.opacity(0.20))
+                .frame(width: 220, height: 220)
+                .blur(radius: 28)
+                .offset(x: 110, y: -70)
+
+            VStack(alignment: .leading, spacing: DSSpacing.lg) {
+                AppInfoChip(text: "A guided beginning", icon: "sparkles", emphasized: true)
+
+                VStack(alignment: .leading, spacing: DSSpacing.sm) {
+                    Text("Notice the day.\nCarry it forward.")
+                        .font(DSFont.display)
+                        .foregroundStyle(DSColor.textPrimary)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    Text("Illuminote helps you reflect with honesty, gather what matters, and build writing from lived experience instead of from memory alone.")
+                        .font(DSFont.body)
+                        .foregroundStyle(DSColor.quietText)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                VStack(alignment: .leading, spacing: DSSpacing.sm) {
+                    OnboardingHeroPoint(
+                        title: "Reflect first",
+                        detail: "Start at Home to reflect on your experiences through a guided Examen."
+                    )
+                    OnboardingHeroPoint(
+                        title: "Note what surfaces",
+                        detail: "Journal holds the moments and insights you've recorded."
+                    )
+                    OnboardingHeroPoint(
+                        title: "Draft from there",
+                        detail: "Insights and Writing offer a way to brainstorm and write from your reflections."
+                    )
+                }
+            }
+            .padding(DSSpacing.xl)
+        }
+        .frame(maxWidth: .infinity, minHeight: 340, alignment: .leading)
+        .shadow(color: DSColor.brandAccent.opacity(0.12), radius: 24, x: 0, y: 16)
+    }
+}
+
+private struct OnboardingHeroPoint: View {
+    let title: String
+    let detail: String
+
+    var body: some View {
+        HStack(alignment: .top, spacing: DSSpacing.sm) {
+            Circle()
+                .fill(DSColor.brandAccent.opacity(0.9))
+                .frame(width: 7, height: 7)
+                .padding(.top, 7)
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title)
+                    .font(DSFont.supporting.weight(.semibold))
+                    .foregroundStyle(DSColor.textPrimary)
+                Text(detail)
+                    .font(DSFont.supporting)
+                    .foregroundStyle(DSColor.quietText)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+}
+
+private struct OnboardingPanelDivider: View {
+    var body: some View {
+        Rectangle()
+            .fill(DSColor.dividerSoft)
+            .frame(height: 1)
+    }
+}
+
+private struct OnboardingCompletionRow: View {
+    let title: String
+    let detail: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title.uppercased())
+                .font(DSFont.eyebrow)
+                .foregroundStyle(DSColor.quietTextMuted)
+            Text(detail)
+                .font(DSFont.supporting)
+                .foregroundStyle(DSColor.textPrimary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+}
+
+private struct OnboardingFeatureCard: View {
+    let index: String
+    let icon: String
+    let title: String
+    let description: String
+
+    var body: some View {
+        HStack(alignment: .top, spacing: DSSpacing.md) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text(index)
+                    .font(DSFont.meta.weight(.bold))
+                    .foregroundStyle(DSColor.brandAccent)
+
+                Image(systemName: icon)
+                    .font(.title3)
+                    .foregroundStyle(DSColor.brandAccent)
+            }
+            .frame(width: 30, alignment: .leading)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .font(DSFont.sectionTitle)
+                    .foregroundStyle(DSColor.textPrimary)
+                Text(description)
+                    .font(DSFont.supporting)
+                    .foregroundStyle(DSColor.quietText)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
     }
 }

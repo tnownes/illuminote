@@ -1,6 +1,124 @@
 import SwiftUI
 import SwiftData
 
+enum ExamenBackgroundPresentation {
+    case flow
+    case completion
+}
+
+private struct ExamenBackgroundBase: View {
+    @Environment(AppSettings.self) private var settings
+
+    var body: some View {
+        SacredScreenBackground(settings: settings)
+            .ignoresSafeArea()
+    }
+}
+
+private struct ExamenFlowAmbientOverlay: View {
+    var body: some View {
+        ZStack {
+            LinearGradient(
+                colors: [
+                    Color.black.opacity(0.28),
+                    Color.black.opacity(0.14),
+                    Color.clear
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+
+            RadialGradient(
+                gradient: Gradient(colors: [
+                    DSColor.brandAccentSoft.opacity(0.28),
+                    .clear
+                ]),
+                center: .topTrailing,
+                startRadius: 40,
+                endRadius: 280
+            )
+        }
+        .ignoresSafeArea()
+    }
+}
+
+struct ExamenBackgroundHost: View {
+    @Environment(AppSettings.self) private var settings
+    @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    let presentation: ExamenBackgroundPresentation
+
+    private var motionPolicy: ReflectiveMotionPolicy {
+        ReflectiveMotionPolicy(
+            scenePhase: scenePhase,
+            reduceMotion: reduceMotion,
+            backgroundAnimationEnabled: settings.backgroundAnimationEnabled
+        )
+    }
+
+    private var activePhaseATheme: ExamenTheme? {
+        switch settings.selectedTheme {
+        case .sacredVoid, .gradient2:
+            return settings.selectedTheme
+        default:
+            return nil
+        }
+    }
+
+    private var shouldUseStaticFallbackBackground: Bool {
+        !settings.backgroundAnimationEnabled
+    }
+
+    var body: some View {
+        ZStack {
+            backgroundLayer
+
+            switch presentation {
+            case .flow:
+                ExamenFlowAmbientOverlay()
+            case .completion:
+                DSColor.immersiveOverlay.ignoresSafeArea()
+            }
+        }
+        .ignoresSafeArea()
+    }
+
+    @ViewBuilder
+    private var backgroundLayer: some View {
+        if shouldUseStaticFallbackBackground {
+            ExamenBackgroundBase()
+        } else {
+            switch activePhaseATheme {
+            case .sacredVoid:
+                if #available(iOS 18.0, *) {
+                    SacredVoidBackground(motionPolicy: motionPolicy)
+                } else {
+                    ExamenBackgroundBase()
+                }
+            case .gradient2:
+                if #available(iOS 18.0, *) {
+                    AnimatedMeshGradientBackground(motionPolicy: motionPolicy)
+                } else {
+                    ExamenBackgroundBase()
+                }
+            default:
+                ExamenBackgroundBase()
+            }
+        }
+    }
+}
+
+struct ExamenSafeBackground: View {
+    var body: some View {
+        ZStack {
+            ExamenBackgroundBase()
+            ExamenFlowAmbientOverlay()
+        }
+        .ignoresSafeArea()
+    }
+}
+
 struct ExamenSessionContainer: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
@@ -18,6 +136,8 @@ struct ExamenSessionContainer: View {
     @StateObject private var promptSpeechManager = PromptSpeechManager()
     @State private var isPromptSpeechEnabled = false
     @State private var reflectiveHoldTask: Task<Void, Never>?
+    @State private var didApplySmokeConfiguration = false
+    private let smokeConfiguration: ExamenSmokeConfiguration?
     
     private var headerState: ExamenHeaderState? {
         guard vm.stage == .promptPhase else { return nil }
@@ -43,14 +163,25 @@ struct ExamenSessionContainer: View {
     // Init with optional starting point (e.g. for "New Note" shortcut)
     init(draft: ExamenSessionDraft = ExamenSessionDraft(type: .other),
          initialStage: ExamenStage = .selectType) {
+        self.smokeConfiguration = nil
         _vm = State(initialValue: ExamenSessionViewModel(draft: draft, initialStage: initialStage))
     }
+
+    #if DEBUG
+    init(smokeConfiguration: ExamenSmokeConfiguration) {
+        self.smokeConfiguration = smokeConfiguration
+        _vm = State(
+            initialValue: ExamenSessionViewModel(
+                draft: smokeConfiguration.draft,
+                initialStage: smokeConfiguration.stage
+            )
+        )
+    }
+    #endif
     
     var body: some View {
         ZStack {
-            // Shared Background
-            settings.selectedTheme.anySceneView
-                .ignoresSafeArea()
+            ExamenBackgroundHost(presentation: .flow)
             
             // Content Switcher
             content
@@ -59,13 +190,22 @@ struct ExamenSessionContainer: View {
         // Inject shared SpeechRecognitionManager for all child views
         .environmentObject(speechManager)
         .environmentObject(promptSpeechManager)
+        .toolbar(.hidden, for: .tabBar)
         // Global Session Configuration
         .onAppear {
             settings.isTabBarVisible = false
-            isPromptSpeechEnabled = settings.readPromptsAloudEnabled
-            // Request speech permissions once per session
-            Task {
-                try? await speechManager.requestPermissions()
+            isPromptSpeechEnabled = AppSettings.featurePolicy.allowsExamenPromptSpeech
+                && settings.readPromptsAloudEnabled
+
+            if let smokeConfiguration, !didApplySmokeConfiguration {
+                smokeConfiguration.apply(to: vm)
+                didApplySmokeConfiguration = true
+            }
+
+            if AppSettings.featurePolicy.allowsExamenVoiceTranscription {
+                Task {
+                    try? await speechManager.requestPermissions()
+                }
             }
             promptSpeechManager.onUtteranceFinished = { finishedPromptID in
                 guard isPromptSpeechEnabled else { return }
@@ -167,6 +307,7 @@ struct ExamenSessionContainer: View {
             Group {
                 if let prompt = vm.currentPrompt, let headerState = headerState {
                     ExamenStepView(
+                        promptID: prompt.id,
                         question: prompt.text,
                         sessionReferencePrompt: vm.longestPromptText,
                         stageName: prompt.stage.uppercased(),
@@ -174,9 +315,17 @@ struct ExamenSessionContainer: View {
                         initialText: vm.answerForCurrentPrompt(),
                         currentStep: vm.phasePromptIndex,
                         isFinalStep: vm.isLastPhase && vm.isLastPromptInPhase,
-                        showNoteButton: true,
+                        showNoteButton: AppSettings.featurePolicy.allowsExamenInlineNotes,
+                        showPromptToolsHint: AppSettings.featurePolicy.allowsExamenInlineNotes
+                            && vm.currentPhase == vm.phases.first
+                            && vm.phasePromptIndex == 0,
+                        allowsVoiceTranscription: AppSettings.featurePolicy.allowsExamenVoiceTranscription,
                         isPromptSpeechEnabled: isPromptSpeechEnabled,
+                        allowsPromptSpeech: AppSettings.featurePolicy.allowsExamenPromptSpeech,
                         onTogglePromptSpeech: togglePromptSpeechForSession,
+                        notePlaceholder: vm.isLastPhase && vm.isLastPromptInPhase
+                            ? "What do you want to keep?"
+                            : "Type your note...",
                         onNext: { answer in
                             reflectiveHoldTask?.cancel()
                             reflectiveHoldTask = nil
@@ -205,6 +354,17 @@ struct ExamenSessionContainer: View {
                             }
                         )
                     }
+                } else {
+                    ExamenPromptPhaseFallbackView(
+                        promptCount: vm.prompts.count,
+                        phaseCount: vm.phases.count,
+                        currentPhase: vm.currentPhase,
+                        promptIndex: vm.phasePromptIndex,
+                        onExit: {
+                            showExitAlert = false
+                            dismiss()
+                        }
+                    )
                 }
             }
             .transition(.opacity)
@@ -228,7 +388,40 @@ struct ExamenSessionContainer: View {
 
         case .summary:
             ExamenCompletionView(
+                hasSavedReflection: vm.lastSavedSessionID != nil,
+                applicationRecordOutcomeText: vm.lastApplicationRecordOutcomeText,
+                onViewJournal: {
+                    settings.pendingInsightEntryIDs = []
+                    settings.pendingInsightsLens = nil
+                    settings.selectedTab = .journal
+                    settings.pendingJournalEntryID = vm.lastSavedSessionID
+                    withAnimation(AnimationConfig.transitionOut) {
+                        vm.finishSession()
+                    }
+                },
+                onOpenInsights: {
+                    settings.pendingJournalEntryID = nil
+                    settings.pendingInsightEntryIDs = vm.lastSavedSessionID.map { [$0] } ?? []
+                    settings.pendingInsightsLens = .themes
+                    settings.selectedTab = .insights
+                    withAnimation(AnimationConfig.transitionOut) {
+                        vm.finishSession()
+                    }
+                },
+                onGoToWriting: {
+                    settings.pendingJournalEntryID = nil
+                    settings.pendingInsightEntryIDs = []
+                    settings.pendingInsightsLens = nil
+                    settings.selectedTab = .statement
+                    withAnimation(AnimationConfig.transitionOut) {
+                        vm.finishSession()
+                    }
+                },
                 onReturnHome: {
+                    settings.pendingJournalEntryID = nil
+                    settings.pendingInsightEntryIDs = []
+                    settings.pendingInsightsLens = nil
+                    settings.selectedTab = .home
                     withAnimation(AnimationConfig.transitionOut) {
                         vm.finishSession()
                     }
@@ -388,6 +581,7 @@ struct ExamenSessionContainer: View {
         }
 
         let priorJournalCount = allSessions.filter { $0.sessionType != .statementDraft }.count
+        vm.recordActiveMode(profile.defaultMode)
         
         let templates = PromptSelector.selectPrompts(
             allPrompts: promptTemplates,
@@ -409,6 +603,135 @@ struct ExamenSessionContainer: View {
     }
 }
 
+struct ExamenSmokeConfiguration {
+    let title: String
+    let draft: ExamenSessionDraft
+    let stage: ExamenStage
+    let prompts: [PromptTemplate]
+
+    @MainActor
+    func apply(to vm: ExamenSessionViewModel) {
+        vm.draft = draft
+        vm.selectType(draft.type)
+        if !prompts.isEmpty {
+            vm.setPrompts(prompts)
+        }
+        vm.stage = stage
+    }
+
+    static let smokePrompts: [PromptTemplate] = [
+        PromptTemplate(
+            id: UUID(uuidString: "11111111-1111-1111-1111-111111111111") ?? UUID(),
+            text: "Begin by noticing one moment from the day that still holds your attention.",
+            phase: 0,
+            stage: "first-principle",
+            depth: "standard",
+            stepIndex: 0,
+            experienceTypes: ["other"],
+            intent: "smoke"
+        ),
+        PromptTemplate(
+            id: UUID(uuidString: "22222222-2222-2222-2222-222222222222") ?? UUID(),
+            text: "Where did you feel most present, grateful, or stretched in that moment?",
+            phase: 1,
+            stage: "gratitude",
+            depth: "standard",
+            stepIndex: 0,
+            experienceTypes: ["other"],
+            intent: "smoke"
+        ),
+        PromptTemplate(
+            id: UUID(uuidString: "33333333-3333-3333-3333-333333333333") ?? UUID(),
+            text: "What truth would you want to remember from this experience when you write about it later?",
+            phase: 2,
+            stage: "reflection",
+            depth: "standard",
+            stepIndex: 0,
+            experienceTypes: ["other"],
+            intent: "smoke"
+        )
+    ]
+
+    static let selectType = ExamenSmokeConfiguration(
+        title: "Select Type",
+        draft: ExamenSessionDraft(type: .other),
+        stage: .selectType,
+        prompts: smokePrompts
+    )
+
+    static let prayerfulPosture = ExamenSmokeConfiguration(
+        title: "Prayerful Posture",
+        draft: ExamenSessionDraft(type: .other),
+        stage: .prayerfulPosture,
+        prompts: smokePrompts
+    )
+
+    static let promptPhase = ExamenSmokeConfiguration(
+        title: "Prompt Phase",
+        draft: ExamenSessionDraft(type: .other),
+        stage: .promptPhase,
+        prompts: smokePrompts
+    )
+}
+
+private struct ExamenPromptPhaseFallbackView: View {
+    let promptCount: Int
+    let phaseCount: Int
+    let currentPhase: Int
+    let promptIndex: Int
+    let onExit: () -> Void
+
+    @State private var didAssert = false
+
+    var body: some View {
+        VStack(spacing: DSSpacing.lg) {
+            Spacer()
+
+            AppPanel(
+                title: "We couldn't load this reflection prompt",
+                subtitle: "Close this Examen and start again. This fallback keeps the launch path from failing silently while we stabilize the flow.",
+                role: .reading,
+                highlighted: true
+            ) {
+                #if DEBUG
+                VStack(alignment: .leading, spacing: DSSpacing.xs) {
+                    Text("Debug info")
+                        .font(DSFont.eyebrow)
+                        .foregroundStyle(DSColor.quietTextMuted)
+                    Text("prompts: \(promptCount)")
+                        .font(DSFont.supporting)
+                        .foregroundStyle(DSColor.textPrimary)
+                    Text("phases: \(phaseCount)")
+                        .font(DSFont.supporting)
+                        .foregroundStyle(DSColor.textPrimary)
+                    Text("current phase: \(currentPhase)")
+                        .font(DSFont.supporting)
+                        .foregroundStyle(DSColor.textPrimary)
+                    Text("prompt index: \(promptIndex)")
+                        .font(DSFont.supporting)
+                        .foregroundStyle(DSColor.textPrimary)
+                }
+                #endif
+            }
+
+            Button("Close Examen", action: onExit)
+                .buttonStyle(SacredButtonStyle())
+
+            Spacer()
+        }
+        .padding(.horizontal, DSSpacing.lg)
+        .onAppear {
+            #if DEBUG
+            guard !didAssert else { return }
+            didAssert = true
+            assertionFailure(
+                "Examen reached promptPhase without a current prompt. prompts=\(promptCount), phases=\(phaseCount), currentPhase=\(currentPhase), promptIndex=\(promptIndex)"
+            )
+            #endif
+        }
+    }
+}
+
 private struct ExamenPromptHeader: View {
     let state: ExamenHeaderState
     let canGoBack: Bool
@@ -423,10 +746,8 @@ private struct ExamenPromptHeader: View {
                 Button(action: onBack) {
                     Image(systemName: "chevron.left")
                         .font(.headline)
-                        .foregroundStyle(Color.white.opacity(canGoBack ? 0.9 : 0.35))
-                        .frame(width: 44, height: 44)
-                        .background(Color.white.opacity(canGoBack ? 0.10 : 0.04))
-                        .clipShape(Circle())
+                        .appCircleControl(active: false, emphasized: canGoBack)
+                        .opacity(canGoBack ? 1 : 0.45)
                 }
                 .disabled(!canGoBack)
                 .accessibilityLabel("Go back")
@@ -436,20 +757,14 @@ private struct ExamenPromptHeader: View {
                 Button(action: onTogglePause) {
                     Image(systemName: timerPaused ? "play.fill" : "pause.fill")
                         .font(.headline)
-                        .foregroundStyle(Color.white.opacity(0.9))
-                        .frame(width: 44, height: 44)
-                        .background(Color.white.opacity(0.10))
-                        .clipShape(Circle())
+                        .appCircleControl()
                 }
                 .accessibilityLabel(timerPaused ? "Resume timer" : "Pause timer")
 
                 Button(action: onExit) {
                     Image(systemName: "xmark")
                         .font(.headline.weight(.semibold))
-                        .foregroundStyle(Color.white.opacity(0.9))
-                        .frame(width: 44, height: 44)
-                        .background(Color.white.opacity(0.10))
-                        .clipShape(Circle())
+                        .appCircleControl()
                 }
                 .accessibilityLabel("Exit Examen")
             }
@@ -462,16 +777,20 @@ private struct ExamenPromptHeader: View {
         .padding(.top, DSSpacing.xs)
         .padding(.bottom, DSSpacing.sm)
         .background(
-            ZStack {
-                Rectangle()
-                    .fill(.ultraThinMaterial)
-                    .opacity(0.22)
-                LinearGradient(
-                    colors: [Color.black.opacity(0.40), Color.black.opacity(0.18), .clear],
-                    startPoint: .top,
-                    endPoint: .bottom
+            Rectangle()
+                .fill(DSColor.readingSurface.opacity(0.92))
+                .overlay(
+                    LinearGradient(
+                        colors: [Color.black.opacity(0.10), .clear],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
                 )
-            }
+                .overlay(alignment: .bottom) {
+                    Rectangle()
+                        .fill(DSColor.dividerSoft)
+                        .frame(height: 1)
+                }
         )
         .accessibilityElement(children: .contain)
     }
@@ -519,3 +838,48 @@ private struct ExamenPromptHeader: View {
     .frame(width: 320, height: 210)
     .environment(\.dynamicTypeSize, .accessibility2)
 }
+
+#if DEBUG
+private let examenSmokePreviewContainer: ModelContainer = {
+    try! ModelContainer(
+        for: UserProfile.self,
+        ExamenSession.self,
+        StepResponse.self,
+        PromptTemplate.self,
+        configurations: ModelConfiguration(isStoredInMemoryOnly: true)
+    )
+}()
+
+#Preview("Examen Smoke - Select Type") {
+    let settings = AppSettings()
+    settings.selectedTheme = .gradient2
+
+    return NavigationStack {
+        ExamenSessionContainer(smokeConfiguration: .selectType)
+    }
+    .environment(settings)
+    .modelContainer(examenSmokePreviewContainer)
+}
+
+#Preview("Examen Smoke - Prayerful Posture") {
+    let settings = AppSettings()
+    settings.selectedTheme = .gradient2
+
+    return NavigationStack {
+        ExamenSessionContainer(smokeConfiguration: .prayerfulPosture)
+    }
+    .environment(settings)
+    .modelContainer(examenSmokePreviewContainer)
+}
+
+#Preview("Examen Smoke - Prompt Phase") {
+    let settings = AppSettings()
+    settings.selectedTheme = .gradient2
+
+    return NavigationStack {
+        ExamenSessionContainer(smokeConfiguration: .promptPhase)
+    }
+    .environment(settings)
+    .modelContainer(examenSmokePreviewContainer)
+}
+#endif

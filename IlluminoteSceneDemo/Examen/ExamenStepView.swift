@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ExamenStepView: View {
     // MARK: - Inputs
+    let promptID: UUID?
     let question: String
     let sessionReferencePrompt: String
     let stageName: String // New
@@ -15,10 +16,18 @@ struct ExamenStepView: View {
     let isFinalStep: Bool
     /// If true, displays the "Write a Note" button in the bottom bar.
     let showNoteButton: Bool
+    /// If true, surfaces a one-time first-use cue for note-taking.
+    let showPromptToolsHint: Bool
+    /// If true, the note editor can append dictated text.
+    let allowsVoiceTranscription: Bool
     /// Session-level speech toggle state driven by parent flow.
     let isPromptSpeechEnabled: Bool
+    /// If true, displays the prompt speech toggle.
+    let allowsPromptSpeech: Bool
     /// Toggles session-level speech behavior for the current Examen run.
     let onTogglePromptSpeech: () -> Void
+    /// Placeholder for the reflection capture field.
+    let notePlaceholder: String
 
     // Controls whether the TextEditor is visible
     @State private var showEditor: Bool = false
@@ -84,6 +93,7 @@ struct ExamenStepView: View {
 
     // MARK: - Backward-compatible initializer
     init(question: String, isFinalStep: Bool = false, onNext: @escaping () -> Void) {
+        self.promptID = nil
         self.question = question
         self.sessionReferencePrompt = ""
         self.stageName = ""
@@ -92,13 +102,18 @@ struct ExamenStepView: View {
         self.currentStep = 0
         self.isFinalStep = isFinalStep
         self.showNoteButton = isFinalStep // Default behavior
+        self.showPromptToolsHint = false
+        self.allowsVoiceTranscription = true
         self.isPromptSpeechEnabled = false
+        self.allowsPromptSpeech = true
         self.onTogglePromptSpeech = {}
+        self.notePlaceholder = "Type your note..."
         self.onNext = { _ in onNext() }
     }
 
     // MARK: - Preferred initializer
-    init(question: String,
+    init(promptID: UUID? = nil,
+         question: String,
          sessionReferencePrompt: String = "",
          stageName: String = "",
          showDebugStageLabel: Bool = false,
@@ -106,10 +121,15 @@ struct ExamenStepView: View {
          currentStep: Int = 0,
          isFinalStep: Bool = false,
          showNoteButton: Bool = false,
+         showPromptToolsHint: Bool = false,
+         allowsVoiceTranscription: Bool = true,
          isPromptSpeechEnabled: Bool = false,
+         allowsPromptSpeech: Bool = true,
          onTogglePromptSpeech: @escaping () -> Void = {},
+         notePlaceholder: String = "Type your note...",
          onNext: @escaping (String) -> Void,
          onBack: (() -> Void)? = nil) {
+        self.promptID = promptID
         self.question = question
         self.sessionReferencePrompt = sessionReferencePrompt
         self.stageName = stageName
@@ -118,8 +138,12 @@ struct ExamenStepView: View {
         self.currentStep = currentStep
         self.isFinalStep = isFinalStep
         self.showNoteButton = showNoteButton
+        self.showPromptToolsHint = showPromptToolsHint
+        self.allowsVoiceTranscription = allowsVoiceTranscription
         self.isPromptSpeechEnabled = isPromptSpeechEnabled
+        self.allowsPromptSpeech = allowsPromptSpeech
         self.onTogglePromptSpeech = onTogglePromptSpeech
+        self.notePlaceholder = notePlaceholder
         self.onNext = onNext
     }
 
@@ -130,18 +154,14 @@ struct ExamenStepView: View {
 
             // 2) Content layer
             VStack(spacing: isAccessibilityTextSize ? DSSpacing.md : DSSpacing.lg) {
-                // Question Area (Immersive Design)
                 VStack(spacing: isAccessibilityTextSize ? DSSpacing.xs : DSSpacing.sm) {
-                    // Stage Label (Subtle)
                     if showDebugStageLabel && !stageName.isEmpty {
                         Text(stageName.uppercased())
-                            .font(.caption)
-                            .fontWeight(.semibold)
-                            .foregroundStyle(Color.white.opacity(0.7)) // Ensure contrast on scene
+                            .font(DSFont.eyebrow)
+                            .foregroundStyle(DSColor.quietTextMuted)
                             .padding(.top, 4)
                     }
 
-                    // Main Prompt Text
                     ZStack {
                         if let outgoingQuestion {
                             promptLayout(
@@ -162,12 +182,14 @@ struct ExamenStepView: View {
                         maxHeight: showEditor ? max(promptContainerMinHeight, promptContainerMaxHeight * 0.72) : promptContainerMaxHeight,
                         alignment: .center
                     )
-                    .padding(.vertical, isAccessibilityTextSize ? DSSpacing.sm : DSSpacing.md)
+                    .padding(.vertical, isAccessibilityTextSize ? DSSpacing.md : DSSpacing.lg)
                 }
-                .frame(maxWidth: .infinity)
+                .frame(maxWidth: .infinity, alignment: .center)
+                .padding(.horizontal, isAccessibilityTextSize ? DSSpacing.sm : DSSpacing.md)
+                .padding(.vertical, isAccessibilityTextSize ? DSSpacing.sm : DSSpacing.md)
+                .appSurfaceStyle(role: .reading, highlighted: true)
                 .accessibilityElement(children: .contain)
                 .accessibilitySortPriority(2)
-                // Removed CardView background/shadow to be immersive
 
                 if showEditor {
                     ZStack(alignment: .bottomTrailing) {
@@ -178,12 +200,12 @@ struct ExamenStepView: View {
                             .autocorrectionDisabled(false)
                             .frame(minHeight: 180)
                             .padding(12)
-                            .padding(.bottom, 44) // Make room for Mic button
-                            .background(DSColor.backgroundSecondary)
+                            .padding(.bottom, allowsVoiceTranscription ? 44 : 8)
+                            .background(DSColor.readingSurface)
                             .clipShape(RoundedRectangle(cornerRadius: 12))
                             .overlay(
                                 RoundedRectangle(cornerRadius: 12)
-                                    .stroke(DSColor.divider, lineWidth: 1)
+                                    .stroke(DSColor.dividerSoft, lineWidth: 1)
                             )
                             .foregroundStyle(DSColor.textPrimary)
                             .accessibilityLabel("Your response")
@@ -191,133 +213,76 @@ struct ExamenStepView: View {
 
                         // Lightweight placeholder when empty
                         if draft.isEmpty {
-                            Text("Type your note…")
-                                .font(.body)
-                                .foregroundStyle(DSColor.textSecondary)
+                            Text(notePlaceholder)
+                                .font(DSFont.body)
+                                .foregroundStyle(DSColor.quietText)
                                 .padding(.top, 20)
                                 .padding(.leading, 16)
                                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                                 .allowsHitTesting(false)
                         }
                         
-                        // Mic Control Overlay (Inside Editor)
-                        Button {
-                            if speechManager.isRecording {
-                                speechManager.stopRecording()
-                                appendTranscriptIfAvailable()
-                            } else {
-                                promptSpeechManager.stop()
-                                do {
-                                    try speechManager.startRecording()
-                                } catch {
-                                    print("Speech start error:", error)
-                                }
-                            }
-                        } label: {
-                            HStack(spacing: 6) {
-                                Image(systemName: speechManager.isRecording ? "stop.fill" : "mic.fill")
-                                    .font(.headline)
+                        if allowsVoiceTranscription {
+                            Button {
                                 if speechManager.isRecording {
-                                    Text("Listening...")
-                                        .font(.caption)
-                                        .fontWeight(.medium)
+                                    speechManager.stopRecording()
+                                    appendTranscriptIfAvailable()
+                                } else {
+                                    promptSpeechManager.stop()
+                                    do {
+                                        try speechManager.startRecording()
+                                    } catch {
+                                        print("Speech start error:", error)
+                                    }
                                 }
+                            } label: {
+                                HStack(spacing: 6) {
+                                    Image(systemName: speechManager.isRecording ? "stop.fill" : "mic.fill")
+                                        .font(.headline)
+                                    if speechManager.isRecording {
+                                        Text("Listening...")
+                                            .font(DSFont.meta)
+                                            .fontWeight(.medium)
+                                    }
+                                }
+                                .foregroundStyle(speechManager.isRecording ? .white : DSColor.textSecondary)
+                                .padding(.vertical, 8)
+                                .padding(.horizontal, 12)
+                                .background(
+                                    speechManager.isRecording
+                                        ? AnyShapeStyle(Color.red.opacity(0.9))
+                                        : AnyShapeStyle(Material.ultraThinMaterial)
+                                )
+                                .clipShape(Capsule())
+                                .shadow(radius: 2)
                             }
-                            .foregroundStyle(speechManager.isRecording ? .white : DSColor.textSecondary)
-                            .padding(.vertical, 8)
-                            .padding(.horizontal, 12)
-                            .background(
-                                speechManager.isRecording
-                                    ? AnyShapeStyle(Color.red.opacity(0.9))
-                                    : AnyShapeStyle(Material.ultraThinMaterial)
-                            )
-                            .clipShape(Capsule())
-                            .shadow(radius: 2)
+                            .padding(12)
                         }
-                        .padding(12)
                     }
+                    .appSurfaceStyle(role: .interactive)
                 }
 
                 Spacer(minLength: isAccessibilityTextSize ? DSSpacing.xs : DSSpacing.sm)
 
-                // Compact Navigation Row (One line)
-                HStack(alignment: .center) {
-                    
-                    // Left Controls: Write & Speak
-                    // Left Controls: Write & Speak
-                    if showNoteButton {
-                        Button {
-                            withAnimation(.easeInOut(duration: 0.2)) { showEditor = true }
-                        } label: {
-                            Image(systemName: "square.and.pencil")
-                                .font(.headline)
-                                .foregroundStyle(.white)
-                                .padding(12)
-                                .background(Material.ultraThinMaterial)
-                                .clipShape(Circle())
-                                .overlay(
-                                    Circle().stroke(Color.white.opacity(0.3), lineWidth: 1)
-                                )
-                        }
-                        .accessibilityLabel("Write a note")
+                VStack(alignment: .leading, spacing: DSSpacing.sm) {
+                    if shouldShowPromptToolsHint {
+                        Text("Write a note any time")
+                            .font(DSFont.supporting)
+                            .foregroundStyle(DSColor.quietText)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .transition(.opacity)
                     }
 
-                    Button {
-                        if speechManager.isRecording {
-                            speechManager.stopRecording()
-                            appendTranscriptIfAvailable()
+                    ViewThatFits(in: .horizontal) {
+                        promptControlsRow(labelStyle: .full)
+                        promptControlsRow(labelStyle: .compact)
+
+                        VStack(alignment: .leading, spacing: DSSpacing.sm) {
+                            promptToolsCluster(labelStyle: .full)
+                            nextButton
+                                .frame(maxWidth: .infinity)
                         }
-                        onTogglePromptSpeech()
-                    } label: {
-                        Image(systemName: isPromptSpeechEnabled ? "speaker.wave.2.fill" : "speaker.slash.fill")
-                            .font(.headline)
-                            .foregroundStyle(.white)
-                            .padding(12)
-                            .background(Material.ultraThinMaterial)
-                            .clipShape(Circle())
-                            .overlay(
-                                Circle().stroke(Color.white.opacity(0.3), lineWidth: 1)
-                            )
                     }
-                    .accessibilityLabel(isPromptSpeechEnabled ? "Turn prompt speech off" : "Turn prompt speech on")
-                    
-                    Spacer()
-                    
-                    // Note: Mic control moved to editor/input choices
-                    
-                    // 3. Next Button (Right) - Glassy Gold Style (MATCHING SacredButtonStyle but static)
-                    Button {
-                        // Stop recording if active before continuing
-                        if speechManager.isRecording {
-                            speechManager.stopRecording()
-                            appendTranscriptIfAvailable()
-                        }
-                        
-                        editorFocused = false
-                        onNext(draft.trimmingCharacters(in: .whitespacesAndNewlines))
-                    } label: {
-                        HStack(spacing: 8) {
-                            Text("Next")
-                                .fontWeight(.medium)
-                            Image(systemName: "chevron.right")
-                        }
-                        .foregroundStyle(Color.white)
-                        .padding(.vertical, 12)
-                        .padding(.horizontal, 20)
-                        .background(
-                            Capsule()
-                                .fill(.ultraThinMaterial)
-                                .overlay(
-                                    Capsule()
-                                        .stroke(DSColor.goldLight, lineWidth: 2)
-                                        // No .luminous() pulse here, static per request
-                                        // But we can add static glow via shadow
-                                )
-                        )
-                        // Static gold shadow for "Glassy Gold" feel
-                        .shadow(color: DSColor.goldLight.opacity(0.4), radius: 10, x: 0, y: 0)
-                    }
-                    .accessibilityLabel("Next step")
                 }
                 .padding(.bottom, DSSpacing.sm)
                 .accessibilitySortPriority(1)
@@ -330,13 +295,14 @@ struct ExamenStepView: View {
             displayedQuestion = question
             incomingPromptOpacity = 1
             outgoingPromptOpacity = 0
-            draft = initialText
-            // Auto‑expand on final step or when there is existing text
-            showEditor = isFinalStep || !initialText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            syncDraftWithCurrentPrompt()
         }
         .onDisappear {
             promptTransitionTask?.cancel()
             promptTransitionTask = nil
+        }
+        .onChange(of: promptID, initial: false) { _, _ in
+            syncDraftWithCurrentPrompt()
         }
         .onChange(of: question, initial: false) { oldQuestion, newQuestion in
             guard newQuestion != oldQuestion else { return }
@@ -386,8 +352,24 @@ struct ExamenStepView: View {
         }
     }
 
+    private func syncDraftWithCurrentPrompt() {
+        draft = initialText
+        showEditor = isFinalStep || !initialText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        if !showEditor {
+            editorFocused = false
+        }
+    }
+
     private var activePromptText: String {
         displayedQuestion.isEmpty ? question : displayedQuestion
+    }
+
+    private var shouldShowPromptToolsHint: Bool {
+        showPromptToolsHint && !showEditor
+    }
+
+    private var nextButtonRowWidth: CGFloat {
+        isAccessibilityTextSize ? 144 : 156
     }
 
     private func crossfadePrompt(to newQuestion: String) {
@@ -440,9 +422,8 @@ struct ExamenStepView: View {
     @ViewBuilder
     private func promptText(_ text: String, pointSize: CGFloat, hidden: Bool, accessibilityHidden: Bool) -> some View {
         Text(text)
-            .font(.system(size: pointSize, weight: .light))
-            .foregroundStyle(hidden ? Color.clear : Color.white)
-            .shadow(color: hidden ? .clear : .black.opacity(0.4), radius: 2, x: 0, y: 1)
+            .font(.system(size: pointSize, weight: .regular, design: .serif))
+            .foregroundStyle(hidden ? Color.clear : DSColor.textPrimary)
             .multilineTextAlignment(.center)
             .lineLimit(nil)
             .fixedSize(horizontal: false, vertical: true)
@@ -450,6 +431,93 @@ struct ExamenStepView: View {
             .frame(maxWidth: .infinity)
             .accessibilityHidden(accessibilityHidden)
             .allowsHitTesting(false)
+    }
+
+    private enum PromptControlsLabelStyle {
+        case full
+        case compact
+    }
+
+    @ViewBuilder
+    private func promptControlsRow(labelStyle: PromptControlsLabelStyle) -> some View {
+        HStack(alignment: .center, spacing: DSSpacing.sm) {
+            promptToolsCluster(labelStyle: labelStyle)
+            Spacer(minLength: DSSpacing.sm)
+            nextButton
+                .frame(width: nextButtonRowWidth)
+        }
+    }
+
+    @ViewBuilder
+    private func promptToolsCluster(labelStyle: PromptControlsLabelStyle) -> some View {
+        HStack(spacing: DSSpacing.sm) {
+            if showNoteButton {
+                Button {
+                    withAnimation(AnimationConfig.confirmation) {
+                        showEditor.toggle()
+                    }
+                } label: {
+                    Label(noteButtonTitle(for: labelStyle),
+                          systemImage: showEditor ? "keyboard.chevron.compact.down" : "square.and.pencil")
+                        .font(DSFont.meta.weight(.semibold))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.9)
+                        .fixedSize(horizontal: true, vertical: false)
+                }
+                .buttonStyle(.appSecondary)
+                .accessibilityLabel(showEditor ? "Hide note" : "Write a note")
+                .accessibilityHint(showEditor ? "Closes the note editor." : "Opens the note editor for this prompt.")
+            }
+
+            if allowsPromptSpeech {
+                Button {
+                    if speechManager.isRecording {
+                        speechManager.stopRecording()
+                        appendTranscriptIfAvailable()
+                    }
+                    onTogglePromptSpeech()
+                } label: {
+                    Image(systemName: isPromptSpeechEnabled ? "speaker.wave.2.fill" : "speaker.slash.fill")
+                        .font(.headline)
+                        .appCircleControl(active: isPromptSpeechEnabled, emphasized: isPromptSpeechEnabled)
+                }
+                .accessibilityLabel(isPromptSpeechEnabled ? "Turn prompt speech off" : "Turn prompt speech on")
+            }
+        }
+    }
+
+    private func noteButtonTitle(for style: PromptControlsLabelStyle) -> String {
+        if showEditor {
+            return "Hide"
+        }
+
+        switch style {
+        case .full:
+            return "Write"
+        case .compact:
+            return "Write"
+        }
+    }
+
+    private var nextButton: some View {
+        Button {
+            if speechManager.isRecording {
+                speechManager.stopRecording()
+                appendTranscriptIfAvailable()
+            }
+
+            editorFocused = false
+            onNext(draft.trimmingCharacters(in: .whitespacesAndNewlines))
+        } label: {
+            HStack(spacing: 8) {
+                Text("Next")
+                    .fontWeight(.medium)
+                Image(systemName: "chevron.right")
+            }
+            .padding(.horizontal, DSSpacing.sm)
+        }
+        .buttonStyle(SacredButtonStyle())
+        .accessibilityLabel("Next step")
     }
 }
 

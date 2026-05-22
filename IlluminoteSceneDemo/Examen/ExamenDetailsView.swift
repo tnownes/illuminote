@@ -17,16 +17,31 @@ struct ExamenDetailsView: View {
     @State private var extraTags: String = "" // comma-separated
     @State private var personalStatement: String = ""
     @State private var hoursString: String = ""
-    @State private var attachmentMode: ApplicationExperienceAttachmentMode = .none
-    @State private var selectedExperienceID: UUID?
+    @State private var isUsingApplicationRecord = false
+    @State private var applicationRecordDestination: ApplicationRecordDestination = .createNew
+    @State private var selectedApplicationRecordID: UUID?
+    @State private var showCopiedDetailOverrides = false
     @State private var newExperienceSeed = ApplicationExperienceSeed()
+    @State private var manuallyEditedExperienceFields: Set<ApplicationExperienceSeedField> = []
+    @State private var isApplyingExperienceSuggestion = false
 
     private var detailFieldConfig: ExperienceDetailFieldConfig { draft.type.detailFieldConfig }
     private var canSave: Bool {
-        attachmentMode != .existing || selectedExperienceID != nil
+        !isUsingApplicationRecord
+            || applicationRecordDestination == .createNew
+            || selectedApplicationRecordID != nil
     }
     
+    @ViewBuilder
     var body: some View {
+        if AppSettings.featurePolicy.allowsExamenApplicationRecordDuringReflection {
+            fullDetailsBody
+        } else {
+            coreSaveBody
+        }
+    }
+
+    private var fullDetailsBody: some View {
         ZStack {
             DSColor.backgroundPrimary.ignoresSafeArea()
             
@@ -109,77 +124,124 @@ struct ExamenDetailsView: View {
 
                         CardView(backgroundColor: DSColor.backgroundSecondary) {
                             VStack(alignment: .leading, spacing: DSSpacing.md) {
-                                ThemedText(text: "Application Experience (Optional)", style: .heading2)
-                                Text("Daily reflections stay separate by default. Attach this note only if it should support a structured application experience.")
+                                ThemedText(text: "Application Record", style: .heading2)
+                                Text("Keep this off for a journal-only reflection. Turn it on when this note should also support an application record.")
                                     .font(DSFont.caption)
                                     .foregroundStyle(DSColor.textSecondary)
 
-                                AttachmentModeSelector(
-                                    selection: $attachmentMode,
-                                    canLinkExisting: !applicationExperiences.isEmpty
-                                )
+                                Toggle("Use this note for an Application Record", isOn: $isUsingApplicationRecord)
+                                    .tint(DSColor.goldLight)
+                                    .accessibilityIdentifier("examen.details.applicationRecord.toggle")
 
-                                switch attachmentMode {
-                                case .none:
-                                    Text("This note will save as a reflection only.")
+                                if !isUsingApplicationRecord {
+                                    Text("This will save to Journal only.")
                                         .font(DSFont.caption)
                                         .foregroundStyle(DSColor.textSecondary)
-                                case .existing:
-                                    Picker("Existing Experience", selection: $selectedExperienceID) {
-                                        Text("Select an experience").tag(UUID?.none)
-                                        ForEach(applicationExperiences) { experience in
-                                            Text(experience.exportTitle).tag(UUID?.some(experience.id))
-                                        }
-                                    }
-                                    .pickerStyle(.menu)
-
-                                    if let selectedExperience = applicationExperiences.first(where: { $0.id == selectedExperienceID }) {
-                                        Text("Linking to \(selectedExperience.exportTitle) keeps the structured experience record separate from this note.")
+                                } else {
+                                    if applicationExperiences.isEmpty {
+                                        Text("Illuminote will create a new Application Record from the details below.")
                                             .font(DSFont.caption)
                                             .foregroundStyle(DSColor.textSecondary)
                                     } else {
-                                        Text("Choose one existing experience before saving.")
-                                            .font(DSFont.caption)
-                                            .foregroundStyle(DSColor.warning)
-                                    }
-                                case .createNew:
-                                    DetailField(label: "Experience Title", text: $newExperienceSeed.title)
-                                    Picker("Category", selection: $newExperienceSeed.category) {
-                                        ForEach(ApplicationExperienceCategory.allCases) { category in
-                                            Text(category.displayName).tag(category)
+                                        Picker("Application Record destination", selection: $applicationRecordDestination) {
+                                            ForEach(ApplicationRecordDestination.allCases) { destination in
+                                                Text(destination.title).tag(destination)
+                                            }
                                         }
+                                        .pickerStyle(.segmented)
                                     }
-                                    .pickerStyle(.menu)
-                                    DetailField(label: "Organization / Site", text: $newExperienceSeed.organizationName)
-                                        .textContentType(.organizationName)
-                                    DetailField(label: "Role / Title", text: $newExperienceSeed.roleTitle)
-                                    DetailField(label: "Location", text: $newExperienceSeed.location)
-                                    DetailField(label: "Supervisor / Contact", text: $newExperienceSeed.contactName)
-                                    DatePicker("Start Date", selection: $newExperienceSeed.initialPeriod.startDate, displayedComponents: .date)
-                                        .tint(DSColor.goldLight)
-                                    Toggle("Ongoing", isOn: $newExperienceSeed.initialPeriod.isOngoing)
-                                        .tint(DSColor.goldLight)
-                                    Toggle("Planned", isOn: $newExperienceSeed.initialPeriod.isPlanned)
-                                        .tint(DSColor.goldLight)
-                                    if !newExperienceSeed.initialPeriod.isOngoing {
-                                        DatePicker(
-                                            "End Date",
-                                            selection: Binding(
-                                                get: { newExperienceSeed.initialPeriod.endDate ?? newExperienceSeed.initialPeriod.startDate },
-                                                set: { newExperienceSeed.initialPeriod.endDate = $0 }
-                                            ),
-                                            in: newExperienceSeed.initialPeriod.startDate...,
-                                            displayedComponents: .date
-                                        )
+
+                                    switch applicationRecordDestination {
+                                    case .connectExisting:
+                                        Picker("Existing Application Record", selection: $selectedApplicationRecordID) {
+                                            Text("Select a record").tag(UUID?.none)
+                                            ForEach(applicationExperiences) { experience in
+                                                Text(experience.exportTitle).tag(UUID?.some(experience.id))
+                                            }
+                                        }
+                                        .pickerStyle(.menu)
+
+                                        if let selectedRecord = applicationExperiences.first(where: { $0.id == selectedApplicationRecordID }) {
+                                            Text("This reflection will stay in Journal and connect to \(selectedRecord.exportTitle).")
+                                                .font(DSFont.caption)
+                                                .foregroundStyle(DSColor.textSecondary)
+                                        } else {
+                                            Text("Choose an Application Record before saving.")
+                                                .font(DSFont.caption)
+                                                .foregroundStyle(DSColor.warning)
+                                        }
+                                    case .createNew:
+                                        ApplicationRecordCopiedDetailsPreview(seed: newExperienceSeed)
+
+                                        VStack(alignment: .leading, spacing: DSSpacing.sm) {
+                                            Text("Additional details")
+                                                .font(DSFont.caption.weight(.semibold))
+                                                .foregroundStyle(DSColor.textSecondary)
+
+                                            Picker("Category", selection: seedCategoryBinding()) {
+                                                ForEach(ApplicationExperienceCategory.allCases) { category in
+                                                    Text(category.displayName).tag(category)
+                                                }
+                                            }
+                                            .pickerStyle(.menu)
+
+                                            DatePicker("Start Date", selection: seedStartDateBinding(), displayedComponents: .date)
+                                                .tint(DSColor.goldLight)
+                                            Toggle("Ongoing", isOn: seedBoolBinding(\.isOngoing, field: .isOngoing))
+                                                .tint(DSColor.goldLight)
+                                            Toggle("Planned", isOn: seedBoolBinding(\.isPlanned, field: .isPlanned))
+                                                .tint(DSColor.goldLight)
+                                            if !newExperienceSeed.initialPeriod.isOngoing {
+                                                DatePicker(
+                                                    "End Date",
+                                                    selection: Binding(
+                                                        get: { newExperienceSeed.initialPeriod.endDate ?? newExperienceSeed.initialPeriod.startDate },
+                                                        set: { newValue in
+                                                            setExperienceField(.endDate) { seed in
+                                                                seed.initialPeriod.endDate = newValue
+                                                            }
+                                                        }
+                                                    ),
+                                                    in: newExperienceSeed.initialPeriod.startDate...,
+                                                    displayedComponents: .date
+                                                )
+                                                .tint(DSColor.goldLight)
+                                            }
+
+                                            if newExperienceSeed.contactName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                                                DetailField(label: "Supervisor / Contact", text: seedTextBinding(\.contactName, field: .contactName))
+                                            }
+
+                                            TextField(
+                                                "Average hours per week (optional)",
+                                                value: seedAverageHoursBinding(),
+                                                format: .number
+                                            )
+                                            .textFieldStyle(.roundedBorder)
+                                            .keyboardType(.decimalPad)
+                                        }
+
+                                        DisclosureGroup("Adjust copied details", isExpanded: $showCopiedDetailOverrides) {
+                                            VStack(alignment: .leading, spacing: DSSpacing.sm) {
+                                                DetailField(label: "Record Title", text: seedTextBinding(\.title, field: .title))
+                                                DetailField(label: "Organization / Site", text: seedTextBinding(\.organizationName, field: .organizationName))
+                                                    .textContentType(.organizationName)
+                                                DetailField(label: "Role / Title", text: seedTextBinding(\.roleTitle, field: .roleTitle))
+                                                DetailField(label: "Location", text: seedTextBinding(\.location, field: .location))
+                                                if !newExperienceSeed.contactName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                                                    DetailField(label: "Supervisor / Contact", text: seedTextBinding(\.contactName, field: .contactName))
+                                                }
+                                                TextField(
+                                                    "Total hours",
+                                                    value: seedHoursBinding(),
+                                                    format: .number
+                                                )
+                                                .textFieldStyle(.roundedBorder)
+                                                .keyboardType(.decimalPad)
+                                                    }
+                                        }
                                         .tint(DSColor.goldLight)
                                     }
-                                    TextField(
-                                        "Experience hours",
-                                        value: $newExperienceSeed.initialPeriod.totalHours,
-                                        format: .number
-                                    )
-                                    .textFieldStyle(.roundedBorder)
-                                    .keyboardType(.decimalPad)
                                 }
                             }
                         }
@@ -202,31 +264,252 @@ struct ExamenDetailsView: View {
                 hoursString = String(draft.hours)
             }
             if let linkedID = draft.linkedApplicationExperienceID {
-                attachmentMode = .existing
-                selectedExperienceID = linkedID
+                isUsingApplicationRecord = true
+                applicationRecordDestination = .connectExisting
+                selectedApplicationRecordID = linkedID
+                manuallyEditedExperienceFields.removeAll()
             } else if let pending = draft.pendingApplicationExperience {
-                attachmentMode = .createNew
+                isUsingApplicationRecord = true
+                applicationRecordDestination = .createNew
                 newExperienceSeed = pending
+                manuallyEditedExperienceFields = Set(ApplicationExperienceSeedField.allCases)
             } else {
-                attachmentMode = .none
+                isUsingApplicationRecord = false
+                applicationRecordDestination = .createNew
                 newExperienceSeed = ApplicationExperienceSeed.suggested(from: draft)
-                selectedExperienceID = nil
+                selectedApplicationRecordID = nil
+                manuallyEditedExperienceFields.removeAll()
             }
         }
-        .onChange(of: attachmentMode) { _, newValue in
+        .onChange(of: isUsingApplicationRecord) { _, isUsing in
+            guard isUsing else { return }
+            if applicationRecordDestination == .connectExisting, selectedApplicationRecordID == nil {
+                selectedApplicationRecordID = applicationExperiences.first?.id
+            }
+            if applicationRecordDestination == .createNew {
+                refreshExperienceSeedFromNoteDetails(force: manuallyEditedExperienceFields.isEmpty)
+            }
+        }
+        .onChange(of: applicationRecordDestination) { _, newValue in
             switch newValue {
-            case .existing:
-                if selectedExperienceID == nil {
-                    selectedExperienceID = applicationExperiences.first?.id
+            case .connectExisting:
+                if selectedApplicationRecordID == nil {
+                    selectedApplicationRecordID = applicationExperiences.first?.id
                 }
             case .createNew:
-                if newExperienceSeed.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                    newExperienceSeed = ApplicationExperienceSeed.suggested(from: draft)
-                }
-            case .none:
-                break
+                refreshExperienceSeedFromNoteDetails(force: manuallyEditedExperienceFields.isEmpty)
             }
         }
+        .onChange(of: personalStatement) { _, _ in refreshExperienceSeedFromNoteDetails() }
+        .onChange(of: primaryValue) { _, _ in refreshExperienceSeedFromNoteDetails() }
+        .onChange(of: secondaryValue) { _, _ in refreshExperienceSeedFromNoteDetails() }
+        .onChange(of: location) { _, _ in refreshExperienceSeedFromNoteDetails() }
+        .onChange(of: hoursString) { _, _ in refreshExperienceSeedFromNoteDetails() }
+    }
+
+    private var coreSaveBody: some View {
+        ZStack {
+            DSColor.backgroundPrimary.ignoresSafeArea()
+
+            VStack(spacing: DSSpacing.xl) {
+                Spacer()
+
+                AppPanel(
+                    title: "Save this reflection?",
+                    subtitle: nil,
+                    role: .reading,
+                    highlighted: true
+                ) {
+                    VStack(spacing: DSSpacing.lg) {
+                        Image(systemName: "book.closed.fill")
+                            .font(.system(size: 56, weight: .semibold))
+                            .foregroundStyle(DSColor.brandAccent)
+                            .frame(maxWidth: .infinity)
+                            .accessibilityHidden(true)
+
+                        VStack(spacing: DSSpacing.xs) {
+                            Text(draft.type.displayName)
+                                .font(DSFont.sectionTitle)
+                                .foregroundStyle(DSColor.textPrimary)
+
+                            Text("Journal only")
+                                .font(DSFont.caption.weight(.semibold))
+                                .foregroundStyle(DSColor.quietText)
+                        }
+
+                        Button {
+                            saveCoreReflection()
+                        } label: {
+                            Label("Save to Journal", systemImage: "checkmark")
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(SacredButtonStyle())
+
+                        Button("Add details later") {
+                            saveCoreReflection()
+                        }
+                        .buttonStyle(.appSecondary)
+                    }
+                }
+                .padding(.horizontal, DSSpacing.lg)
+
+                Spacer()
+
+                Button("Cancel") {
+                    onCancel()
+                }
+                .buttonStyle(.appQuiet)
+                .padding(.bottom, DSSpacing.xl)
+            }
+        }
+        .toolbar(.hidden, for: .navigationBar)
+    }
+
+    private func seedTextBinding(
+        _ keyPath: WritableKeyPath<ApplicationExperienceSeed, String>,
+        field: ApplicationExperienceSeedField
+    ) -> Binding<String> {
+        Binding(
+            get: { newExperienceSeed[keyPath: keyPath] },
+            set: { newValue in
+                setExperienceField(field) { seed in
+                    seed[keyPath: keyPath] = newValue
+                }
+            }
+        )
+    }
+
+    private func seedCategoryBinding() -> Binding<ApplicationExperienceCategory> {
+        Binding(
+            get: { newExperienceSeed.category },
+            set: { newValue in
+                setExperienceField(.category) { seed in
+                    seed.category = newValue
+                }
+            }
+        )
+    }
+
+    private func seedStartDateBinding() -> Binding<Date> {
+        Binding(
+            get: { newExperienceSeed.initialPeriod.startDate },
+            set: { newValue in
+                setExperienceField(.startDate) { seed in
+                    seed.initialPeriod.startDate = newValue
+                    if let endDate = seed.initialPeriod.endDate, endDate < newValue {
+                        seed.initialPeriod.endDate = newValue
+                    }
+                }
+            }
+        )
+    }
+
+    private func seedBoolBinding(
+        _ keyPath: WritableKeyPath<ExperiencePeriodDraft, Bool>,
+        field: ApplicationExperienceSeedField
+    ) -> Binding<Bool> {
+        Binding(
+            get: { newExperienceSeed.initialPeriod[keyPath: keyPath] },
+            set: { newValue in
+                setExperienceField(field) { seed in
+                    seed.initialPeriod[keyPath: keyPath] = newValue
+                }
+            }
+        )
+    }
+
+    private func seedHoursBinding() -> Binding<Double> {
+        Binding(
+            get: { newExperienceSeed.initialPeriod.totalHours },
+            set: { newValue in
+                setExperienceField(.totalHours) { seed in
+                    seed.initialPeriod.totalHours = max(0, newValue)
+                }
+            }
+        )
+    }
+
+    private func seedAverageHoursBinding() -> Binding<Double> {
+        Binding(
+            get: { newExperienceSeed.initialPeriod.averageHoursPerWeek ?? 0 },
+            set: { newValue in
+                setExperienceField(.averageHoursPerWeek) { seed in
+                    if newValue > 0 {
+                        seed.initialPeriod.averageHoursPerWeek = newValue
+                    } else {
+                        seed.initialPeriod.averageHoursPerWeek = nil
+                    }
+                }
+            }
+        )
+    }
+
+    private func setExperienceField(
+        _ field: ApplicationExperienceSeedField,
+        update: (inout ApplicationExperienceSeed) -> Void
+    ) {
+        if !isApplyingExperienceSuggestion {
+            manuallyEditedExperienceFields.insert(field)
+        }
+        var seed = newExperienceSeed
+        update(&seed)
+        newExperienceSeed = seed
+    }
+
+    private func refreshExperienceSeedFromNoteDetails(force: Bool = false) {
+        guard isUsingApplicationRecord, applicationRecordDestination == .createNew else { return }
+        let suggestion = ApplicationExperienceSeed.suggested(from: currentDraftSnapshot())
+
+        isApplyingExperienceSuggestion = true
+        defer { isApplyingExperienceSuggestion = false }
+
+        if force || !manuallyEditedExperienceFields.contains(.title) {
+            newExperienceSeed.title = suggestion.title
+        }
+        if force || !manuallyEditedExperienceFields.contains(.category) {
+            newExperienceSeed.category = suggestion.category
+        }
+        if force || !manuallyEditedExperienceFields.contains(.organizationName) {
+            newExperienceSeed.organizationName = suggestion.organizationName
+        }
+        if force || !manuallyEditedExperienceFields.contains(.roleTitle) {
+            newExperienceSeed.roleTitle = suggestion.roleTitle
+        }
+        if force || !manuallyEditedExperienceFields.contains(.location) {
+            newExperienceSeed.location = suggestion.location
+        }
+        if force || !manuallyEditedExperienceFields.contains(.contactName) {
+            newExperienceSeed.contactName = suggestion.contactName
+        }
+        if force || !manuallyEditedExperienceFields.contains(.totalHours) {
+            newExperienceSeed.initialPeriod.totalHours = suggestion.initialPeriod.totalHours
+        }
+
+        if force {
+            newExperienceSeed.initialPeriod.startDate = suggestion.initialPeriod.startDate
+            newExperienceSeed.initialPeriod.endDate = suggestion.initialPeriod.endDate
+            newExperienceSeed.initialPeriod.isOngoing = suggestion.initialPeriod.isOngoing
+            newExperienceSeed.initialPeriod.isPlanned = suggestion.initialPeriod.isPlanned
+            newExperienceSeed.initialPeriod.averageHoursPerWeek = suggestion.initialPeriod.averageHoursPerWeek
+        }
+    }
+
+    private func currentDraftSnapshot() -> ExamenSessionDraft {
+        var snapshot = draft
+        snapshot.applyDetails(
+            primary: primaryValue,
+            secondary: secondaryValue,
+            focus: focusValue,
+            location: location,
+            hours: Double(hoursString)
+        )
+        snapshot.notes = notes.trimmingCharacters(in: .whitespacesAndNewlines)
+        snapshot.tags = extraTags
+            .split(separator: ",")
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+        snapshot.personalStatement = personalStatement
+        return snapshot
     }
     
     private func saveSession() {
@@ -245,11 +528,14 @@ struct ExamenDetailsView: View {
         updatedDraft.linkedApplicationExperienceID = nil
         updatedDraft.pendingApplicationExperience = nil
 
-        switch attachmentMode {
-        case .none:
-            break
-        case .existing:
-            updatedDraft.linkedApplicationExperienceID = selectedExperienceID
+        guard isUsingApplicationRecord else {
+            onSave(updatedDraft)
+            return
+        }
+
+        switch applicationRecordDestination {
+        case .connectExisting:
+            updatedDraft.linkedApplicationExperienceID = selectedApplicationRecordID
         case .createNew:
             var seed = newExperienceSeed
             if seed.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
@@ -264,14 +550,42 @@ struct ExamenDetailsView: View {
         // Pass back to parent to handle persistence via VM
         onSave(updatedDraft)
     }
+
+    private func saveCoreReflection() {
+        var updatedDraft = draft
+        updatedDraft.linkedApplicationExperienceID = nil
+        updatedDraft.pendingApplicationExperience = nil
+        onSave(updatedDraft)
+    }
 }
 
-private enum ApplicationExperienceAttachmentMode: String, CaseIterable, Identifiable {
-    case none
-    case existing
+private enum ApplicationRecordDestination: String, CaseIterable, Identifiable {
     case createNew
+    case connectExisting
 
     var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .createNew: return "Create New"
+        case .connectExisting: return "Connect Existing"
+        }
+    }
+}
+
+private enum ApplicationExperienceSeedField: Hashable, CaseIterable {
+    case title
+    case category
+    case organizationName
+    case roleTitle
+    case location
+    case contactName
+    case startDate
+    case endDate
+    case isOngoing
+    case isPlanned
+    case totalHours
+    case averageHoursPerWeek
 }
 
 private struct DetailField: View {
@@ -289,80 +603,46 @@ private struct DetailField: View {
     }
 }
 
-private struct AttachmentModeSelector: View {
-    @Binding var selection: ApplicationExperienceAttachmentMode
-    let canLinkExisting: Bool
+private struct ApplicationRecordCopiedDetailsPreview: View {
+    let seed: ApplicationExperienceSeed
 
     var body: some View {
-        VStack(spacing: 10) {
-            AttachmentModeButton(
-                title: "Reflection Only",
-                subtitle: "Save this as a private journal note.",
-                isSelected: selection == .none
-            ) {
-                selection = .none
-            }
+        VStack(alignment: .leading, spacing: DSSpacing.sm) {
+            Text("Copied from this note")
+                .font(DSFont.caption.weight(.semibold))
+                .foregroundStyle(DSColor.textSecondary)
 
-            if canLinkExisting {
-                AttachmentModeButton(
-                    title: "Link Existing Experience",
-                    subtitle: "Attach this note to a record already in your Experience Log.",
-                    isSelected: selection == .existing
-                ) {
-                    selection = .existing
+            VStack(alignment: .leading, spacing: 6) {
+                previewRow("Title", value: seed.title)
+                previewRow("Role", value: seed.roleTitle)
+                previewRow("Organization / Site", value: seed.organizationName)
+                previewRow("Location", value: seed.location)
+                previewRow("Supervisor / Contact", value: seed.contactName)
+                if seed.initialPeriod.totalHours > 0 {
+                    previewRow("Hours", value: seed.initialPeriod.totalHours.formatted(.number.precision(.fractionLength(0...1))))
                 }
             }
-
-            AttachmentModeButton(
-                title: "Create New Experience",
-                subtitle: "Make a new application-ready record from this note.",
-                isSelected: selection == .createNew
-            ) {
-                selection = .createNew
-            }
+            .padding(DSSpacing.sm)
+            .background(DSColor.surfaceElevated.opacity(0.7))
+            .clipShape(RoundedRectangle(cornerRadius: 12))
         }
     }
-}
 
-private struct AttachmentModeButton: View {
-    let title: String
-    let subtitle: String
-    let isSelected: Bool
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            HStack(alignment: .top, spacing: 12) {
-                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                    .font(.title3)
-                    .foregroundStyle(isSelected ? DSColor.goldLight : DSColor.textSecondary)
-
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(title)
-                        .font(.headline)
-                        .foregroundStyle(.white)
-                    Text(subtitle)
-                        .font(DSFont.caption)
-                        .foregroundStyle(DSColor.textSecondary)
-                        .multilineTextAlignment(.leading)
-                }
-
-                Spacer(minLength: 0)
+    @ViewBuilder
+    private func previewRow(_ label: String, value: String) -> some View {
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmed.isEmpty {
+            HStack(alignment: .firstTextBaseline, spacing: DSSpacing.sm) {
+                Text(label)
+                    .font(DSFont.caption)
+                    .foregroundStyle(DSColor.textSecondary)
+                    .frame(width: 112, alignment: .leading)
+                Text(trimmed)
+                    .font(DSFont.caption.weight(.semibold))
+                    .foregroundStyle(DSColor.textPrimary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
-            .padding(12)
-            .background(DSColor.surfaceElevated.opacity(isSelected ? 0.9 : 0.7))
-            .clipShape(RoundedRectangle(cornerRadius: 14))
-            .overlay(
-                RoundedRectangle(cornerRadius: 14)
-                    .stroke(isSelected ? DSColor.goldLight : DSColor.textSecondary.opacity(0.25), lineWidth: 1)
-            )
         }
-        .buttonStyle(.plain)
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(title)
-        .accessibilityValue(isSelected ? "Selected" : "Not selected")
-        .accessibilityHint(subtitle)
-        .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 }
 

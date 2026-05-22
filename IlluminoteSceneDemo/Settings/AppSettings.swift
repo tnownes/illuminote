@@ -32,6 +32,116 @@ enum AppBuildChannel: String {
     }
 }
 
+enum AppRuntimeFlags {
+    static var isRunningUITests: Bool {
+        ProcessInfo.processInfo.arguments.contains("-ui-testing")
+    }
+
+    static var isRunningUnitTests: Bool {
+        ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
+    }
+
+    static var isMLXDisabledForTesting: Bool {
+        #if ILLUMINOTE_DISABLE_MLX_LINK
+        return true
+        #else
+        isRunningUITests
+            || isRunningUnitTests
+            || ProcessInfo.processInfo.arguments.contains("-disable-mlx")
+            || ProcessInfo.processInfo.environment["ILLUMINOTE_DISABLE_MLX"] == "1"
+        #endif
+    }
+}
+
+enum IlluminoteExperienceMode: String {
+    case core
+    case full
+
+    private static let launchArgumentPrefix = "-illuminote-experience="
+    private static let environmentKey = "ILLUMINOTE_EXPERIENCE_MODE"
+
+    static func current(for channel: AppBuildChannel) -> IlluminoteExperienceMode {
+        if let override = overrideValue() {
+            return override
+        }
+
+        switch channel {
+        case .development:
+            return .full
+        case .internalTestFlight, .alphaExternal, .appStore:
+            return .core
+        }
+    }
+
+    private static func overrideValue() -> IlluminoteExperienceMode? {
+        if let rawValue = ProcessInfo.processInfo.arguments
+            .first(where: { $0.hasPrefix(launchArgumentPrefix) })?
+            .dropFirst(launchArgumentPrefix.count) {
+            return IlluminoteExperienceMode(rawValue: String(rawValue).lowercased())
+        }
+
+        if ProcessInfo.processInfo.arguments.contains("-illuminote-core") {
+            return .core
+        }
+
+        if ProcessInfo.processInfo.arguments.contains("-illuminote-full") {
+            return .full
+        }
+
+        if let rawValue = ProcessInfo.processInfo.environment[environmentKey]?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased() {
+            return IlluminoteExperienceMode(rawValue: rawValue)
+        }
+
+        return nil
+    }
+}
+
+struct IlluminoteFeaturePolicy {
+    let mode: IlluminoteExperienceMode
+    let allowsAdvisor: Bool
+    let allowsExamenVoiceTranscription: Bool
+    let allowsExamenPromptSpeech: Bool
+    let allowsExamenInlineNotes: Bool
+    let allowsExamenApplicationRecordDuringReflection: Bool
+    let showsHomeApplicationRecordPrompts: Bool
+    let showsAdvancedWritingTools: Bool
+    let showsAISettings: Bool
+    let showsCoreGuidance: Bool
+
+    static func policy(for mode: IlluminoteExperienceMode) -> IlluminoteFeaturePolicy {
+        switch mode {
+        case .core:
+            return IlluminoteFeaturePolicy(
+                mode: mode,
+                allowsAdvisor: false,
+                allowsExamenVoiceTranscription: false,
+                allowsExamenPromptSpeech: false,
+                allowsExamenInlineNotes: false,
+                allowsExamenApplicationRecordDuringReflection: false,
+                showsHomeApplicationRecordPrompts: false,
+                showsAdvancedWritingTools: false,
+                showsAISettings: false,
+                showsCoreGuidance: true
+            )
+        case .full:
+            return IlluminoteFeaturePolicy(
+                mode: mode,
+                allowsAdvisor: true,
+                allowsExamenVoiceTranscription: true,
+                allowsExamenPromptSpeech: true,
+                allowsExamenInlineNotes: true,
+                allowsExamenApplicationRecordDuringReflection: true,
+                showsHomeApplicationRecordPrompts: true,
+                showsAdvancedWritingTools: true,
+                showsAISettings: true,
+                showsCoreGuidance: false
+            )
+        }
+    }
+}
+
 struct AppBuildPolicy {
     let channel: AppBuildChannel
     let allowsAI: Bool
@@ -92,11 +202,22 @@ struct AppBuildPolicy {
     }
 }
 
+enum AppRootTab: Hashable {
+    case home
+    case journal
+    case insights
+    case statement
+    case settings
+}
+
 @Observable
 final class AppSettings {
     static var buildChannel: AppBuildChannel { AppBuildPolicy.current.channel }
     static var buildPolicy: AppBuildPolicy { AppBuildPolicy.current }
+    static var experienceMode: IlluminoteExperienceMode { IlluminoteExperienceMode.current(for: buildChannel) }
+    static var featurePolicy: IlluminoteFeaturePolicy { IlluminoteFeaturePolicy.policy(for: experienceMode) }
     static var aiFeaturesAllowedInThisBuild: Bool { buildPolicy.allowsAI }
+    static var advisorAllowedInThisExperience: Bool { featurePolicy.allowsAdvisor }
     static var bundlesPrimaryAIModelInThisBuild: Bool { buildPolicy.bundlesPrimaryAIModel }
     static var experimentalModelsAllowedInThisBuild: Bool { buildPolicy.allowsExperimentalModels }
     static var internalAIDiagnosticsAllowedInThisBuild: Bool { buildPolicy.allowsInternalDiagnostics }
@@ -157,7 +278,9 @@ final class AppSettings {
 
     /// Effective AI availability after applying build policy.
     var effectiveAIEnabled: Bool {
-        Self.aiFeaturesAllowedInThisBuild && aiEnabled
+        Self.aiFeaturesAllowedInThisBuild
+            && aiEnabled
+            && AIModelRuntimePolicy.supportsCurrentRuntimeForAI
     }
 
     var backgroundAnimationEnabled: Bool {
@@ -178,7 +301,23 @@ final class AppSettings {
         set { selectedThemeRaw = newValue.rawValue }
     }
 
+    var selectedTab: AppRootTab = .home
+    var pendingJournalEntryID: UUID?
+    var pendingInsightEntryIDs: [UUID] = []
+    var pendingInsightsLensRaw: String?
+    var pendingWritingTargetID: String?
+    var pendingWritingDraftID: UUID?
     var isTabBarVisible: Bool = true
+
+    var pendingInsightsLens: InsightLens? {
+        get {
+            guard let pendingInsightsLensRaw else { return nil }
+            return InsightLens(rawValue: pendingInsightsLensRaw)
+        }
+        set {
+            pendingInsightsLensRaw = newValue?.rawValue
+        }
+    }
 
     init() {
         self.backgroundAnimationEnabled = UserDefaults.standard.object(forKey: animationKey) as? Bool ?? true
@@ -196,9 +335,15 @@ final class AppSettings {
     func resetToDefaults() {
         backgroundAnimationEnabled = true
         selectedThemeRaw = ExamenTheme.sacredVoid.rawValue
+        selectedTab = .home
+        pendingJournalEntryID = nil
+        pendingInsightEntryIDs = []
+        pendingInsightsLensRaw = nil
+        pendingWritingTargetID = nil
+        pendingWritingDraftID = nil
         isTabBarVisible = true
         appThemeMode = .core
-        aiEnabled = Self.aiFeaturesAllowedInThisBuild
+        aiEnabled = Self.aiFeaturesAllowedInThisBuild && AIModelRuntimePolicy.supportsCurrentRuntimeForAI
         readPromptsAloudEnabled = false
         promptSpeechRate = Double(AVSpeechUtteranceDefaultSpeechRate)
         showExamenDebugLabels = false
@@ -215,9 +360,19 @@ final class AppSettings {
             UserDefaults.standard.set(selectedTheme.rawValue, forKey: themeKey)
         }
 
-        if !Self.aiFeaturesAllowedInThisBuild {
+        if !Self.aiFeaturesAllowedInThisBuild || !AIModelRuntimePolicy.supportsCurrentRuntimeForAI {
             aiEnabled = false
             UserDefaults.standard.set(false, forKey: aiEnabledKey)
+        }
+
+        if !Self.advisorAllowedInThisExperience {
+            aiEnabled = false
+            UserDefaults.standard.set(false, forKey: aiEnabledKey)
+        }
+
+        if !Self.featurePolicy.allowsExamenPromptSpeech {
+            readPromptsAloudEnabled = false
+            UserDefaults.standard.set(false, forKey: readPromptsAloudKey)
         }
 
         if !Self.examenDebugLabelsAllowedInThisBuild {

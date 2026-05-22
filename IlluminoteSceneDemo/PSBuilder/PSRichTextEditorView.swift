@@ -5,8 +5,17 @@ import UIKit
 // MARK: - Native Rich Text Editor
 struct PSRichTextEditorView: View {
     @Bindable var draft: StatementDraft
+    var onClose: (() -> Void)? = nil
+    var isWritingMapVisible: Bool = false
+    var onToggleWritingMap: (() -> Void)? = nil
+    var onAdvisorPresentationChange: ((Bool) -> Void)? = nil
     @Environment(\.modelContext) private var modelContext
     @Environment(AppSettings.self) private var settings
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @Query(sort: \UserProfile.id) private var profiles: [UserProfile]
+    @Query(sort: [SortDescriptor(\StatementDraft.dateModified, order: .reverse)])
+    private var syncedDrafts: [StatementDraft]
     
     // State for the editor
     @State private var attributedText: NSAttributedString = NSAttributedString(string: "")
@@ -15,7 +24,22 @@ struct PSRichTextEditorView: View {
     // Formatting State
     @State private var isBold: Bool = false
     @State private var isItalic: Bool = false
-    @State private var showingAIAdvisor = false
+    @State private var isAdvisorPresented = false
+    @State private var advisorDraftText = ""
+    @State private var advisorReviewID = UUID()
+    @State private var showingTargetPicker = false
+    @State private var showingRenameDraftDialog = false
+    @State private var draftRenameText = ""
+    @State private var persistenceAlert: PersistenceAlertContext?
+    @State private var requirements: [StatementRequirement] = []
+    @State private var availableTargets: [WritingTargetDefinition] = []
+    @State private var activeDraftConflict: DraftSyncConflict?
+    @State private var draftSyncStatusMessage: String?
+    @State private var hasLoadedDraftSnapshot = false
+    @State private var loadedDraftContentFingerprint = Data()
+    @State private var observedDraftModifiedAt: Date?
+    @State private var lastLocalSaveAt: Date?
+    @State private var lastLocalSaveFingerprint = Data()
     
     // Editor Configuration
     @State private var fontName: String = "HelveticaNeue" // Default body font
@@ -26,9 +50,27 @@ struct PSRichTextEditorView: View {
     
     // Internal coordinate for bridge
     private let textStorage = NSTextStorage()
+    private let requirementsService = LocalStatementRequirementsService()
+    private let targetCatalogService = LocalWritingTargetCatalogService()
 
     private var useImmersive: Bool {
         settings.appThemeMode == .core
+    }
+
+    private var usesWideEditorCanvas: Bool {
+        horizontalSizeClass == .regular && !dynamicTypeSize.isAccessibilitySize
+    }
+
+    private var allowsAdvisor: Bool {
+        AppSettings.featurePolicy.allowsAdvisor
+    }
+
+    private var showsAdvancedWritingTools: Bool {
+        AppSettings.featurePolicy.showsAdvancedWritingTools
+    }
+
+    private var editorCanvasMaxWidth: CGFloat {
+        usesWideEditorCanvas ? 860 : .infinity
     }
 
     private var editorForegroundColor: UIColor {
@@ -41,8 +83,34 @@ struct PSRichTextEditorView: View {
         case needsReReview
     }
 
+    fileprivate struct DraftSyncConflict: Identifiable {
+        let id = UUID()
+        let remoteModifiedAt: Date
+        let remotePreview: String
+    }
+
     private var currentDraftTextForStatus: String {
         attributedText.string.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var syncedDraftSnapshot: StatementDraft? {
+        syncedDrafts.first { $0.id == draft.id }
+    }
+
+    private var syncedDraftChangeToken: String {
+        guard let syncedDraftSnapshot else { return "missing-\(draft.id.uuidString)" }
+        let richTextSize = syncedDraftSnapshot.richTextData?.count ?? 0
+        let sectionSignature = syncedDraftSnapshot.sections
+            .sorted(by: { $0.order < $1.order })
+            .map { "\($0.id.uuidString):\($0.order):\($0.content.count):\($0.date.timeIntervalSinceReferenceDate)" }
+            .joined(separator: "|")
+        return [
+            syncedDraftSnapshot.id.uuidString,
+            syncedDraftSnapshot.dateModified.timeIntervalSinceReferenceDate.description,
+            (syncedDraftSnapshot.syncRevision ?? 0).description,
+            richTextSize.description,
+            sectionSignature
+        ].joined(separator: "::")
     }
 
     private var reviewState: ReviewState {
@@ -58,9 +126,9 @@ struct PSRichTextEditorView: View {
 
     private var reviewStateLabel: String {
         switch reviewState {
-        case .notReviewed: return "Not Reviewed"
+        case .notReviewed: return "Not Yet Reviewed"
         case .reviewed: return "Reviewed"
-        case .needsReReview: return "Needs Re-Review"
+        case .needsReReview: return "Updated Since Review"
         }
     }
 
@@ -109,6 +177,146 @@ struct PSRichTextEditorView: View {
                 )
             )
     }
+
+    private var currentProfile: UserProfile? {
+        profiles.first
+    }
+
+    private var currentTarget: WritingTargetDefinition? {
+        targetCatalogService.target(
+            withID: draft.writingTargetID,
+            for: currentProfile,
+            requirements: requirements
+        )
+    }
+
+    private var currentServiceLabel: String? {
+        currentTarget?.serviceCode?.displayName
+    }
+
+    private var characterCount: Int {
+        currentDraftTextForStatus.count
+    }
+
+    private var characterLimit: Int? {
+        currentTarget?.characterLimitMax
+    }
+
+    private var progressFraction: Double? {
+        guard let characterLimit, characterLimit > 0 else { return nil }
+        return Double(characterCount) / Double(characterLimit)
+    }
+
+    private var progressTint: Color {
+        guard let progressFraction else { return useImmersive ? DSColor.goldLight : DSColor.brandAccent }
+        if progressFraction > 1 {
+            return useImmersive ? DSColor.error : .red
+        }
+        if progressFraction >= 0.9 {
+            return useImmersive ? DSColor.warning : .orange
+        }
+        return useImmersive ? DSColor.goldLight : DSColor.brandAccent
+    }
+
+    private var progressText: String {
+        if let characterLimit {
+            return "\(characterCount) / \(characterLimit) chars"
+        }
+        return "\(characterCount) chars"
+    }
+
+    private var targetTitleText: String {
+        currentTarget?.title ?? "Needs Assignment"
+    }
+
+    private var snapshotChip: some View {
+        Group {
+            if draft.isSnapshot {
+                Text("Snapshot")
+                    .font(DSFont.caption)
+                    .lineLimit(1)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .foregroundStyle(useImmersive ? DSColor.goldLight : .orange)
+                    .background(
+                        Capsule().fill(
+                            useImmersive ? DSColor.goldLight.opacity(0.18) : Color.orange.opacity(0.14)
+                        )
+                    )
+            }
+        }
+    }
+
+    private var writingContextCard: some View {
+        VStack(alignment: .leading, spacing: DSSpacing.sm) {
+            HStack(alignment: .top, spacing: DSSpacing.sm) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Essay Type")
+                        .font(DSFont.caption.weight(.semibold))
+                        .foregroundStyle(useImmersive ? DSColor.quietTextMuted : .secondary)
+                    Text(targetTitleText)
+                        .font(DSFont.body.weight(.semibold))
+                        .foregroundStyle(useImmersive ? DSColor.textPrimary : .primary)
+                    if let currentServiceLabel {
+                        Text(currentServiceLabel)
+                            .font(DSFont.caption)
+                            .foregroundStyle(useImmersive ? DSColor.textSecondary : .secondary)
+                    }
+                    draftScopeChip
+                }
+                Spacer()
+                if allowsAdvisor {
+                    reviewStateChip
+                }
+                snapshotChip
+            }
+
+            if let customPrompt = draft.customPromptText?.trimmingCharacters(in: .whitespacesAndNewlines),
+               !customPrompt.isEmpty {
+                Text(customPrompt)
+                    .font(DSFont.caption)
+                    .foregroundStyle(useImmersive ? DSColor.textSecondary : .secondary)
+                    .lineLimit(3)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            HStack {
+                Text(progressText)
+                    .font(DSFont.caption.weight(.semibold))
+                    .foregroundStyle(progressTint)
+                Spacer()
+                Button(draft.writingTargetID == nil ? "Assign Essay Type" : "Change Essay Type") {
+                    showingTargetPicker = true
+                }
+                .font(DSFont.caption.weight(.semibold))
+            }
+
+            if let progressFraction {
+                ProgressView(value: min(progressFraction, 1))
+                    .tint(progressTint)
+                    .accessibilityLabel(progressText)
+            }
+        }
+        .padding(DSSpacing.md)
+        .if(useImmersive) { view in
+            view.sacredCardStyle(highlighted: false)
+        }
+        .if(!useImmersive) { view in
+            view.appSurfaceStyle(role: .interactive, highlighted: false)
+        }
+    }
+
+    private var writingGuidanceMenu: some View {
+        Menu {
+            Link("AAMC essays", destination: URL(string: "https://students-residents.aamc.org/how-apply-medical-school-amcas/section-8-amcas-application-essays")!)
+            Link("AACOMAS statement", destination: URL(string: "https://help.liaisonedu.com/AACOMAS_Applicant_Help_Center/Filling_Out_Your_AACOMAS_Application/Supporting_Information/5_Personal_Statement")!)
+            Link("TMDSAS guide", destination: URL(string: "https://www.tmdsas.com/application-guide/")!)
+        } label: {
+            Label("Guidance", systemImage: "book")
+        }
+        .tint(useImmersive ? DSColor.goldLight : .accentColor)
+        .accessibilityLabel("Writing guidance")
+    }
     
     var body: some View {
         ZStack {
@@ -116,29 +324,44 @@ struct PSRichTextEditorView: View {
                 SacredScreenBackground(settings: settings)
             }
             VStack(spacing: useImmersive ? DSSpacing.sm : 0) {
-                VStack(spacing: 0) {
-                    RichTextToolbar(
-                        isBold: isBold,
-                        isItalic: isItalic,
-                        useImmersive: useImmersive,
-                        toggleBold: { toggleAttribute(.font, value: UIFont.boldSystemFont(ofSize: fontSize)) }, // Simplified toggle logic needed
-                        toggleItalic: { toggleTrait(.traitItalic) },
-                        toggleUnderline: { toggleAttribute(.underlineStyle, value: NSUnderlineStyle.single.rawValue) },
-                        alignLeft: { setAlignment(.left) },
-                        alignCenter: { setAlignment(.center) },
-                        alignRight: { setAlignment(.right) }
-                    )
-                    .padding(.vertical, 8)
-                    .background(useImmersive ? Color.clear : Color(uiColor: .secondarySystemBackground))
-                    
-                    Divider()
-                        .background(useImmersive ? DSColor.divider : Color(uiColor: .separator))
-                }
-                .if(useImmersive) { view in
-                    view
-                        .padding(.horizontal, DSSpacing.md)
-                        .padding(.top, DSSpacing.sm)
-                        .sacredCardStyle(highlighted: false)
+                writingContextCard
+                    .padding(.horizontal, useImmersive ? DSSpacing.md : DSSpacing.lg)
+                    .padding(.top, useImmersive ? DSSpacing.sm : DSSpacing.lg)
+
+                draftSyncNotice
+                    .padding(.horizontal, useImmersive ? DSSpacing.md : DSSpacing.lg)
+
+                if showsAdvancedWritingTools {
+                    VStack(spacing: 0) {
+                        RichTextToolbar(
+                            isBold: isBold,
+                            isItalic: isItalic,
+                            useImmersive: useImmersive,
+                            toggleBold: { toggleTrait(.traitBold) },
+                            toggleItalic: { toggleTrait(.traitItalic) },
+                            toggleUnderline: { toggleAttribute(.underlineStyle, value: NSUnderlineStyle.single.rawValue) },
+                            toggleStrikethrough: { toggleAttribute(.strikethroughStyle, value: NSUnderlineStyle.single.rawValue) },
+                            applyTextColor: applyTextColor,
+                            clearTextColor: clearTextColor,
+                            applyHighlight: applyHighlight,
+                            clearHighlight: clearHighlight,
+                            clearRevisionFormatting: clearRevisionFormatting,
+                            alignLeft: { setAlignment(.left) },
+                            alignCenter: { setAlignment(.center) },
+                            alignRight: { setAlignment(.right) }
+                        )
+                        .padding(.vertical, 8)
+                        .background(useImmersive ? Color.clear : Color(uiColor: .secondarySystemBackground))
+
+                        Divider()
+                            .background(useImmersive ? DSColor.divider : Color(uiColor: .separator))
+                    }
+                    .if(useImmersive) { view in
+                        view
+                            .padding(.horizontal, DSSpacing.md)
+                            .padding(.top, DSSpacing.sm)
+                            .sacredCardStyle(highlighted: false)
+                    }
                 }
                 
                 // MARK: - Editor
@@ -157,29 +380,59 @@ struct PSRichTextEditorView: View {
                     view.sacredCardStyle(highlighted: false)
                 }
             }
+            .frame(maxWidth: editorCanvasMaxWidth, maxHeight: .infinity)
+            .frame(maxWidth: .infinity)
         }
         .background(useImmersive ? Color.clear : Color(uiColor: .systemGroupedBackground))
+        .toolbarBackground(.hidden, for: .navigationBar)
         .toolbarColorScheme(useImmersive ? .dark : nil, for: .navigationBar)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            ToolbarItem(placement: .principal) {
-                VStack(spacing: 3) {
-                    Text(draft.title.isEmpty ? "Untitled Draft" : draft.title)
-                        .font(DSFont.heading2)
-                        .foregroundStyle(useImmersive ? DSColor.textPrimary : .primary)
-                        .lineLimit(1)
-                        .truncationMode(.tail)
-                    HStack(spacing: 6) {
-                        draftScopeChip
-                        reviewStateChip
+            if onClose != nil || shouldShowWritingMapToggle {
+                ToolbarItemGroup(placement: .topBarLeading) {
+                    if shouldShowWritingMapToggle, let onToggleWritingMap {
+                        Button {
+                            onToggleWritingMap()
+                        } label: {
+                            Label("Hide Writing Map", systemImage: "sidebar.left")
+                        }
+                        .tint(useImmersive ? DSColor.goldLight : .accentColor)
+                        .accessibilityLabel("Hide Writing Map")
+                    }
+
+                    if let onClose {
+                        Button {
+                            saveDraft()
+                            onClose()
+                        } label: {
+                            Label("Close Draft", systemImage: "xmark")
+                        }
+                        .tint(useImmersive ? DSColor.goldLight : .accentColor)
+                        .accessibilityLabel("Close Draft")
                     }
                 }
             }
-            ToolbarItem(placement: .topBarTrailing) {
-                Button {
-                    showingAIAdvisor = true
-                } label: {
-                    Label("AI Advisor", systemImage: "sparkles")
+            ToolbarItem(placement: .principal) {
+                Text(draft.title.isEmpty ? "Untitled Draft" : draft.title)
+                    .font(DSFont.heading2)
+                    .foregroundStyle(useImmersive ? DSColor.textPrimary : .primary)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+            }
+            if allowsAdvisor {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        toggleAdvisor()
+                    } label: {
+                        Label("Advisor", systemImage: "sparkles")
+                    }
+                    .tint(isAdvisorPresented ? (useImmersive ? DSColor.goldLight : DSColor.brandAccent) : (useImmersive ? DSColor.goldLight : .accentColor))
+                    .accessibilityLabel(isAdvisorPresented ? "Hide Advisor" : "Show Advisor")
+                    .accessibilityValue(isAdvisorPresented ? "Open" : "Closed")
+                }
+            } else {
+                ToolbarItem(placement: .topBarTrailing) {
+                    writingGuidanceMenu
                 }
             }
             ToolbarItem(placement: .topBarTrailing) {
@@ -192,17 +445,55 @@ struct PSRichTextEditorView: View {
                 }
                 .tint(useImmersive ? DSColor.goldLight : .accentColor)
             }
+            ToolbarItem(placement: .topBarTrailing) {
+                Menu {
+                    Button("Rename Draft") {
+                        beginRenameDraft()
+                    }
+                    Button("Save Snapshot") {
+                        saveSnapshot()
+                    }
+                    Button(draft.writingTargetID == nil ? "Assign Essay Type" : "Change Essay Type") {
+                        showingTargetPicker = true
+                    }
+                } label: {
+                    Image(systemName: "ellipsis.circle")
+                }
+                .tint(useImmersive ? DSColor.goldLight : .accentColor)
+            }
 
         }
-        .sheet(isPresented: $showingAIAdvisor) {
+        .inspector(isPresented: $isAdvisorPresented) {
             AIAdvisorPanel(
-                draftContent: advisorSeedText,
+                draftContent: advisorDraftText,
                 draftID: draft.id,
                 initialGuidelineScope: draft.draftScope.asAdvisorGuidelineScope
             )
-                .presentationBackground(useImmersive ? DSColor.backgroundPrimary : Color(uiColor: .systemBackground))
+            .id(advisorReviewID)
+            .inspectorColumnWidth(min: 340, ideal: 390, max: 460)
+            .presentationBackground(useImmersive ? DSColor.backgroundPrimary : Color(uiColor: .systemBackground))
         }
+        .sheet(isPresented: $showingTargetPicker) {
+            WritingDraftAssignmentSheet(
+                draft: draft,
+                targets: availableTargets
+            )
+            .presentationBackground(useImmersive ? DSColor.backgroundPrimary : Color(uiColor: .systemBackground))
+        }
+        .alert("Rename Draft", isPresented: $showingRenameDraftDialog) {
+            TextField("Draft name", text: $draftRenameText)
+            Button("Cancel", role: .cancel) { }
+            Button("Save") {
+                commitDraftRename()
+            }
+        } message: {
+            Text("Choose a name you will recognize when you return to this essay.")
+        }
+        .persistenceFailureAlert($persistenceAlert)
         .onAppear {
+            if !allowsAdvisor {
+                isAdvisorPresented = false
+            }
             Task { @MainActor in
                 loadDraft()
             }
@@ -210,18 +501,78 @@ struct PSRichTextEditorView: View {
         .onDisappear {
             Task {
                 await MainActor.run {
-                    saveDraft()
+                    saveDraftOnDisappear()
                 }
             }
         }
         .onChange(of: settings.appThemeMode) { _, _ in
             attributedText = normalizedAttributedText(attributedText)
         }
+        .onChange(of: isAdvisorPresented) { _, isPresented in
+            onAdvisorPresentationChange?(isPresented)
+        }
+        .onChange(of: draft.dateModified) { _, newValue in
+            handleRemoteDraftSnapshotChange(
+                modifiedAt: newValue,
+                remoteFingerprint: persistedDraftContentFingerprint(for: draft),
+                remotePreviewText: persistedDraftPlainText(for: draft)
+            )
+        }
+        .onChange(of: syncedDraftChangeToken) { _, _ in
+            checkForRemoteDraftUpdate()
+        }
+        .task(id: draft.id) {
+            await monitorDraftForRemoteChanges()
+        }
+        .task(id: profileSignature) {
+            await loadWritingTargets()
+        }
 
 
     }
+
+    private var shouldShowWritingMapToggle: Bool {
+        isWritingMapVisible && onToggleWritingMap != nil
+    }
     
     // MARK: - Logic
+
+    @ViewBuilder
+    private var draftSyncNotice: some View {
+        if let activeDraftConflict {
+            DraftSyncConflictCard(
+                conflict: activeDraftConflict,
+                useImmersive: useImmersive,
+                onKeepLocalEdits: keepLocalDraftEdits,
+                onReloadRemoteVersion: reloadRemoteDraftVersion,
+                onSaveLocalCopy: { saveLocalDraftEditsAsCopy() }
+            )
+            .padding(.top, DSSpacing.xs)
+        } else if let draftSyncStatusMessage {
+            HStack(alignment: .top, spacing: DSSpacing.sm) {
+                Image(systemName: "checkmark.icloud")
+                    .foregroundStyle(useImmersive ? DSColor.goldLight : DSColor.brandAccent)
+                Text(draftSyncStatusMessage)
+                    .font(DSFont.caption)
+                    .foregroundStyle(useImmersive ? DSColor.textSecondary : .secondary)
+                Spacer()
+                Button("Dismiss") {
+                    withAnimation(AnimationConfig.screenTransition) {
+                        self.draftSyncStatusMessage = nil
+                    }
+                }
+                .font(DSFont.caption.weight(.semibold))
+            }
+            .padding(DSSpacing.sm)
+            .if(useImmersive) { view in
+                view.sacredCardStyle(highlighted: false)
+            }
+            .if(!useImmersive) { view in
+                view.appSurfaceStyle(role: .quiet, highlighted: false)
+            }
+            .padding(.top, DSSpacing.xs)
+        }
+    }
     
     private func loadDraft() {
         if let data = draft.richTextData {
@@ -233,7 +584,10 @@ struct PSRichTextEditorView: View {
                 )
                 attributedText = normalizedAttributedText(loadedText)
             } catch {
-                print("Error loading RTF: \(error)")
+                persistenceAlert = PersistenceAlertContext(
+                    title: "Couldn't Open Draft",
+                    message: "Illuminote couldn't load the rich text for this draft. \(error.localizedDescription)"
+                )
             }
         } else if !draft.sections.isEmpty {
             // Migration: Convert plain text sections to RTF
@@ -246,23 +600,18 @@ struct PSRichTextEditorView: View {
             mutable.addAttribute(.font, value: UIFont.systemFont(ofSize: 17), range: NSRange(location: 0, length: fullText.count))
             mutable.addAttribute(.foregroundColor, value: editorForegroundColor, range: NSRange(location: 0, length: fullText.count))
             attributedText = normalizedAttributedText(mutable)
+        } else {
+            attributedText = normalizedAttributedText(NSAttributedString(string: ""))
         }
+
+        markLoadedDraftSnapshot()
     }
 
     private func normalizedAttributedText(_ text: NSAttributedString) -> NSAttributedString {
-        let mutable = NSMutableAttributedString(attributedString: text)
-        let range = NSRange(location: 0, length: mutable.length)
-        guard range.length > 0 else { return mutable }
-        mutable.addAttribute(.foregroundColor, value: editorForegroundColor, range: range)
-        return mutable
+        RichTextDefaultColorNormalizer.normalized(text, defaultColor: editorForegroundColor)
     }
 
-    private var advisorSeedText: String {
-        let liveText = attributedText.string.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !liveText.isEmpty {
-            return liveText
-        }
-
+    private var savedAdvisorSeedText: String {
         if let data = draft.richTextData,
            let attributed = try? NSAttributedString(
                 data: data,
@@ -280,50 +629,382 @@ struct PSRichTextEditorView: View {
             .map(\.content)
             .joined(separator: "\n\n")
     }
+
+    private var profileSignature: String {
+        guard let profile = currentProfile else { return "no-profile" }
+        return [
+            profile.id.uuidString,
+            profile.preProfessionalTrack?.canonical.rawValue ?? "general",
+            profile.degreeIntent.rawValue,
+            profile.isTexasApplicant.description,
+            profile.isMDPhDApplicant.description
+        ].joined(separator: "|")
+    }
+
+    private func loadWritingTargets() async {
+        let loadedRequirements: [StatementRequirement]
+        if let currentProfile {
+            loadedRequirements = await requirementsService.requirements(for: currentProfile)
+        } else {
+            loadedRequirements = []
+        }
+        requirements = loadedRequirements
+        availableTargets = targetCatalogService.targets(for: currentProfile, requirements: loadedRequirements)
+    }
+
+    private func beginRenameDraft() {
+        draftRenameText = draft.title.isEmpty ? "Untitled Draft" : draft.title
+        showingRenameDraftDialog = true
+    }
+
+    private func commitDraftRename() {
+        let trimmedTitle = draftRenameText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedTitle.isEmpty, trimmedTitle != draft.title else { return }
+
+        do {
+            draft.title = trimmedTitle
+            draft.dateModified = Date()
+            draft.isLocked = false
+            draft.syncRevision = (draft.syncRevision ?? 0) + 1
+            observedDraftModifiedAt = draft.dateModified
+            try modelContext.persistIfNeeded(for: "rename this draft")
+        } catch let error as PersistenceOperationError {
+            persistenceAlert = error.alertContext
+        } catch {
+            persistenceAlert = PersistenceAlertContext.saveFailure(
+                for: "rename this draft",
+                details: error.localizedDescription
+            )
+        }
+    }
+
+    private func toggleAdvisor() {
+        guard !isAdvisorPresented else {
+            isAdvisorPresented = false
+            return
+        }
+
+        guard saveDraft() else { return }
+        advisorDraftText = savedAdvisorSeedText
+        advisorReviewID = UUID()
+        isAdvisorPresented = true
+    }
     
-    private func saveDraft() {
+    @discardableResult
+    private func saveDraft(resolvingConflict: Bool = false) -> Bool {
+        guard hasDraftChangesToSave else { return true }
+
         do {
             let data = try attributedText.data(
                 from: NSRange(location: 0, length: attributedText.length),
                 documentAttributes: [.documentType: NSAttributedString.DocumentType.rtf]
             )
+            let savedAt = Date()
+            lastLocalSaveAt = savedAt
             draft.richTextData = data
-            draft.dateModified = Date()
-            try? modelContext.save()
+            mirrorRichTextIntoDraftSection()
+            draft.dateModified = savedAt
+            draft.isLocked = false
+            draft.syncRevision = (draft.syncRevision ?? 0) + 1
+            lastLocalSaveFingerprint = attributedTextFingerprint(attributedText)
+            if resolvingConflict {
+                draft.lastConflictDetectedAt = Date()
+            }
+            try modelContext.persistIfNeeded(for: "save this draft")
+            activeDraftConflict = nil
+            markLoadedDraftSnapshot()
+            return true
+        } catch let error as PersistenceOperationError {
+            persistenceAlert = error.alertContext
         } catch {
-            print("Error saving RTF: \(error)")
+            persistenceAlert = PersistenceAlertContext.saveFailure(
+                for: "save this draft",
+                details: error.localizedDescription
+            )
+        }
+        return false
+    }
+
+    private func saveSnapshot() {
+        draft.isSnapshot = true
+        saveDraft()
+    }
+
+    private func saveDraftOnDisappear() {
+        checkForRemoteDraftUpdate()
+        if activeDraftConflict != nil {
+            saveLocalDraftEditsAsCopy(reloadRemoteAfterSave: false)
+        } else if hasDraftChangesToSave {
+            saveDraft()
         }
     }
-    
+
+    private func monitorDraftForRemoteChanges() async {
+        while !Task.isCancelled {
+            try? await Task.sleep(nanoseconds: 2_000_000_000)
+            guard !Task.isCancelled else { return }
+            await MainActor.run {
+                checkForRemoteDraftUpdate()
+            }
+        }
+    }
+
+    private func checkForRemoteDraftUpdate() {
+        guard hasLoadedDraftSnapshot else { return }
+        let refreshedDraft: StatementDraft?
+        if let syncedDraftSnapshot {
+            refreshedDraft = syncedDraftSnapshot
+        } else {
+            let draftID = draft.id
+            var descriptor = FetchDescriptor<StatementDraft>(
+                predicate: #Predicate { candidate in
+                    candidate.id == draftID
+                }
+            )
+            descriptor.fetchLimit = 1
+            refreshedDraft = try? modelContext.fetch(descriptor).first
+        }
+
+        guard let refreshedDraft else { return }
+        handleRemoteDraftSnapshotChange(
+            modifiedAt: refreshedDraft.dateModified,
+            remoteFingerprint: persistedDraftContentFingerprint(for: refreshedDraft),
+            remotePreviewText: persistedDraftPlainText(for: refreshedDraft)
+        )
+    }
+
+    private func handleRemoteDraftSnapshotChange(
+        modifiedAt newValue: Date,
+        remoteFingerprint: Data,
+        remotePreviewText: String
+    ) {
+        guard hasLoadedDraftSnapshot else { return }
+
+        let localFingerprint = attributedTextFingerprint(attributedText)
+        let localHasUnsavedEdits = localFingerprint != loadedDraftContentFingerprint
+        let isLocalSaveEcho = lastLocalSaveAt.map {
+            abs(newValue.timeIntervalSince($0)) < 0.01
+        } ?? false
+
+        if isLocalSaveEcho,
+           remoteFingerprint == lastLocalSaveFingerprint,
+           !localHasUnsavedEdits {
+            observedDraftModifiedAt = newValue
+            return
+        }
+
+        if let observedDraftModifiedAt,
+           newValue <= observedDraftModifiedAt.addingTimeInterval(0.01) {
+            return
+        }
+
+        if !localHasUnsavedEdits {
+            loadDraft()
+            draftSyncStatusMessage = "This draft was updated from iCloud."
+            return
+        }
+
+        guard localFingerprint != remoteFingerprint else {
+            markLoadedDraftSnapshot()
+            return
+        }
+
+        observedDraftModifiedAt = newValue
+        withAnimation(AnimationConfig.screenTransition) {
+            activeDraftConflict = DraftSyncConflict(
+                remoteModifiedAt: newValue,
+                remotePreview: previewText(from: remotePreviewText)
+            )
+            draftSyncStatusMessage = nil
+        }
+    }
+
+    private func keepLocalDraftEdits() {
+        saveDraft(resolvingConflict: true)
+        draftSyncStatusMessage = "Your edits were kept and saved over the iCloud version."
+    }
+
+    private func reloadRemoteDraftVersion() {
+        loadDraft()
+        activeDraftConflict = nil
+        draftSyncStatusMessage = "The version from iCloud is now open."
+    }
+
+    private func saveLocalDraftEditsAsCopy(reloadRemoteAfterSave: Bool = true) {
+        do {
+            let data = try attributedText.data(
+                from: NSRange(location: 0, length: attributedText.length),
+                documentAttributes: [.documentType: NSAttributedString.DocumentType.rtf]
+            )
+            let baseTitle = draft.title.isEmpty ? "Untitled Draft" : draft.title
+            let copy = StatementDraft(
+                title: "\(baseTitle) Copy",
+                version: draft.version,
+                richTextData: data,
+                draftScope: draft.draftScope,
+                writingTargetID: draft.writingTargetID,
+                writingTargetCategory: draft.writingTargetCategory,
+                customPromptText: draft.customPromptText
+            )
+            copy.dateCreated = Date()
+            copy.dateModified = Date()
+            copy.syncRevision = 0
+            modelContext.insert(copy)
+            try modelContext.persistIfNeeded(for: "save a copy of this draft")
+            if reloadRemoteAfterSave {
+                loadDraft()
+            }
+            activeDraftConflict = nil
+            draftSyncStatusMessage = reloadRemoteAfterSave
+                ? "Your local edits were saved as \(copy.title). The iCloud version is now open here."
+                : "Your local edits were saved as \(copy.title) to avoid overwriting the iCloud version."
+        } catch let error as PersistenceOperationError {
+            persistenceAlert = error.alertContext
+        } catch {
+            persistenceAlert = PersistenceAlertContext.saveFailure(
+                for: "save a copy of this draft",
+                details: error.localizedDescription
+            )
+        }
+    }
+
+    private func markLoadedDraftSnapshot() {
+        hasLoadedDraftSnapshot = true
+        loadedDraftContentFingerprint = attributedTextFingerprint(attributedText)
+        observedDraftModifiedAt = draft.dateModified
+    }
+
+    private var hasDraftChangesToSave: Bool {
+        attributedTextFingerprint(attributedText) != loadedDraftContentFingerprint
+    }
+
+    private func mirrorRichTextIntoDraftSection() {
+        let plainText = attributedText.string.trimmingCharacters(in: .whitespacesAndNewlines)
+        let mirrorSourceID = draft.id
+        if let existing = draft.sections.first(where: { $0.source == .manual && $0.sourceID == mirrorSourceID }) {
+            existing.content = plainText
+            existing.date = Date()
+            existing.order = 0
+            return
+        }
+
+        let section = StatementSection(
+            source: .manual,
+            content: plainText,
+            order: 0,
+            sourceID: mirrorSourceID
+        )
+        draft.sections.append(section)
+    }
+
+    private func attributedTextFingerprint(_ text: NSAttributedString) -> Data {
+        if let data = try? text.data(
+            from: NSRange(location: 0, length: text.length),
+            documentAttributes: [.documentType: NSAttributedString.DocumentType.rtf]
+        ) {
+            return data
+        }
+        return Data(text.string.utf8)
+    }
+
+    private func persistedDraftContentFingerprint() -> Data {
+        persistedDraftContentFingerprint(for: draft)
+    }
+
+    private func persistedDraftContentFingerprint(for draft: StatementDraft) -> Data {
+        if let data = draft.richTextData {
+            return data
+        }
+        return Data(persistedDraftPlainText(for: draft).utf8)
+    }
+
+    private func persistedDraftPlainText() -> String {
+        persistedDraftPlainText(for: draft)
+    }
+
+    private func persistedDraftPlainText(for draft: StatementDraft) -> String {
+        if let data = draft.richTextData,
+           let attributed = try? NSAttributedString(
+                data: data,
+                options: [.documentType: NSAttributedString.DocumentType.rtf],
+                documentAttributes: nil
+           ) {
+            return attributed.string
+        }
+
+        return draft.sections
+            .sorted(by: { $0.order < $1.order })
+            .map(\.content)
+            .joined(separator: "\n\n")
+    }
+
+    private func textFingerprint(_ text: String) -> String {
+        text.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private func previewText(from text: String) -> String {
+        let trimmed = textFingerprint(text)
+        guard trimmed.count > 180 else { return trimmed }
+        return "\(trimmed.prefix(180))..."
+    }
+
     // Removed legacy exportDraft() and exportDocument state in favor of ShareLink
     
     // MARK: - Formatting Helpers
-    
-    // ... helper logic methods follow
-    // In a real implementation this requires more robust attribute inspection of currently selected range.
-    // For MVP, we pass commands to the wrapper via Binding or Notification? 
-    // Actually, modifying `attributedText` directly triggers the UIViewRepresentable to update.
-    // BUT preserving selection and not resetting typing state is tricky with direct State update.
-    // A better approach for formatting is usually direct commands to the UITextView via a Coordinator or ID.
-    // We will stick to simple attribute modification on the binding for now, 
-    // aware that full-blown rich text editors often need a reference to the UITextView or TextKit.
-    
+
     private func toggleTrait(_ trait: UIFontDescriptor.SymbolicTraits) {
-        // This is complex to simple "toggle" without checking current selection state
-        // We need 'current attributes' from the selection. 
-        // For this MVP step, I will implement a simpler 'Apply' approach 
-        // or delegate this to the UIKit layer through a Coordinator if possible.
-        // Let's rely on the UIKit layer (UIViewRepresentable) to expose a "applyAttribute" API? 
-        // No, SwiftUI views act on State.
-        // I'll leave placeholders inside the view above, but the real logic needs the UITextView.
-        // See NativeUITextViewWrapper below.
-        
-        // NotificationCenter is a quick way to send commands to the active editor
         NotificationCenter.default.post(name: .applyFormatCommand, object: nil, userInfo: ["trait": trait])
     }
     
     private func toggleAttribute(_ key: NSAttributedString.Key, value: Any) {
          NotificationCenter.default.post(name: .applyFormatCommand, object: nil, userInfo: ["key": key, "value": value])
+    }
+
+    private func applyTextColor(_ color: RevisionTextColor) {
+        NotificationCenter.default.post(
+            name: .applyFormatCommand,
+            object: nil,
+            userInfo: ["key": NSAttributedString.Key.foregroundColor, "value": color.uiColor, "mode": "set"]
+        )
+    }
+
+    private func clearTextColor() {
+        NotificationCenter.default.post(
+            name: .applyFormatCommand,
+            object: nil,
+            userInfo: ["removeKeys": [NSAttributedString.Key.foregroundColor], "defaultForegroundColor": editorForegroundColor]
+        )
+    }
+
+    private func applyHighlight(_ color: RevisionHighlightColor) {
+        NotificationCenter.default.post(
+            name: .applyFormatCommand,
+            object: nil,
+            userInfo: ["key": NSAttributedString.Key.backgroundColor, "value": color.uiColor, "mode": "set"]
+        )
+    }
+
+    private func clearHighlight() {
+        NotificationCenter.default.post(
+            name: .applyFormatCommand,
+            object: nil,
+            userInfo: ["removeKeys": [NSAttributedString.Key.backgroundColor]]
+        )
+    }
+
+    private func clearRevisionFormatting() {
+        NotificationCenter.default.post(
+            name: .applyFormatCommand,
+            object: nil,
+            userInfo: [
+                "removeKeys": [
+                    NSAttributedString.Key.foregroundColor,
+                    NSAttributedString.Key.backgroundColor,
+                    NSAttributedString.Key.strikethroughStyle
+                ],
+                "defaultForegroundColor": editorForegroundColor
+            ]
+        )
     }
     
     private func setAlignment(_ alignment: NSTextAlignment) {
@@ -387,6 +1068,9 @@ struct StatementDraftExportable: Transferable {
                     title: received.file.deletingPathExtension().lastPathComponent,
                     version: 1,
                     draftScopeRaw: StatementDraftScope.full.rawValue,
+                    writingTargetID: nil,
+                    writingTargetCategoryRaw: nil,
+                    customPromptText: nil,
                     isFinal: false,
                     isLocked: false,
                     dateCreated: Date(),
@@ -400,6 +1084,233 @@ struct StatementDraftExportable: Transferable {
     }
 }
 
+private struct DraftSyncConflictCard: View {
+    let conflict: PSRichTextEditorView.DraftSyncConflict
+    let useImmersive: Bool
+    let onKeepLocalEdits: () -> Void
+    let onReloadRemoteVersion: () -> Void
+    let onSaveLocalCopy: () -> Void
+
+    private var timestampText: String {
+        conflict.remoteModifiedAt.formatted(.dateTime.month().day().hour().minute())
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: DSSpacing.sm) {
+            HStack(alignment: .top, spacing: DSSpacing.sm) {
+                Image(systemName: "icloud.and.arrow.down")
+                    .font(.headline)
+                    .foregroundStyle(useImmersive ? DSColor.warning : .orange)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Updated on another device")
+                        .font(DSFont.body.weight(.semibold))
+                        .foregroundStyle(useImmersive ? DSColor.textPrimary : .primary)
+                    Text("This draft changed through iCloud at \(timestampText) while you had local edits open.")
+                        .font(DSFont.caption)
+                        .foregroundStyle(useImmersive ? DSColor.textSecondary : .secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+
+            if !conflict.remotePreview.isEmpty {
+                Text("Other version: \(conflict.remotePreview)")
+                    .font(DSFont.caption)
+                    .foregroundStyle(useImmersive ? DSColor.quietText : .secondary)
+                    .lineLimit(3)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            VStack(spacing: DSSpacing.xs) {
+                Button("Save My Edits as a Copy", action: onSaveLocalCopy)
+                    .buttonStyle(.appPrimary)
+                Button("Keep My Edits Here", action: onKeepLocalEdits)
+                    .buttonStyle(.appSecondary)
+                Button("Reload iCloud Version", role: .destructive, action: onReloadRemoteVersion)
+                    .buttonStyle(.appQuiet)
+            }
+            .padding(.top, DSSpacing.xs)
+        }
+        .padding(DSSpacing.md)
+        .if(useImmersive) { view in
+            view.sacredCardStyle(highlighted: true)
+        }
+        .if(!useImmersive) { view in
+            view.appSurfaceStyle(role: .interactive, highlighted: true)
+        }
+        .accessibilityElement(children: .combine)
+    }
+}
+
+// MARK: - Revision Formatting
+enum RevisionTextColor: String, CaseIterable, Identifiable {
+    case needsWork
+    case strongSentence
+    case cutOrReplace
+    case evidence
+    case theme
+
+    var id: String { rawValue }
+
+    var label: String {
+        switch self {
+        case .needsWork: return "Needs work"
+        case .strongSentence: return "Strong sentence"
+        case .cutOrReplace: return "Cut or replace"
+        case .evidence: return "Evidence"
+        case .theme: return "Theme"
+        }
+    }
+
+    var systemImage: String {
+        switch self {
+        case .needsWork: return "pencil.and.scribble"
+        case .strongSentence: return "checkmark.seal"
+        case .cutOrReplace: return "scissors"
+        case .evidence: return "quote.bubble"
+        case .theme: return "sparkle"
+        }
+    }
+
+    var swiftUIColor: Color { Color(uiColor: uiColor) }
+
+    var uiColor: UIColor {
+        switch self {
+        case .needsWork:
+            return UIColor { traits in
+                traits.userInterfaceStyle == .dark
+                    ? UIColor(red: 0.95, green: 0.74, blue: 0.33, alpha: 1.0)
+                    : UIColor(red: 0.52, green: 0.34, blue: 0.00, alpha: 1.0)
+            }
+        case .strongSentence:
+            return UIColor { traits in
+                traits.userInterfaceStyle == .dark
+                    ? UIColor(red: 0.49, green: 0.84, blue: 0.65, alpha: 1.0)
+                    : UIColor(red: 0.10, green: 0.48, blue: 0.30, alpha: 1.0)
+            }
+        case .cutOrReplace:
+            return UIColor { traits in
+                traits.userInterfaceStyle == .dark
+                    ? UIColor(red: 1.00, green: 0.54, blue: 0.50, alpha: 1.0)
+                    : UIColor(red: 0.70, green: 0.15, blue: 0.12, alpha: 1.0)
+            }
+        case .evidence:
+            return UIColor { traits in
+                traits.userInterfaceStyle == .dark
+                    ? UIColor(red: 0.56, green: 0.77, blue: 1.00, alpha: 1.0)
+                    : UIColor(red: 0.10, green: 0.42, blue: 0.72, alpha: 1.0)
+            }
+        case .theme:
+            return UIColor { traits in
+                traits.userInterfaceStyle == .dark
+                    ? UIColor(red: 0.85, green: 0.70, blue: 0.35, alpha: 1.0)
+                    : UIColor(red: 0.54, green: 0.42, blue: 0.00, alpha: 1.0)
+            }
+        }
+    }
+}
+
+enum RevisionHighlightColor: String, CaseIterable, Identifiable {
+    case revise
+    case keep
+    case verify
+
+    var id: String { rawValue }
+
+    var label: String {
+        switch self {
+        case .revise: return "Revise"
+        case .keep: return "Keep"
+        case .verify: return "Verify"
+        }
+    }
+
+    var systemImage: String {
+        switch self {
+        case .revise: return "highlighter"
+        case .keep: return "bookmark"
+        case .verify: return "magnifyingglass"
+        }
+    }
+
+    var swiftUIColor: Color { Color(uiColor: uiColor) }
+
+    var uiColor: UIColor {
+        switch self {
+        case .revise:
+            return UIColor { traits in
+                traits.userInterfaceStyle == .dark
+                    ? UIColor(red: 0.35, green: 0.25, blue: 0.08, alpha: 1.0)
+                    : UIColor(red: 1.00, green: 0.93, blue: 0.67, alpha: 1.0)
+            }
+        case .keep:
+            return UIColor { traits in
+                traits.userInterfaceStyle == .dark
+                    ? UIColor(red: 0.12, green: 0.33, blue: 0.24, alpha: 1.0)
+                    : UIColor(red: 0.78, green: 0.94, blue: 0.84, alpha: 1.0)
+            }
+        case .verify:
+            return UIColor { traits in
+                traits.userInterfaceStyle == .dark
+                    ? UIColor(red: 0.11, green: 0.27, blue: 0.45, alpha: 1.0)
+                    : UIColor(red: 0.80, green: 0.90, blue: 1.00, alpha: 1.0)
+            }
+        }
+    }
+}
+
+fileprivate enum RichTextDefaultColorNormalizer {
+    static func normalized(_ attributed: NSAttributedString, defaultColor: UIColor) -> NSAttributedString {
+        guard attributed.length > 0 else { return attributed }
+        let mutable = NSMutableAttributedString(attributedString: attributed)
+        let fullRange = NSRange(location: 0, length: mutable.length)
+
+        mutable.enumerateAttribute(.foregroundColor, in: fullRange, options: []) { value, range, _ in
+            guard let color = value as? UIColor else {
+                mutable.addAttribute(.foregroundColor, value: defaultColor, range: range)
+                return
+            }
+
+            if isEditorDefaultColor(color) {
+                mutable.addAttribute(.foregroundColor, value: defaultColor, range: range)
+            }
+        }
+
+        return mutable
+    }
+
+    static func isEditorDefaultColor(_ color: UIColor) -> Bool {
+        let editorDefaults: [UIColor] = [.white, .black, .label, .darkText, .lightText]
+        return editorDefaults.contains { approximatelyMatches(color, $0) }
+    }
+
+    private static func approximatelyMatches(_ lhs: UIColor, _ rhs: UIColor) -> Bool {
+        let styles: [UIUserInterfaceStyle] = [.light, .dark]
+        return styles.contains { style in
+            guard let left = rgba(lhs, style: style), let right = rgba(rhs, style: style) else {
+                return lhs.isEqual(rhs)
+            }
+
+            return abs(left.red - right.red) < 0.02
+                && abs(left.green - right.green) < 0.02
+                && abs(left.blue - right.blue) < 0.02
+                && abs(left.alpha - right.alpha) < 0.02
+        }
+    }
+
+    private static func rgba(_ color: UIColor, style: UIUserInterfaceStyle) -> (red: CGFloat, green: CGFloat, blue: CGFloat, alpha: CGFloat)? {
+        let resolved = color.resolvedColor(with: UITraitCollection(userInterfaceStyle: style))
+        var red: CGFloat = 0
+        var green: CGFloat = 0
+        var blue: CGFloat = 0
+        var alpha: CGFloat = 0
+        guard resolved.getRed(&red, green: &green, blue: &blue, alpha: &alpha) else {
+            return nil
+        }
+        return (red, green, blue, alpha)
+    }
+}
+
 // MARK: - Toolbar View
 struct RichTextToolbar: View {
     var isBold: Bool
@@ -408,52 +1319,150 @@ struct RichTextToolbar: View {
     var toggleBold: () -> Void
     var toggleItalic: () -> Void
     var toggleUnderline: () -> Void
+    var toggleStrikethrough: () -> Void
+    var applyTextColor: (RevisionTextColor) -> Void
+    var clearTextColor: () -> Void
+    var applyHighlight: (RevisionHighlightColor) -> Void
+    var clearHighlight: () -> Void
+    var clearRevisionFormatting: () -> Void
     var alignLeft: () -> Void
     var alignCenter: () -> Void
     var alignRight: () -> Void
+
+    private var toolbarForeground: Color {
+        useImmersive ? DSColor.textPrimary : .primary
+    }
     
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 16) {
+            HStack(spacing: 10) {
                 Group {
-                    Button(action: toggleBold) { 
-                        Image(systemName: "bold")
-                            .foregroundStyle(isBold ? DSColor.goldLight : (useImmersive ? DSColor.textPrimary : .primary))
-                            .padding(4)
-                            .background(isBold ? DSColor.goldLight.opacity(0.2) : Color.clear)
-                            .clipShape(RoundedRectangle(cornerRadius: 4))
-                    }
-                    Button(action: toggleItalic) { 
-                        Image(systemName: "italic")
-                            .foregroundStyle(isItalic ? DSColor.goldLight : (useImmersive ? DSColor.textPrimary : .primary))
-                            .padding(4)
-                            .background(isItalic ? DSColor.goldLight.opacity(0.2) : Color.clear)
-                            .clipShape(RoundedRectangle(cornerRadius: 4))
-                    }
-                    Button(action: toggleUnderline) {
-                        Image(systemName: "underline")
-                            .foregroundStyle(useImmersive ? DSColor.textPrimary : .primary)
-                    }
+                    RichTextToolbarButton(
+                        systemName: "bold",
+                        accessibilityLabel: "Bold",
+                        isActive: isBold,
+                        useImmersive: useImmersive,
+                        action: toggleBold
+                    )
+                    RichTextToolbarButton(
+                        systemName: "italic",
+                        accessibilityLabel: "Italic",
+                        isActive: isItalic,
+                        useImmersive: useImmersive,
+                        action: toggleItalic
+                    )
+                    RichTextToolbarButton(
+                        systemName: "underline",
+                        accessibilityLabel: "Underline",
+                        useImmersive: useImmersive,
+                        action: toggleUnderline
+                    )
+                    RichTextToolbarButton(
+                        systemName: "strikethrough",
+                        accessibilityLabel: "Strikethrough",
+                        useImmersive: useImmersive,
+                        action: toggleStrikethrough
+                    )
                 }
                 
                 Divider().frame(height: 20)
-                
+
                 Group {
-                    Button(action: alignLeft) {
-                        Image(systemName: "text.alignleft")
-                            .foregroundStyle(useImmersive ? DSColor.textPrimary : .primary)
+                    Menu {
+                        Section("Text color") {
+                            ForEach(RevisionTextColor.allCases) { color in
+                                Button {
+                                    applyTextColor(color)
+                                } label: {
+                                    Label(color.label, systemImage: color.systemImage)
+                                }
+                            }
+                        }
+                        Button("Clear text color", systemImage: "xmark.circle", action: clearTextColor)
+                    } label: {
+                        Image(systemName: "paintpalette")
+                            .font(.body.weight(.semibold))
+                            .foregroundStyle(toolbarForeground)
+                            .frame(width: 44, height: 44)
+                            .contentShape(Rectangle())
                     }
-                    Button(action: alignCenter) {
-                        Image(systemName: "text.aligncenter")
-                            .foregroundStyle(useImmersive ? DSColor.textPrimary : .primary)
+                    .accessibilityLabel("Text color")
+
+                    Menu {
+                        Section("Highlight") {
+                            ForEach(RevisionHighlightColor.allCases) { color in
+                                Button {
+                                    applyHighlight(color)
+                                } label: {
+                                    Label(color.label, systemImage: color.systemImage)
+                                }
+                            }
+                        }
+                        Button("Clear highlight", systemImage: "xmark.circle", action: clearHighlight)
+                        Button("Clear selected revision marks", systemImage: "eraser", action: clearRevisionFormatting)
+                    } label: {
+                        Image(systemName: "highlighter")
+                            .font(.body.weight(.semibold))
+                            .foregroundStyle(toolbarForeground)
+                            .frame(width: 44, height: 44)
+                            .contentShape(Rectangle())
                     }
-                    Button(action: alignRight) {
-                        Image(systemName: "text.alignright")
-                            .foregroundStyle(useImmersive ? DSColor.textPrimary : .primary)
-                    }
+                    .accessibilityLabel("Highlight")
+                }
+
+                Divider().frame(height: 20)
+
+                Group {
+                    RichTextToolbarButton(
+                        systemName: "text.alignleft",
+                        accessibilityLabel: "Align left",
+                        useImmersive: useImmersive,
+                        action: alignLeft
+                    )
+                    RichTextToolbarButton(
+                        systemName: "text.aligncenter",
+                        accessibilityLabel: "Align center",
+                        useImmersive: useImmersive,
+                        action: alignCenter
+                    )
+                    RichTextToolbarButton(
+                        systemName: "text.alignright",
+                        accessibilityLabel: "Align right",
+                        useImmersive: useImmersive,
+                        action: alignRight
+                    )
                 }
             }
-            .padding(.horizontal)
+            .padding(.horizontal, DSSpacing.sm)
+        }
+    }
+}
+
+private struct RichTextToolbarButton: View {
+    let systemName: String
+    let accessibilityLabel: String
+    var isActive: Bool = false
+    let useImmersive: Bool
+    let action: () -> Void
+
+    private var foreground: Color {
+        isActive ? DSColor.goldLight : (useImmersive ? DSColor.textPrimary : .primary)
+    }
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: systemName)
+                .font(.body.weight(.semibold))
+                .foregroundStyle(foreground)
+                .frame(width: 44, height: 44)
+                .background(isActive ? DSColor.goldLight.opacity(0.18) : Color.clear)
+                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(accessibilityLabel)
+        .if(isActive) { view in
+            view.accessibilityAddTraits(.isSelected)
         }
     }
 }
@@ -505,17 +1514,11 @@ struct NativeUITextViewWrapper: UIViewRepresentable {
         }
         uiView.keyboardAppearance = useImmersive ? .dark : .default
         uiView.tintColor = useImmersive ? UIColor(DSColor.goldLight) : .systemBlue
-        if var typingAttributes = uiView.typingAttributes as [NSAttributedString.Key : Any]? {
-            typingAttributes[.foregroundColor] = targetForegroundColor
-            uiView.typingAttributes = typingAttributes
-        }
+        context.coordinator.normalizeTypingForeground(in: uiView)
     }
 
     private func normalizedText(_ attributed: NSAttributedString, color: UIColor) -> NSAttributedString {
-        guard attributed.length > 0 else { return attributed }
-        let mutable = NSMutableAttributedString(attributedString: attributed)
-        mutable.addAttribute(.foregroundColor, value: color, range: NSRange(location: 0, length: mutable.length))
-        return mutable
+        RichTextDefaultColorNormalizer.normalized(attributed, defaultColor: color)
     }
     
     func makeCoordinator() -> Coordinator {
@@ -536,7 +1539,7 @@ struct NativeUITextViewWrapper: UIViewRepresentable {
         
         func textViewDidChange(_ textView: UITextView) {
             guard !isUpdatingFromSwiftUI else { return }
-            enforceForegroundColor(in: textView)
+            normalizeDefaultForeground(in: textView)
             parent.text = textView.attributedText
             parent.selectedRange = textView.selectedRange
         }
@@ -544,55 +1547,39 @@ struct NativeUITextViewWrapper: UIViewRepresentable {
         func textViewDidChangeSelection(_ textView: UITextView) {
             guard !isUpdatingFromSwiftUI else { return }
             self.parent.selectedRange = textView.selectedRange
-            if parent.useImmersive {
-                var typing = textView.typingAttributes
-                typing[.foregroundColor] = UIColor.white
-                textView.typingAttributes = typing
-            } else {
-                var typing = textView.typingAttributes
-                typing[.foregroundColor] = UIColor.label
-                textView.typingAttributes = typing
-            }
-            // Update UI toolbar state binding
+            normalizeTypingForeground(in: textView)
             updateFormattingState(textView)
         }
 
-        private func enforceForegroundColor(in textView: UITextView) {
+        fileprivate func normalizeTypingForeground(in textView: UITextView) {
             let targetColor: UIColor = parent.useImmersive ? .white : .label
-            guard textView.attributedText.length > 0 else { return }
-
-            var needsNormalization = false
-            textView.attributedText.enumerateAttribute(
-                .foregroundColor,
-                in: NSRange(location: 0, length: textView.attributedText.length),
-                options: []
-            ) { value, _, stop in
-                guard let color = value as? UIColor else {
-                    needsNormalization = true
-                    stop.pointee = true
-                    return
-                }
-
-                if !color.isEqual(targetColor) {
-                    needsNormalization = true
-                    stop.pointee = true
-                }
+            guard let currentColor = textView.typingAttributes[.foregroundColor] as? UIColor else {
+                var typing = textView.typingAttributes
+                typing[.foregroundColor] = targetColor
+                textView.typingAttributes = typing
+                return
             }
 
-            guard needsNormalization else { return }
-
-            let selection = textView.selectedRange
-            let mutable = NSMutableAttributedString(attributedString: textView.attributedText)
-            mutable.addAttribute(.foregroundColor, value: targetColor, range: NSRange(location: 0, length: mutable.length))
-
-            isUpdatingFromSwiftUI = true
-            textView.attributedText = mutable
-            textView.selectedRange = selection
-            isUpdatingFromSwiftUI = false
+            guard RichTextDefaultColorNormalizer.isEditorDefaultColor(currentColor) else { return }
 
             var typing = textView.typingAttributes
             typing[.foregroundColor] = targetColor
             textView.typingAttributes = typing
+        }
+
+        private func normalizeDefaultForeground(in textView: UITextView) {
+            let targetColor: UIColor = parent.useImmersive ? .white : .label
+            guard textView.attributedText.length > 0 else { return }
+
+            let selection = textView.selectedRange
+            let normalized = RichTextDefaultColorNormalizer.normalized(textView.attributedText, defaultColor: targetColor)
+            guard normalized != textView.attributedText else { return }
+
+            isUpdatingFromSwiftUI = true
+            textView.attributedText = normalized
+            textView.selectedRange = selection
+            isUpdatingFromSwiftUI = false
+            normalizeTypingForeground(in: textView)
         }
         
         private func updateFormattingState(_ textView: UITextView) {
@@ -623,13 +1610,18 @@ struct NativeUITextViewWrapper: UIViewRepresentable {
             guard let textView = self.textView else { return }
             guard let userInfo = notification.userInfo else { return }
             
-            // Trait Handling (Bold/Italic)
             if let trait = userInfo["trait"] as? UIFontDescriptor.SymbolicTraits {
                 toggleTrait(trait, in: textView)
             }
-            // Attribute Handling (Underline)
+            else if let keys = userInfo["removeKeys"] as? [NSAttributedString.Key] {
+                clearAttributes(keys, defaultForegroundColor: userInfo["defaultForegroundColor"] as? UIColor, in: textView)
+            }
             else if let key = userInfo["key"] as? NSAttributedString.Key, let value = userInfo["value"] {
-                toggleAttribute(key, value: value, in: textView)
+                if userInfo["mode"] as? String == "set" {
+                    setAttribute(key, value: value, in: textView)
+                } else {
+                    toggleAttribute(key, value: value, in: textView)
+                }
             }
         }
         
@@ -663,15 +1655,77 @@ struct NativeUITextViewWrapper: UIViewRepresentable {
             var attributes = textView.typingAttributes
             
             if range.length > 0 {
-                 // Check if already applied. If so, remove.
-                 // Simplification: Just applying 'value' for now.
-                 // Real toggle logic requires inspecting range.
-                 textView.textStorage.addAttribute(key, value: value, range: range)
+                if selectionHasAttribute(key, value: value, range: range, in: textView) {
+                    textView.textStorage.removeAttribute(key, range: range)
+                    attributes.removeValue(forKey: key)
+                } else {
+                    textView.textStorage.addAttribute(key, value: value, range: range)
+                    attributes[key] = value
+                }
+            } else if attributeValue(attributes[key], equals: value) {
+                attributes.removeValue(forKey: key)
+            } else {
+                attributes[key] = value
             }
-            
+
+            textView.typingAttributes = attributes
+            parent.text = textView.attributedText
+        }
+
+        private func setAttribute(_ key: NSAttributedString.Key, value: Any, in textView: UITextView) {
+            let range = textView.selectedRange
+            var attributes = textView.typingAttributes
+
+            if range.length > 0 {
+                textView.textStorage.addAttribute(key, value: value, range: range)
+            }
+
             attributes[key] = value
             textView.typingAttributes = attributes
             parent.text = textView.attributedText
+        }
+
+        private func clearAttributes(_ keys: [NSAttributedString.Key], defaultForegroundColor: UIColor?, in textView: UITextView) {
+            let range = textView.selectedRange
+            var attributes = textView.typingAttributes
+
+            if range.length > 0 {
+                keys.forEach { textView.textStorage.removeAttribute($0, range: range) }
+                if keys.contains(.foregroundColor), let defaultForegroundColor {
+                    textView.textStorage.addAttribute(.foregroundColor, value: defaultForegroundColor, range: range)
+                }
+            }
+
+            keys.forEach { attributes.removeValue(forKey: $0) }
+            if keys.contains(.foregroundColor), let defaultForegroundColor {
+                attributes[.foregroundColor] = defaultForegroundColor
+            }
+            textView.typingAttributes = attributes
+            parent.text = textView.attributedText
+        }
+
+        private func selectionHasAttribute(_ key: NSAttributedString.Key, value: Any, range: NSRange, in textView: UITextView) -> Bool {
+            var hasAttributeAcrossSelection = true
+            textView.attributedText.enumerateAttribute(key, in: range, options: []) { currentValue, _, stop in
+                if !attributeValue(currentValue, equals: value) {
+                    hasAttributeAcrossSelection = false
+                    stop.pointee = true
+                }
+            }
+            return hasAttributeAcrossSelection
+        }
+
+        private func attributeValue(_ currentValue: Any?, equals targetValue: Any) -> Bool {
+            switch (currentValue, targetValue) {
+            case let (current as Int, target as Int):
+                return current == target
+            case let (current as UIColor, target as UIColor):
+                return current.isEqual(target)
+            case let (current as NSObject, target as NSObject):
+                return current.isEqual(target)
+            default:
+                return false
+            }
         }
         
         private func toggleTrait(_ trait: UIFontDescriptor.SymbolicTraits, in textView: UITextView) {

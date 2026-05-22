@@ -2,243 +2,46 @@ import SwiftUI
 import SwiftData
 import Charts
 
-enum ExamenRoute: Hashable {
-    case examenSession(ExamenSessionDraft, ExamenStage) // Unified route
+private struct HomeExamenLaunch: Identifiable {
+    let id = UUID()
+    let draft: ExamenSessionDraft
+    let stage: ExamenStage
 }
 
-struct LandingView: View {
-    @Environment(\.modelContext) private var modelContext
-    @Environment(AppSettings.self) private var settings
-    @Query(sort: \ExamenSession.date, order: .reverse) private var sessions: [ExamenSession]
-    @AppStorage("hasSeenLandingBefore") private var hasSeenLandingBefore = false
-    
-    @Query(sort: \StatementDraft.dateModified, order: .reverse) private var drafts: [StatementDraft]
-    
-    @State private var navPath = NavigationPath()
-    
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @Namespace private var namespace
-    
-    // Animation State
-    @State private var callGlow = false
-    
-    @State private var showProfile = false
-    @State private var didTapExamen = false
-    @State private var showNewNoteTypePicker = false
-    @State private var greetingText = "Welcome"
-    
-    var body: some View {
-        NavigationStack(path: $navPath) {
-            ZStack {
-                // Background
-                if settings.selectedTheme == .sacredVoid {
-                    RadialGradient(
-                        gradient: Gradient(colors: [DSColor.nearBlack, DSColor.deepMaroon]),
-                        center: .center,
-                        startRadius: 50,
-                        endRadius: 350
-                    )
-                    .ignoresSafeArea()
-                } else if settings.selectedTheme == .gradient {
-                    AnimatedMeshGradientBackground()
-                } else {
-                     // Fallback/Standard dark theme
-                    Color.black.ignoresSafeArea()
-                }
-                
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 24) {
-                        // Header
-                        HStack {
-                            Text(greetingText)
-                                .font(.largeTitle)
-                                .fontWeight(.bold)
-                                .foregroundStyle(.white) // Ensure visibility on dark void
-                            Spacer()
-                            Button {
-                                showProfile = true
-                            } label: {
-                                Image(systemName: "person.circle")
-                                    .font(.title)
-                                    .foregroundStyle(.white.opacity(0.8))
-                                    .accessibilityLabel("Profile")
-                            }
-                        }
-                        .padding(.top)
-                    
-                    // Stats Grid
-                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
-                        StatCard(title: "Total Sessions", value: "\(sessions.count)", icon: "circle.grid.cross")
-                        StatCard(title: "Recent", value: lastSessionDate, icon: "calendar")
-                    }
-                    
-                    // Primary CTA
-                    Button {
-                        didTapExamen.toggle()
-                        let draft = ExamenSessionDraft(type: .other)
-                        navPath.append(ExamenRoute.examenSession(draft, .selectType))
-                    } label: {
-                        HStack {
-                            Image(systemName: "play.fill")
-                            Text("Start Examen")
-                                .fontWeight(.semibold)
-                        }
-                    }
-                    .buttonStyle(SacredButtonStyle())
-                    .sensoryFeedback(.impact(weight: .medium), trigger: didTapExamen)
-                    .compat_matchedTransitionSource(id: "startExamen", in: namespace)
-                    .padding(.vertical)
-                    
-                    // Secondary CTA: Quick Note
-                    Button {
-                        showNewNoteTypePicker = true
-                    } label: {
-                        Text("New Note")
-                            .fontWeight(.medium)
-                            .foregroundColor(DSColor.goldLight) // Harmonize with the theme
-                            .luminous()
-                    }
-                    .padding(.bottom)
-                    .compat_matchedTransitionSource(id: "newNote", in: namespace)
-                    
-                    // NEW: Detailed Stats Grid
-                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
-                        // Card 1: Top Focus
-                        if let top = topFocusExperience {
-                            StatCard(title: "Top Focus", value: top.type.displayName, icon: "chart.pie.fill")
-                        } else {
-                            StatCard(title: "Top Focus", value: "--", icon: "chart.pie.fill")
-                        }
-                        
-                        // Card 2: Last Draft Edit
-                        StatCard(title: "Last Draft Edit", value: lastDraftDate ?? "No drafts", icon: "doc.text.fill")
-                    }
-
-                    NavigationLink {
-                        ExperienceHoursBreakdownView()
-                    } label: {
-                        ExperienceHoursCard(experiences: Array(topExperienceHours.prefix(5)))
-                    }
-                    .buttonStyle(.plain)
-
-
-                    // Recent History
-                    if !sessions.isEmpty {
-                        VStack(alignment: .leading, spacing: 12) {
-                            Text("Recent History")
-                                .font(.headline)
-                                .foregroundStyle(.white.opacity(0.9))
-                            
-                            ForEach(sessions.prefix(3)) { session in
-                                HStack {
-                                    VStack(alignment: .leading) {
-                                        Text(session.date.formatted(date: .abbreviated, time: .shortened))
-                                            .font(.subheadline)
-                                            .fontWeight(.medium)
-                                            .foregroundStyle(.white)
-                                        if let type = session.experienceType {
-                                            Text(type.displayName)
-                                                .font(.caption)
-                                                .foregroundStyle(.white.opacity(0.7))
-                                        }
-                                    }
-                                    Spacer()
-                                    if session.hours > 0 {
-                                        // Also show hours in history list
-                                        Text("\(session.hours, specifier: "%.1f")h")
-                                            .font(.caption)
-                                            .foregroundStyle(.white.opacity(0.6))
-                                            .padding(.trailing, 4)
-                                    }
-                                    Image(systemName: "chevron.right")
-                                        .font(.caption)
-                                        .foregroundStyle(.white.opacity(0.5))
-                                }
-                                .padding()
-                                .glassCardStyle()
-                                .accessibilityElement(children: .combine)
-                            }
-                        }
-                    }
-                }
-                .padding()
-            }
-        } // Close ZStack
-            .navigationTitle("Dashboard")
-            .toolbar(.hidden, for: .navigationBar)
-            .confirmationDialog(
-                "New Note: Choose Experience Type",
-                isPresented: $showNewNoteTypePicker,
-                titleVisibility: .visible
-            ) {
-                ForEach(ExperienceType.allCases, id: \.self) { type in
-                    Button(type.displayName) {
-                        startQuickNote(type)
-                    }
-                }
-                Button("Cancel", role: .cancel) { }
-            } message: {
-                Text("This opens the Session Details form directly without running a full Examen.")
-            }
-            .navigationDestination(for: ExamenRoute.self) { route in
-                switch route {
-                case .examenSession(let draft, let stage):
-                    ExamenSessionContainer(draft: draft, initialStage: stage)
-                        .navigationBarBackButtonHidden(true)
-                        // Apply entry transitions from dashboard
-                        .compat_zoomTransition(sourceID: stage == .selectType ? "startExamen" : "newNote", in: namespace)
-                        .compat_navigationFade()
-                        .animation(AnimationConfig.transitionIn, value: navPath)
-                }
-            }
-            .toolbar(settings.isTabBarVisible ? .visible : .hidden, for: .tabBar)
-            .sheet(isPresented: $showProfile) {
-                NavigationStack {
-                    ProfileView()
-                }
-            }
-            .onAppear {
-                if hasSeenLandingBefore {
-                    greetingText = "Welcome back"
-                } else {
-                    greetingText = "Welcome"
-                    hasSeenLandingBefore = true
-                }
-            }
-        }
+private struct LandingHomeSummary {
+    struct FocusExperience {
+        let type: ExperienceType
+        let count: Int
+        let hours: Double
     }
 
-    private func startQuickNote(_ type: ExperienceType) {
-        let draft = ExamenSessionDraft(type: type)
-        navPath.append(ExamenRoute.examenSession(draft, .details))
-    }
-    
-    private var lastSessionDate: String {
-        guard let last = sessions.first else { return "--" }
+    static let empty = LandingHomeSummary(
+        lastSessionDateText: "--",
+        lastDraftDateText: nil,
+        topFocusExperience: nil,
+        topExperienceHours: []
+    )
+
+    let lastSessionDateText: String
+    let lastDraftDateText: String?
+    let topFocusExperience: FocusExperience?
+    let topExperienceHours: [(type: ExperienceType, count: Int, hours: Double)]
+
+    static func make(sessions: [ExamenSession], drafts: [StatementDraft]) -> LandingHomeSummary {
         let formatter = RelativeDateTimeFormatter()
         formatter.unitsStyle = .abbreviated
-        return formatter.localizedString(for: last.date, relativeTo: Date())
-    }
-    
-    private var lastDraftDate: String? {
-        guard let last = drafts.first else { return nil }
-        let formatter = RelativeDateTimeFormatter()
-        formatter.unitsStyle = .abbreviated
-        return formatter.localizedString(for: last.dateModified, relativeTo: Date())
-    }
-    
-    private var topFocusExperience: (type: ExperienceType, count: Int, hours: Double)? {
+
         var counts: [ExperienceType: Int] = [:]
         var hours: [ExperienceType: Double] = [:]
-        
+
         for session in sessions {
-            if let type = session.experienceType {
-                counts[type, default: 0] += 1
-                hours[type, default: 0] += session.hours
-            }
+            guard let type = session.experienceType else { continue }
+            counts[type, default: 0] += 1
+            hours[type, default: 0] += session.hours
         }
-        
-        let sorted = counts.map { (type: $0.key, count: $0.value, hours: hours[$0.key] ?? 0) }
+
+        let rankedExperiences = counts
+            .map { (type: $0.key, count: $0.value, hours: hours[$0.key] ?? 0) }
             .sorted { lhs, rhs in
                 if lhs.count == rhs.count {
                     return lhs.hours > rhs.hours
@@ -246,21 +49,7 @@ struct LandingView: View {
                 return lhs.count > rhs.count
             }
 
-        return sorted.first
-    }
-
-    private var topExperienceHours: [(type: ExperienceType, count: Int, hours: Double)] {
-        var counts: [ExperienceType: Int] = [:]
-        var hours: [ExperienceType: Double] = [:]
-
-        for session in sessions {
-            if let type = session.experienceType {
-                counts[type, default: 0] += 1
-                hours[type, default: 0] += session.hours
-            }
-        }
-
-        return counts
+        let topExperienceHours = counts
             .map { (type: $0.key, count: $0.value, hours: hours[$0.key] ?? 0) }
             .filter { $0.hours > 0 }
             .sorted { lhs, rhs in
@@ -269,6 +58,349 @@ struct LandingView: View {
                 }
                 return lhs.hours > rhs.hours
             }
+
+        return LandingHomeSummary(
+            lastSessionDateText: sessions.first.map {
+                formatter.localizedString(for: $0.date, relativeTo: Date())
+            } ?? "--",
+            lastDraftDateText: drafts.first.map {
+                formatter.localizedString(for: $0.dateModified, relativeTo: Date())
+            },
+            topFocusExperience: rankedExperiences.first.map {
+                FocusExperience(type: $0.type, count: $0.count, hours: $0.hours)
+            },
+            topExperienceHours: topExperienceHours
+        )
+    }
+}
+
+struct LandingView: View {
+    @Environment(AppSettings.self) private var settings
+    @Query(sort: \ExamenSession.date, order: .reverse) private var sessions: [ExamenSession]
+    @AppStorage("hasSeenLandingBefore") private var hasSeenLandingBefore = false
+    
+    @Query(sort: \StatementDraft.dateModified, order: .reverse) private var drafts: [StatementDraft]
+    
+    @State private var activeExamenLaunch: HomeExamenLaunch?
+    @State private var showProfile = false
+    @State private var showNewNoteTypePicker = false
+    @State private var showExamenGuide = false
+    @State private var greetingText = "Welcome"
+    @State private var homeSummary = LandingHomeSummary.empty
+    
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                SacredScreenBackground(settings: settings)
+                
+                AppPageScrollView {
+                    AppPageHeader(
+                        title: greetingText,
+                        eyebrow: "Home",
+                        subtitle: homeSubtitle
+                    ) {
+                        Button {
+                            showProfile = true
+                        } label: {
+                            Image(systemName: "person.crop.circle")
+                                .font(.headline)
+                                .appCircleControl(emphasized: true)
+                        }
+                        .accessibilityLabel("Profile")
+                    }
+
+                    if sessions.isEmpty {
+                        StartHerePanel(onLearnExamen: { showExamenGuide = true })
+                    }
+
+                    HomeLaunchPanel(
+                        onStartExamen: launchExamen,
+                        onCaptureQuickNote: { showNewNoteTypePicker = true }
+                    )
+
+                    AppPanel(
+                        title: "At a glance",
+                        subtitle: "A quiet summary of where reflection is already gathering.",
+                        role: .quiet
+                    ) {
+                        VStack(spacing: DSSpacing.md) {
+                            LandingInsightRow(
+                                title: sessions.isEmpty ? "Next step" : "Last reflection",
+                                value: sessions.isEmpty ? "Start your first Examen" : homeSummary.lastSessionDateText,
+                                detail: sessions.isEmpty ? "Your reflections will gather here over time." : "Open Journal when you want to revisit it."
+                            )
+
+                            LandingPanelDivider()
+
+                            LandingInsightRow(
+                                title: "Writing",
+                                value: homeSummary.lastDraftDateText ?? "No draft yet",
+                                detail: homeSummary.lastDraftDateText == nil ? "Move a reflection into writing when you are ready." : "Return to Writing when you want to keep shaping it."
+                            )
+
+                            if let top = homeSummary.topFocusExperience {
+                                LandingPanelDivider()
+
+                                LandingInsightRow(
+                                    title: "Focus emerging",
+                                    value: top.type.displayName,
+                                    detail: "\(top.count) reflection\(top.count == 1 ? "" : "s") have gathered here."
+                                )
+                            }
+                        }
+                    }
+
+                    if !sessions.isEmpty {
+                        AppPanel(
+                            title: "Recent reflections",
+                            subtitle: "Return to the moments that are still speaking to you.",
+                            role: .quiet
+                        ) {
+                            VStack(spacing: DSSpacing.sm) {
+                                ForEach(Array(sessions.prefix(3).enumerated()), id: \.element.id) { index, session in
+                                    LandingHistoryRow(session: session)
+                                    if index < min(3, sessions.count) - 1 {
+                                        LandingPanelDivider()
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    if AppSettings.featurePolicy.showsHomeApplicationRecordPrompts {
+                        NavigationLink {
+                            ExperienceHoursBreakdownView()
+                        } label: {
+                            ExperienceHoursCard(experiences: Array(homeSummary.topExperienceHours.prefix(5)))
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+        }
+        .navigationTitle("Home")
+        .toolbar(.hidden, for: .navigationBar)
+        .confirmationDialog(
+            "Quick Note",
+            isPresented: $showNewNoteTypePicker,
+            titleVisibility: .visible
+        ) {
+            ForEach(ExperienceType.allCases, id: \.self) { type in
+                Button(type.displayName) {
+                    startQuickNote(type)
+                }
+            }
+            Button("Cancel", role: .cancel) { }
+        } message: {
+            Text("Choose the kind of experience you want to capture. You can add the details right away.")
+        }
+        .fullScreenCover(item: $activeExamenLaunch) { launch in
+            ExamenSessionContainer(draft: launch.draft, initialStage: launch.stage)
+        }
+        .toolbar(settings.isTabBarVisible ? .visible : .hidden, for: .tabBar)
+        .sheet(isPresented: $showProfile) {
+            NavigationStack {
+                ProfileView()
+            }
+        }
+        .sheet(isPresented: $showExamenGuide) {
+            NavigationStack {
+                ExamenExplainerView()
+                    .toolbar {
+                        ToolbarItem(placement: .topBarTrailing) {
+                            Button("Done") {
+                                showExamenGuide = false
+                            }
+                        }
+                    }
+            }
+        }
+        .onAppear {
+            if hasSeenLandingBefore {
+                greetingText = "Welcome back"
+            } else {
+                greetingText = "Welcome"
+                hasSeenLandingBefore = true
+            }
+        }
+        .task(id: landingSummaryRevision) {
+            homeSummary = LandingHomeSummary.make(sessions: sessions, drafts: drafts)
+        }
+    }
+
+    private var homeSubtitle: String {
+        sessions.isEmpty
+            ? "Home is where most people begin. Start with a full Examen when you want clarity and pace, or a note when you need to capture a moment before it fades."
+            : "Take time for an Examen, or capture a quick note."
+    }
+
+    private func launchExamen() {
+        activeExamenLaunch = HomeExamenLaunch(
+            draft: ExamenSessionDraft(type: .other),
+            stage: .selectType
+        )
+    }
+
+    private func startQuickNote(_ type: ExperienceType) {
+        activeExamenLaunch = HomeExamenLaunch(
+            draft: ExamenSessionDraft(type: type),
+            stage: .details
+        )
+    }
+    
+    private var landingSummaryRevision: Int {
+        var hasher = Hasher()
+        for session in sessions {
+            hasher.combine(session.id)
+            hasher.combine(session.date)
+            hasher.combine(session.experienceType?.rawValue)
+            hasher.combine(session.hours)
+        }
+        for draft in drafts {
+            hasher.combine(draft.id)
+            hasher.combine(draft.dateModified)
+        }
+        return hasher.finalize()
+    }
+}
+
+private struct StartHerePanel: View {
+    @AppStorage(AppCoachStorageKey.home) private var isDismissed = false
+
+    let onLearnExamen: () -> Void
+
+    var body: some View {
+        Group {
+            if !isDismissed {
+                AppCoachPanel(
+                    title: "Start here",
+                    subtitle: "The Examen is the app's most guided way to review your day with honesty, gratitude, and clarity. Home is where you begin when you want that fuller reflective rhythm.",
+                    role: .quiet,
+                    onDismiss: dismiss
+                ) {
+                    Button("What is the Examen?") {
+                        onLearnExamen()
+                    }
+                    .buttonStyle(.appQuiet)
+                }
+                .transition(.opacity.combined(with: .scale(scale: 0.98)))
+            }
+        }
+    }
+
+    private func dismiss() {
+        withAnimation(AnimationConfig.screenTransition) {
+            isDismissed = true
+        }
+    }
+}
+
+private struct LandingPanelDivider: View {
+    var body: some View {
+        Rectangle()
+            .fill(DSColor.dividerSoft)
+            .frame(height: 1)
+    }
+}
+
+private struct LandingInsightRow: View {
+    let title: String
+    let value: String
+    let detail: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(title.uppercased())
+                .font(DSFont.eyebrow)
+                .foregroundStyle(DSColor.quietTextMuted)
+            Text(value)
+                .font(DSFont.sectionTitle)
+                .foregroundStyle(DSColor.textPrimary)
+            Text(detail)
+                .font(DSFont.supporting)
+                .foregroundStyle(DSColor.quietText)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+private struct HomeLaunchPanel: View {
+    let onStartExamen: () -> Void
+    let onCaptureQuickNote: () -> Void
+
+    var body: some View {
+        VStack(spacing: DSSpacing.xl) {
+            Text("Slow down and reflect")
+                .font(DSFont.supporting)
+                .foregroundStyle(DSColor.quietText)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: 280)
+
+            VStack(spacing: DSSpacing.lg) {
+                Button(action: onStartExamen) {
+                    Label("Start Examen", systemImage: "play.fill")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(SacredButtonStyle())
+                .accessibilityIdentifier("home.startExamen")
+                .accessibilityHint("Begins a full reflection.")
+
+                HStack(spacing: DSSpacing.sm) {
+                    Rectangle()
+                        .fill(DSColor.dividerSoft)
+                        .frame(height: 1)
+
+                    Text("or")
+                        .font(DSFont.meta.weight(.semibold))
+                        .foregroundStyle(DSColor.quietTextMuted)
+
+                    Rectangle()
+                        .fill(DSColor.dividerSoft)
+                        .frame(height: 1)
+                }
+
+                Button(action: onCaptureQuickNote) {
+                    Label("Capture a Quick Note", systemImage: "square.and.pencil")
+                }
+                .buttonStyle(.appSecondary)
+                .accessibilityIdentifier("home.quickNote")
+                .accessibilityHint("Captures a note without starting a full Examen.")
+            }
+            .frame(maxWidth: 328)
+        }
+        .frame(maxWidth: .infinity, minHeight: 272)
+        .padding(.horizontal, DSSpacing.lg)
+        .padding(.vertical, DSSpacing.xl)
+        .appSurfaceStyle(role: .interactive, highlighted: true)
+    }
+}
+
+private struct LandingHistoryRow: View {
+    let session: ExamenSession
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: DSSpacing.md) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(session.experienceType?.displayName ?? "Reflection")
+                    .font(DSFont.body.weight(.semibold))
+                    .foregroundStyle(DSColor.textPrimary)
+                Text(session.date.formatted(date: .abbreviated, time: .shortened))
+                    .font(DSFont.meta)
+                    .foregroundStyle(DSColor.quietText)
+            }
+
+            Spacer()
+
+            if session.hours > 0 {
+                AppInfoChip(text: "\(session.hours.formattedOneDecimal) hours", icon: "clock")
+            } else {
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(DSColor.quietTextMuted)
+            }
+        }
+        .padding(.vertical, 6)
     }
 }
 
@@ -280,24 +412,23 @@ struct StatCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             Image(systemName: icon)
-                .font(.title2)
-                .foregroundStyle(DSColor.goldLight) // Gold accent
+                .font(.title3)
+                .foregroundStyle(DSColor.brandAccent)
             
             VStack(alignment: .leading, spacing: 4) {
                 Text(value)
-                    .font(.title)
-                    .fontWeight(.bold)
-                    .foregroundStyle(.white)
+                    .font(DSFont.sectionTitle)
+                    .foregroundStyle(DSColor.textPrimary)
                     .lineLimit(1)
                     .minimumScaleFactor(0.6)
                 Text(title)
-                    .font(.caption)
-                    .foregroundStyle(.white.opacity(0.7))
+                    .font(DSFont.meta)
+                    .foregroundStyle(DSColor.quietText)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding()
-        .glassCardStyle()
+        .padding(DSSpacing.md)
+        .appSurfaceStyle(role: .interactive)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(title): \(value)")
     }
@@ -327,21 +458,21 @@ private struct ExperienceHoursCard: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Experience Hours")
                         .font(.headline)
-                        .foregroundStyle(.white)
+                        .foregroundStyle(DSColor.textPrimary)
                     Text("Hours logged in Illuminote")
                         .font(.caption)
-                        .foregroundStyle(.white.opacity(0.7))
+                        .foregroundStyle(DSColor.quietText)
                 }
                 Spacer()
                 Label("See Breakdown", systemImage: "chevron.right")
                     .font(.caption.weight(.semibold))
-                    .foregroundStyle(DSColor.goldLight)
+                    .foregroundStyle(DSColor.brandAccent)
             }
 
             if experiences.isEmpty {
                 Text("Add note details with hours to start building your experience totals.")
                     .font(.subheadline)
-                    .foregroundStyle(.white.opacity(0.75))
+                    .foregroundStyle(DSColor.quietText)
             } else {
                 Chart(experiences, id: \.type) { item in
                     BarMark(
@@ -365,7 +496,7 @@ private struct ExperienceHoursCard: View {
                             if let label = value.as(String.self) {
                                 Text(label)
                                     .font(.caption)
-                                    .foregroundStyle(.white.opacity(0.8))
+                                    .foregroundStyle(DSColor.quietText)
                             }
                         }
                     }
@@ -379,15 +510,15 @@ private struct ExperienceHoursCard: View {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(experience.type.displayName)
                                     .font(.subheadline.weight(.semibold))
-                                    .foregroundStyle(.white)
+                                    .foregroundStyle(DSColor.textPrimary)
                                 Text("\(experience.count) note\(experience.count == 1 ? "" : "s")")
                                     .font(.caption)
-                                    .foregroundStyle(.white.opacity(0.68))
+                                    .foregroundStyle(DSColor.quietText)
                             }
                             Spacer()
                             Text("\(experience.hours.formattedOneDecimal) hrs")
                                 .font(.subheadline.weight(.semibold))
-                                .foregroundStyle(DSColor.goldLight)
+                                .foregroundStyle(DSColor.brandAccent)
                         }
                     }
                 }
@@ -395,16 +526,16 @@ private struct ExperienceHoursCard: View {
                 HStack {
                     Text("\(experiences.reduce(0) { $0 + $1.hours }, specifier: "%.1f") total hours")
                         .font(.caption)
-                        .foregroundStyle(.white.opacity(0.75))
+                        .foregroundStyle(DSColor.quietText)
                     Spacer()
                     Text("\(experiences.reduce(0) { $0 + $1.count }) notes shown")
                         .font(.caption)
-                        .foregroundStyle(.white.opacity(0.75))
+                        .foregroundStyle(DSColor.quietText)
                 }
             }
         }
         .padding()
-        .sacredCardStyle(highlighted: !experiences.isEmpty)
+        .appSurfaceStyle(role: .quiet, highlighted: false)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(accessibilitySummary)
         .accessibilityHint("Opens the hours breakdown and application experience tools.")
@@ -462,12 +593,12 @@ private struct ExperienceHoursBreakdownView: View {
                             ExperienceLogView()
                         } label: {
                             VStack(alignment: .leading, spacing: 6) {
-                                Text("Need application-ready entries too?")
+                                Text("Need application-ready records too?")
                                     .font(DSFont.caption.weight(.semibold))
                                     .foregroundStyle(DSColor.textSecondary)
-                                Text("Manage application experiences")
+                                Text("Manage application-ready experiences")
                                     .font(DSFont.body.weight(.semibold))
-                                Text("Build structured records with dates, contacts, highlights, and notes for AMCAS, TMDSAS, AADSAS, CASPA, and similar applications.")
+                                Text("Keep this separate from brainstorming. Build structured records with dates, contacts, highlights, and notes for AMCAS, TMDSAS, AADSAS, CASPA, and similar applications.")
                                     .font(DSFont.caption)
                             }
                             .frame(maxWidth: .infinity, alignment: .leading)
@@ -480,7 +611,7 @@ private struct ExperienceHoursBreakdownView: View {
                     VStack(alignment: .leading, spacing: 12) {
                         Text("At a glance")
                             .font(DSFont.heading2)
-                            .foregroundStyle(.white)
+                            .foregroundStyle(DSColor.textPrimary)
 
                         HStack {
                             summaryMetric(title: "Total hours", value: totalHours.formattedOneDecimal)
@@ -494,7 +625,7 @@ private struct ExperienceHoursBreakdownView: View {
                         VStack(alignment: .leading, spacing: 12) {
                             Text("No logged hours yet")
                                 .font(DSFont.heading2)
-                                .foregroundStyle(.white)
+                                .foregroundStyle(DSColor.textPrimary)
                             Text("Add hours to your reflection notes to start building a clear hours summary here.")
                                 .font(DSFont.body)
                                 .foregroundStyle(DSColor.textSecondary)
@@ -505,14 +636,14 @@ private struct ExperienceHoursBreakdownView: View {
                         VStack(alignment: .leading, spacing: 12) {
                             Text("Hours by experience")
                                 .font(DSFont.heading2)
-                                .foregroundStyle(.white)
+                                .foregroundStyle(DSColor.textPrimary)
 
                             ForEach(hourEntries, id: \.type) { entry in
                                 HStack(alignment: .firstTextBaseline, spacing: 12) {
                                     VStack(alignment: .leading, spacing: 4) {
                                         Text(entry.type.displayName)
                                             .font(DSFont.body.weight(.semibold))
-                                            .foregroundStyle(.white)
+                                            .foregroundStyle(DSColor.textPrimary)
                                         Text("\(entry.count) note\(entry.count == 1 ? "" : "s") logged")
                                             .font(DSFont.caption)
                                             .foregroundStyle(DSColor.textSecondary)
@@ -520,7 +651,7 @@ private struct ExperienceHoursBreakdownView: View {
                                     Spacer()
                                     Text("\(entry.hours.formattedOneDecimal) hrs")
                                         .font(DSFont.body.weight(.semibold))
-                                        .foregroundStyle(DSColor.goldLight)
+                                        .foregroundStyle(DSColor.brandAccent)
                                 }
                                 .padding(.vertical, 6)
                             }
@@ -540,7 +671,7 @@ private struct ExperienceHoursBreakdownView: View {
         VStack(alignment: .leading, spacing: 4) {
             Text(value)
                 .font(DSFont.heading2)
-                .foregroundStyle(.white)
+                .foregroundStyle(DSColor.textPrimary)
             Text(title)
                 .font(DSFont.caption)
                 .foregroundStyle(DSColor.textSecondary)

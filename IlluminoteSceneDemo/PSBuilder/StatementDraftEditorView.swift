@@ -8,6 +8,8 @@ struct StatementDraftEditorView: View {
     @State private var showingJournalPicker = false
     @State private var showingAIAdvisor = false
     @State private var showingAIUnavailableAlert = false
+    @State private var persistenceAlert: PersistenceAlertContext?
+    @State private var loadedDraftFingerprint = ""
 
     private enum ReviewState {
         case notReviewed
@@ -17,6 +19,10 @@ struct StatementDraftEditorView: View {
 
     private var useImmersive: Bool {
         settings.appThemeMode == .core
+    }
+
+    private var allowsAdvisor: Bool {
+        AppSettings.featurePolicy.allowsAdvisor
     }
 
     private var currentDraftTextForStatus: String {
@@ -55,9 +61,9 @@ struct StatementDraftEditorView: View {
 
     private var reviewStateLabel: String {
         switch reviewState {
-        case .notReviewed: return "Not Reviewed"
+        case .notReviewed: return "Not Yet Reviewed"
         case .reviewed: return "Reviewed"
-        case .needsReReview: return "Needs Re-Review"
+        case .needsReReview: return "Updated Since Review"
         }
     }
 
@@ -97,7 +103,7 @@ struct StatementDraftEditorView: View {
         if !draft.title.isEmpty {
             return draft.title
         }
-        return draft.isFinal ? "Final Draft" : "Edit Draft"
+        return draft.isSnapshot ? "Snapshot" : "Writing Draft"
     }
     
     var body: some View {
@@ -149,7 +155,7 @@ struct StatementDraftEditorView: View {
                         ForEach(draft.sections.sorted(by: { $0.order < $1.order })) { section in
                             VStack(alignment: .leading, spacing: 8) {
                                 HStack {
-                                    Text(section.source.rawValue.capitalized)
+                                    Text(section.source.displayName)
                                         .font(DSFont.caption)
                                         .padding(.horizontal, 6)
                                         .padding(.vertical, 2)
@@ -197,21 +203,25 @@ struct StatementDraftEditorView: View {
                             .foregroundStyle(useImmersive ? DSColor.textPrimary : .primary)
                             .lineLimit(1)
                             .truncationMode(.tail)
-                        reviewStateChip
+                        if allowsAdvisor {
+                            reviewStateChip
+                        }
                     }
                 }
-                ToolbarItem(placement: .topBarTrailing) {
-                    if DeviceCapabilities.hasSufficientMemoryForAI {
-                        Button {
-                            showingAIAdvisor = true
-                        } label: {
-                            Label("AI Advisor", systemImage: "sparkles")
-                        }
-                    } else {
-                        Button {
-                            showingAIUnavailableAlert = true
-                        } label: {
-                            Label("AI Advisor", systemImage: "sparkles")
+                if allowsAdvisor {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        if DeviceCapabilities.hasSufficientMemoryForAI {
+                            Button {
+                                showingAIAdvisor = true
+                            } label: {
+                                Label("AI Advisor", systemImage: "sparkles")
+                            }
+                        } else {
+                            Button {
+                                showingAIUnavailableAlert = true
+                            } label: {
+                                Label("AI Advisor", systemImage: "sparkles")
+                            }
                         }
                     }
                 }
@@ -238,18 +248,10 @@ struct StatementDraftEditorView: View {
                             Label("Save as New Version", systemImage: "doc.on.doc")
                         }
                         
-                        if !draft.isFinal {
-                            Button {
-                                markAsFinal()
-                            } label: {
-                                Label("Mark as Final", systemImage: "checkmark.seal")
-                            }
-                        } else {
-                            Button {
-                                draft.isFinal = false
-                            } label: {
-                                Label("Reopen Draft", systemImage: "lock.open")
-                            }
+                        Button {
+                            saveSnapshot()
+                        } label: {
+                            Label("Save Snapshot", systemImage: "checkmark.seal")
                         }
                     } label: {
                         Label("Options", systemImage: "ellipsis.circle")
@@ -273,6 +275,17 @@ struct StatementDraftEditorView: View {
             } message: {
                 Text("The AI Advisor feature runs entirely on-device to protect your privacy and requires at least 8GB of memory (e.g., iPhone 15 Pro or newer).")
             }
+            .persistenceFailureAlert($persistenceAlert)
+            .onAppear {
+                if !allowsAdvisor {
+                    showingAIAdvisor = false
+                    showingAIUnavailableAlert = false
+                }
+                loadedDraftFingerprint = draftFingerprint
+            }
+            .onDisappear {
+                persistDraftChangesIfNeeded("save this draft")
+            }
         }
     }
     
@@ -290,6 +303,7 @@ struct StatementDraftEditorView: View {
                 draft.sections.remove(at: idx)
             }
         }
+        persistDraftChanges("delete that section")
     }
     
     private func moveSection(from source: IndexSet, to destination: Int) {
@@ -300,12 +314,15 @@ struct StatementDraftEditorView: View {
         for (index, section) in sortedSections.enumerated() {
             section.order = index
         }
+        persistDraftChanges("reorder those sections")
     }
     
     private func addManualSection() {
         let newOrder = (draft.sections.map { $0.order }.max() ?? -1) + 1
         let section = StatementSection(source: .manual, content: "", order: newOrder)
         draft.sections.append(section)
+        draft.dateModified = Date()
+        persistDraftChanges("add a manual section")
     }
     
     private func saveAsNewVersion() {
@@ -313,7 +330,10 @@ struct StatementDraftEditorView: View {
         let newDraft = StatementDraft(
             title: draft.title,
             version: newVersion,
-            draftScope: draft.draftScope
+            draftScope: draft.draftScope,
+            writingTargetID: draft.writingTargetID,
+            writingTargetCategory: draft.writingTargetCategory,
+            customPromptText: draft.customPromptText
         )
         
         // Clone sections
@@ -328,13 +348,16 @@ struct StatementDraftEditorView: View {
         }
         
         modelContext.insert(newDraft)
+        persistDraftChanges("save a new draft version")
         // Navigate to new draft? Or just inform user?
         // For now, simpler to stay here or pop back.
     }
     
-    private func markAsFinal() {
-        draft.isFinal = true
-        draft.isLocked = true
+    private func saveSnapshot() {
+        draft.isSnapshot = true
+        draft.isLocked = false
+        draft.dateModified = Date()
+        persistDraftChanges("save this snapshot")
     }
 
     private var advisorSeedText: String {
@@ -354,5 +377,43 @@ struct StatementDraftEditorView: View {
             .sorted(by: { $0.order < $1.order })
             .map(\.content)
             .joined(separator: "\n\n")
+    }
+
+    private var draftFingerprint: String {
+        [
+            draft.title,
+            draft.version.description,
+            draft.isSnapshot.description,
+            draft.draftScopeRaw ?? "",
+            draft.writingTargetID ?? "",
+            draft.writingTargetCategoryRaw ?? "",
+            draft.customPromptText ?? "",
+            draft.sections
+                .sorted(by: { $0.order < $1.order })
+                .map { "\($0.id.uuidString)|\($0.order)|\($0.source.rawValue)|\($0.content)|\($0.sourceID?.uuidString ?? "")" }
+                .joined(separator: "||")
+        ].joined(separator: "|||")
+    }
+
+    private func persistDraftChangesIfNeeded(_ operation: String) {
+        guard draftFingerprint != loadedDraftFingerprint else { return }
+        persistDraftChanges(operation)
+    }
+
+    private func persistDraftChanges(_ operation: String) {
+        draft.dateModified = Date()
+        draft.isLocked = false
+
+        do {
+            try modelContext.persistIfNeeded(for: operation)
+            loadedDraftFingerprint = draftFingerprint
+        } catch let error as PersistenceOperationError {
+            persistenceAlert = error.alertContext
+        } catch {
+            persistenceAlert = PersistenceAlertContext.saveFailure(
+                for: operation,
+                details: error.localizedDescription
+            )
+        }
     }
 }
