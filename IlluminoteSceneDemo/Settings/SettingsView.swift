@@ -5,6 +5,7 @@
 import SwiftUI
 import SwiftData
 import UIKit
+import UniformTypeIdentifiers
 #if ILLUMINOTE_ENABLE_CLOUDKIT_DIAGNOSTICS
 import CloudKit
 #endif
@@ -14,6 +15,8 @@ struct SettingsView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.openURL) private var openURL
     @Query(sort: \UserProfile.id) private var profiles: [UserProfile]
+    @Query(sort: \ExamenSession.date, order: .reverse) private var allSessions: [ExamenSession]
+    @Query(sort: \ApplicationExperience.dateModified, order: .reverse) private var allExperiences: [ApplicationExperience]
     
     @State private var onDemandModelManager = OnDemandModelManager.shared
     @State private var mlxManager = MLXManager.shared
@@ -21,6 +24,15 @@ struct SettingsView: View {
     @State private var showOnboarding = false
     @State private var showExamenGuide = false
     @State private var showResetAlert = false
+    
+    // File Exporters State
+    @State private var showRTFExporter = false
+    @State private var rtfExportDocument: RTFDocument?
+    @State private var showTXTExporter = false
+    @State private var txtExportDocument: TXTDocument?
+    @State private var showCSVExporter = false
+    @State private var csvExportDocument: ApplicationExperienceCSVDocument?
+    
     @State private var showPrimaryAIInstallSheet = false
     @State private var experimental4BEnabled = AIModelRuntimePolicy.isExperimental4BEnabled
     @State private var primaryAIDownloadTask: Task<Void, Never>?
@@ -251,6 +263,7 @@ struct SettingsView: View {
                     if AppSettings.featurePolicy.showsAISettings {
                         aiPanel
                     }
+                    exportPanel
                     restoreDefaultsPanel
 
                     if AppSettings.featurePolicy.showsAISettings
@@ -356,6 +369,45 @@ struct SettingsView: View {
                     }
                 }
                 .presentationDetents([.medium, .large])
+            }
+            .fileExporter(
+                isPresented: $showRTFExporter,
+                document: rtfExportDocument,
+                contentType: .rtf,
+                defaultFilename: "IlluminoteJournalExport"
+            ) { result in
+                switch result {
+                case .success(let url):
+                    print("Exported RTF to: \(url)")
+                case .failure(let error):
+                    print("RTF export failed: \(error)")
+                }
+            }
+            .fileExporter(
+                isPresented: $showTXTExporter,
+                document: txtExportDocument,
+                contentType: .plainText,
+                defaultFilename: "IlluminoteJournalExport"
+            ) { result in
+                switch result {
+                case .success(let url):
+                    print("Exported TXT to: \(url)")
+                case .failure(let error):
+                    print("TXT export failed: \(error)")
+                }
+            }
+            .fileExporter(
+                isPresented: $showCSVExporter,
+                document: csvExportDocument,
+                contentType: .commaSeparatedText,
+                defaultFilename: "IlluminoteExperiencesExport"
+            ) { result in
+                switch result {
+                case .success(let url):
+                    print("Exported CSV to: \(url)")
+                case .failure(let error):
+                    print("CSV export failed: \(error)")
+                }
             }
         }
         .fullScreenCover(isPresented: $showOnboarding) {
@@ -939,6 +991,130 @@ struct SettingsView: View {
                 }
             }
         }
+    }
+
+    private var exportPanel: some View {
+        AppPanel(
+            title: "Export Workspace",
+            subtitle: "Download all reflections and application records as editable documents.",
+            role: .interactive
+        ) {
+            VStack(alignment: .leading, spacing: DSSpacing.md) {
+                Button {
+                    prepareRTFExport()
+                } label: {
+                    SettingsNavigationRow(
+                        icon: "doc.richtext",
+                        title: "Export Journal (RTF)",
+                        subtitle: "Save all reflections in a formatted RTF document."
+                    )
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("settings.export.rtf")
+
+                SettingsDivider()
+
+                Button {
+                    prepareTXTExport()
+                } label: {
+                    SettingsNavigationRow(
+                        icon: "doc.text",
+                        title: "Export Journal (TXT)",
+                        subtitle: "Save all reflections in a plain text file."
+                    )
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("settings.export.txt")
+
+                SettingsDivider()
+
+                Button {
+                    prepareCSVExport()
+                } label: {
+                    SettingsNavigationRow(
+                        icon: "tablecells",
+                        title: "Export Experiences (CSV)",
+                        subtitle: "Save all linked application records as a spreadsheet."
+                    )
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("settings.export.csv")
+            }
+        }
+    }
+
+    private func prepareRTFExport() {
+        let journalEntries = allSessions.filter { $0.sessionType != .statementDraft }
+            .sorted { $0.date < $1.date }
+        
+        var fullText = ""
+        let formatter = Date.FormatStyle(date: .abbreviated, time: .shortened)
+        
+        for entry in journalEntries {
+            fullText += formattedJournalEntryText(for: entry, dateStyle: formatter)
+            fullText += "\n\n------------------------------------------------\n\n"
+        }
+        
+        rtfExportDocument = RTFDocument(text: fullText)
+        showRTFExporter = true
+    }
+
+    private func prepareTXTExport() {
+        let journalEntries = allSessions.filter { $0.sessionType != .statementDraft }
+            .sorted { $0.date < $1.date }
+        
+        var fullText = ""
+        let formatter = Date.FormatStyle(date: .abbreviated, time: .shortened)
+        
+        for entry in journalEntries {
+            fullText += formattedJournalEntryText(for: entry, dateStyle: formatter)
+            fullText += "\n\n------------------------------------------------\n\n"
+        }
+        
+        txtExportDocument = TXTDocument(text: fullText)
+        showTXTExporter = true
+    }
+
+    private func prepareCSVExport() {
+        let csvText = ApplicationExperience.csvExport(for: allExperiences)
+        csvExportDocument = ApplicationExperienceCSVDocument(csvText: csvText)
+        showCSVExporter = true
+    }
+
+    private func formattedJournalEntryText(
+        for entry: ExamenSession,
+        dateStyle: Date.FormatStyle
+    ) -> String {
+        var sections: [String] = []
+
+        sections.append("— Journal \(entry.date.formatted(dateStyle)) —")
+
+        var metadata: [String] = []
+        if let type = entry.experienceType {
+            metadata.append("Experience: \(type.displayName)")
+        }
+        metadata.append(contentsOf: entry.detailMetadataLines())
+
+        if !metadata.isEmpty {
+            sections.append(metadata.joined(separator: "\n"))
+        }
+
+        let responsesText = entry.normalizedResponseTexts().joined(separator: "\n\n")
+        if !responsesText.isEmpty {
+            sections.append("— Prompt Responses —\n\(responsesText)")
+        }
+
+        let finalReflection = entry.personalStatement.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !finalReflection.isEmpty {
+            sections.append("— Final Reflection —\n\(finalReflection)")
+        }
+
+        let privateNotes = entry.notes?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        if !privateNotes.isEmpty {
+            sections.append("— Private Notes —\n\(privateNotes)")
+        }
+
+        return sections.joined(separator: "\n\n")
     }
 
     private var restoreDefaultsPanel: some View {
@@ -1768,3 +1944,27 @@ struct SettingsView_Previews: PreviewProvider {
     }
 }
 #endif
+
+struct TXTDocument: FileDocument {
+    static var readableContentTypes: [UTType] { [.plainText] }
+
+    var text: String
+
+    init(text: String) {
+        self.text = text
+    }
+
+    init(configuration: ReadConfiguration) throws {
+        if let data = configuration.file.regularFileContents,
+           let decoded = String(data: data, encoding: .utf8) {
+            text = decoded
+        } else {
+            text = ""
+        }
+    }
+
+    func fileWrapper(configuration: WriteConfiguration) throws -> FileWrapper {
+        FileWrapper(regularFileWithContents: Data(text.utf8))
+    }
+}
+

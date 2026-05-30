@@ -303,11 +303,16 @@ final class AppSettings {
 
     var selectedTab: AppRootTab = .home
     var pendingJournalEntryID: UUID?
+    var pendingJournalDetailsEntryID: UUID?
+    var deferredJournalDetailsEntryID: UUID?
     var pendingInsightEntryIDs: [UUID] = []
     var pendingInsightsLensRaw: String?
     var pendingWritingTargetID: String?
     var pendingWritingDraftID: UUID?
     var isTabBarVisible: Bool = true
+
+    @ObservationIgnored private var deferredJournalDetailsPresentationTask: Task<Void, Never>?
+    @ObservationIgnored private var deferredJournalDetailsPresentationGeneration = 0
 
     var pendingInsightsLens: InsightLens? {
         get {
@@ -316,6 +321,124 @@ final class AppSettings {
         }
         set {
             pendingInsightsLensRaw = newValue?.rawValue
+        }
+    }
+
+    func routeToJournalEntry(_ entryID: UUID?) {
+        cancelDeferredJournalDetailsPresentation()
+        deferredJournalDetailsEntryID = nil
+        pendingInsightEntryIDs = []
+        pendingInsightsLens = nil
+        pendingWritingTargetID = nil
+        pendingWritingDraftID = nil
+        pendingJournalDetailsEntryID = nil
+        pendingJournalEntryID = entryID
+        selectedTab = .journal
+    }
+
+    func routeToJournalDetails(for entryID: UUID) {
+        cancelDeferredJournalDetailsPresentation()
+        deferredJournalDetailsEntryID = nil
+        pendingJournalEntryID = nil
+        pendingInsightEntryIDs = []
+        pendingInsightsLens = nil
+        pendingWritingTargetID = nil
+        pendingWritingDraftID = nil
+        pendingJournalDetailsEntryID = entryID
+        selectedTab = .journal
+    }
+
+    func routeToInsights(lens: InsightLens = .themes, entryIDs: [UUID] = []) {
+        cancelDeferredJournalDetailsPresentation()
+        deferredJournalDetailsEntryID = nil
+        pendingJournalEntryID = nil
+        pendingJournalDetailsEntryID = nil
+        pendingInsightEntryIDs = entryIDs
+        pendingInsightsLens = lens
+        pendingWritingTargetID = nil
+        pendingWritingDraftID = nil
+        selectedTab = .insights
+    }
+
+    func routeToInsights(writingTargetID targetID: String) {
+        cancelDeferredJournalDetailsPresentation()
+        deferredJournalDetailsEntryID = nil
+        pendingJournalEntryID = nil
+        pendingJournalDetailsEntryID = nil
+        pendingInsightEntryIDs = []
+        pendingInsightsLens = nil
+        pendingWritingTargetID = targetID
+        pendingWritingDraftID = nil
+        selectedTab = .insights
+    }
+
+    func routeToWriting(draftID: UUID? = nil) {
+        cancelDeferredJournalDetailsPresentation()
+        deferredJournalDetailsEntryID = nil
+        pendingJournalEntryID = nil
+        pendingJournalDetailsEntryID = nil
+        pendingInsightEntryIDs = []
+        pendingInsightsLens = nil
+        pendingWritingTargetID = nil
+        pendingWritingDraftID = draftID
+        selectedTab = .statement
+    }
+
+    func routeHome() {
+        cancelDeferredJournalDetailsPresentation()
+        deferredJournalDetailsEntryID = nil
+        pendingJournalEntryID = nil
+        pendingJournalDetailsEntryID = nil
+        pendingInsightEntryIDs = []
+        pendingInsightsLens = nil
+        pendingWritingTargetID = nil
+        pendingWritingDraftID = nil
+        selectedTab = .home
+    }
+
+    func deferJournalDetailsRoute(for entryID: UUID) {
+        cancelDeferredJournalDetailsPresentation()
+        pendingJournalEntryID = nil
+        pendingJournalDetailsEntryID = nil
+        pendingInsightEntryIDs = []
+        pendingInsightsLens = nil
+        pendingWritingTargetID = nil
+        pendingWritingDraftID = nil
+        deferredJournalDetailsEntryID = entryID
+    }
+
+    func routeDeferredJournalDetailsIfNeeded(presentAfterDelay delayNanoseconds: UInt64 = 0) {
+        guard let entryID = deferredJournalDetailsEntryID else { return }
+        if delayNanoseconds == 0 {
+            routeToJournalDetails(for: entryID)
+            return
+        }
+
+        deferredJournalDetailsEntryID = nil
+        pendingJournalEntryID = nil
+        pendingJournalDetailsEntryID = nil
+        pendingInsightEntryIDs = []
+        pendingInsightsLens = nil
+        pendingWritingTargetID = nil
+        pendingWritingDraftID = nil
+        selectedTab = .journal
+
+        cancelDeferredJournalDetailsPresentation()
+        let presentationGeneration = deferredJournalDetailsPresentationGeneration
+        deferredJournalDetailsPresentationTask = Task { @MainActor in
+            try? await Task.sleep(nanoseconds: delayNanoseconds)
+            defer {
+                if self.deferredJournalDetailsPresentationGeneration == presentationGeneration {
+                    self.deferredJournalDetailsPresentationTask = nil
+                }
+            }
+            guard !Task.isCancelled else { return }
+            guard self.deferredJournalDetailsPresentationGeneration == presentationGeneration else { return }
+            guard self.selectedTab == .journal else { return }
+            guard self.pendingWritingTargetID == nil, self.pendingWritingDraftID == nil else { return }
+            guard self.pendingInsightEntryIDs.isEmpty, self.pendingInsightsLens == nil else { return }
+            self.pendingJournalEntryID = nil
+            self.pendingJournalDetailsEntryID = entryID
         }
     }
 
@@ -333,10 +456,13 @@ final class AppSettings {
     }
 
     func resetToDefaults() {
+        cancelDeferredJournalDetailsPresentation()
         backgroundAnimationEnabled = true
         selectedThemeRaw = ExamenTheme.sacredVoid.rawValue
         selectedTab = .home
         pendingJournalEntryID = nil
+        pendingJournalDetailsEntryID = nil
+        deferredJournalDetailsEntryID = nil
         pendingInsightEntryIDs = []
         pendingInsightsLensRaw = nil
         pendingWritingTargetID = nil
@@ -352,6 +478,12 @@ final class AppSettings {
 
     private static func clampPromptSpeechRate(_ value: Double) -> Double {
         min(max(value, promptSpeechRateRange.lowerBound), promptSpeechRateRange.upperBound)
+    }
+
+    private func cancelDeferredJournalDetailsPresentation() {
+        deferredJournalDetailsPresentationGeneration += 1
+        deferredJournalDetailsPresentationTask?.cancel()
+        deferredJournalDetailsPresentationTask = nil
     }
 
     private func applyBuildPolicy() {

@@ -3,6 +3,23 @@ import SwiftData
 import OSLog
 
 enum InsightsViewSupport {
+    enum CoreMode: String, CaseIterable, Identifiable {
+        case patterns
+        case experiences
+
+        var id: String { rawValue }
+
+        var title: String {
+            switch self {
+            case .patterns: return "Patterns"
+            case .experiences: return "Experiences"
+            }
+        }
+    }
+
+    static let coreDefaultLens: InsightLens = .themes
+    static let coreVisibleLenses: [InsightLens] = [.themes, .experiences]
+
     struct LensSummary {
         let nodesCount: Int
         let draftsCount: Int
@@ -138,6 +155,33 @@ enum InsightsViewSupport {
             }
 
         return LandingState(summariesByLens: summaries, suggestedLens: suggestedLens)
+    }
+
+    static func promptContext(for suggestion: InsightSuggestion) -> InsightPromptContext {
+        let signals = orderedUniqueTitles(
+            from: [suggestion.title] + suggestion.keywordHighlights
+        )
+        return InsightPromptContext(
+            lens: suggestion.lens,
+            signalTitles: Array(signals.prefix(4)),
+            entryCount: suggestion.entries.count
+        )
+    }
+
+    static func orderedUniqueTitles(from titles: [String]) -> [String] {
+        var seen = Set<String>()
+        var result: [String] = []
+
+        for title in titles {
+            let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty else { continue }
+            let key = trimmed.lowercased()
+            guard !seen.contains(key) else { continue }
+            seen.insert(key)
+            result.append(trimmed)
+        }
+
+        return result
     }
 }
 
@@ -297,55 +341,57 @@ struct InsightsView: View {
     }
     
     var body: some View {
-        NavigationStack {
-            ZStack {
-                InsightsSupportingBackground()
-                
-                AppPageScrollView {
-                    VStack(alignment: .leading, spacing: DSSpacing.lg) {
-                        AppPageHeader(
-                            title: "Insights",
-                            eyebrow: AppSettings.featurePolicy.mode == .core ? nil : "Workbench",
-                            subtitle: AppSettings.featurePolicy.mode == .core
-                                ? "Notice what your reflections are showing you."
-                                : "Explore patterns and build your perspective over time."
-                        )
+        if AppSettings.featurePolicy.mode == .core {
+            CoreInsightsView()
+        } else {
+            NavigationStack {
+                ZStack {
+                    InsightsSupportingBackground()
 
-                        InsightsEntryGuide(suggestedLens: landingState.suggestedLens)
-                        
-                        LazyVGrid(columns: columns, spacing: DSSpacing.sm) {
-                            ForEach(InsightLens.allCases) { lens in
-                                Button(action: { activeStudioLens = lens }) {
-                                    InsightBentoTile(
-                                        lens: lens,
-                                        nodesCount: landingState.summary(for: lens).nodesCount,
-                                        draftsCount: landingState.summary(for: lens).draftsCount,
-                                        isSuggestedStart: landingState.suggestedLens == lens
-                                    )
+                    AppPageScrollView {
+                        VStack(alignment: .leading, spacing: DSSpacing.lg) {
+                            AppPageHeader(
+                                title: "Insights",
+                                eyebrow: "Workbench",
+                                subtitle: "Explore patterns and build your perspective over time."
+                            )
+
+                            InsightsEntryGuide(suggestedLens: landingState.suggestedLens)
+
+                            LazyVGrid(columns: columns, spacing: DSSpacing.sm) {
+                                ForEach(InsightLens.allCases) { lens in
+                                    Button(action: { activeStudioLens = lens }) {
+                                        InsightBentoTile(
+                                            lens: lens,
+                                            nodesCount: landingState.summary(for: lens).nodesCount,
+                                            draftsCount: landingState.summary(for: lens).draftsCount,
+                                            isSuggestedStart: landingState.suggestedLens == lens
+                                        )
+                                    }
+                                    .buttonStyle(.plain)
+                                    .accessibilityIdentifier("insights.lens.\(lens.rawValue)")
                                 }
-                                .buttonStyle(.plain)
-                                .accessibilityIdentifier("insights.lens.\(lens.rawValue)")
                             }
                         }
                     }
                 }
-            }
-            .navigationTitle("")
-            .navigationBarTitleDisplayMode(.inline)
-            .fullScreenCover(item: $activeStudioLens) { lens in
-                InsightStudioView(selectedLens: lens)
-            }
-            .task {
-                openPendingStudioIfNeeded()
-            }
-            .onChange(of: settings.selectedTab) { _, _ in
-                openPendingStudioIfNeeded()
-            }
-            .onChange(of: settings.pendingInsightsLensRaw) { _, _ in
-                openPendingStudioIfNeeded()
-            }
-            .task(id: landingMetricsRevision) {
-                landingState = InsightsViewSupport.landingState(nodes: nodes, drafts: drafts)
+                .navigationTitle("")
+                .navigationBarTitleDisplayMode(.inline)
+                .fullScreenCover(item: $activeStudioLens) { lens in
+                    InsightStudioView(selectedLens: lens)
+                }
+                .task {
+                    openPendingStudioIfNeeded()
+                }
+                .onChange(of: settings.selectedTab) { _, _ in
+                    openPendingStudioIfNeeded()
+                }
+                .onChange(of: settings.pendingInsightsLensRaw) { _, _ in
+                    openPendingStudioIfNeeded()
+                }
+                .task(id: landingMetricsRevision) {
+                    landingState = InsightsViewSupport.landingState(nodes: nodes, drafts: drafts)
+                }
             }
         }
     }
@@ -373,6 +419,547 @@ struct InsightsView: View {
         guard activeStudioLens == nil else { return }
         guard let pendingLens = settings.pendingInsightsLens else { return }
         activeStudioLens = pendingLens
+    }
+}
+
+private struct CoreInsightsView: View {
+    private enum SheetRoute: Identifiable {
+        case brainstorm(InsightSuggestion)
+        case addToDraft(UUID)
+
+        var id: String {
+            switch self {
+            case .brainstorm(let suggestion):
+                return "brainstorm-\(suggestion.id.uuidString)"
+            case .addToDraft(let entryID):
+                return "addToDraft-\(entryID.uuidString)"
+            }
+        }
+    }
+
+    @Environment(\.modelContext) private var modelContext
+    @Environment(AppSettings.self) private var settings
+
+    @Query(sort: [SortDescriptor(\ExamenSession.date, order: .reverse)])
+    private var allSessions: [ExamenSession]
+    @Query(sort: [SortDescriptor(\InsightWorkspaceEntry.updatedAt, order: .reverse)])
+    private var workspaceEntries: [InsightWorkspaceEntry]
+    @Query private var practiceThemes: [PracticeTheme]
+
+    @State private var selectedMode: InsightsViewSupport.CoreMode = .patterns
+    @State private var patternSuggestions: [InsightSuggestion] = []
+    @State private var experienceSuggestions: [InsightSuggestion] = []
+    @State private var isAnalyzing = false
+    @State private var activeSheet: SheetRoute?
+    @State private var persistenceAlert: PersistenceAlertContext?
+    @State private var refreshTask: Task<Void, Never>?
+    @State private var activeAnalysisRevision: Int?
+
+    private let analysisService = InsightsAnalysisService()
+
+    private var journalEntries: [ExamenSession] {
+        allSessions.filter { $0.sessionType != .statementDraft }
+    }
+
+    private var entriesByID: [UUID: ExamenSession] {
+        Dictionary(uniqueKeysWithValues: journalEntries.map { ($0.id, $0) })
+    }
+
+    private var visibleSuggestions: [InsightSuggestion] {
+        switch selectedMode {
+        case .patterns:
+            return patternSuggestions
+        case .experiences:
+            return experienceSuggestions
+        }
+    }
+
+    private var experienceGroups: [(type: ExperienceType, suggestions: [InsightSuggestion])] {
+        Dictionary(grouping: experienceSuggestions) { suggestion in
+            suggestion.experienceType?.canonical ?? .other
+        }
+        .map { (type: $0.key, suggestions: $0.value.sorted { $0.score > $1.score }) }
+        .sorted { lhs, rhs in
+            if lhs.suggestions.count == rhs.suggestions.count {
+                return lhs.type.displayName < rhs.type.displayName
+            }
+            return lhs.suggestions.count > rhs.suggestions.count
+        }
+    }
+
+    private var contentRevision: Int {
+        var hasher = Hasher()
+        for entry in allSessions where entry.sessionType != .statementDraft {
+            hasher.combine(entry.id)
+            hasher.combine(entry.date)
+            hasher.combine(entry.sessionType.rawValue)
+            hasher.combine(entry.experienceType?.rawValue)
+            hasher.combine(entry.examenModeRaw)
+            hasher.combine(entry.personalStatement)
+            hasher.combine(entry.title)
+            hasher.combine(entry.physician)
+            hasher.combine(entry.facility)
+            hasher.combine(entry.specialty)
+            hasher.combine(entry.location)
+            hasher.combine(entry.mentorOrSupervisor)
+            hasher.combine(entry.roleTitle)
+            hasher.combine(entry.organizationName)
+            hasher.combine(entry.focusArea)
+            hasher.combine(entry.notes)
+            hasher.combine(entry.tags)
+        }
+        for theme in practiceThemes {
+            hasher.combine(theme.id)
+            hasher.combine(theme.title)
+            hasher.combine(theme.themeDescription)
+        }
+        return hasher.finalize()
+    }
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                InsightsSupportingBackground()
+
+                AppPageScrollView {
+                    VStack(alignment: .leading, spacing: DSSpacing.lg) {
+                        AppPageHeader(
+                            title: "Insights",
+                            eyebrow: nil,
+                            subtitle: "What your reflections are showing you."
+                        )
+
+                        Picker("Insights view", selection: $selectedMode) {
+                            ForEach(InsightsViewSupport.CoreMode.allCases) { mode in
+                                Text(mode.title).tag(mode)
+                            }
+                        }
+                        .pickerStyle(.segmented)
+                        .accessibilityIdentifier("insights.core.modePicker")
+
+                        if isAnalyzing {
+                            CoreInsightsLoadingCard()
+                        }
+
+                        content
+                    }
+                }
+            }
+            .navigationTitle("")
+            .navigationBarTitleDisplayMode(.inline)
+            .sheet(item: $activeSheet) { route in
+                sheetContent(for: route)
+                    .presentationBackground(DSColor.backgroundPrimary)
+            }
+            .task(id: contentRevision) {
+                refreshSuggestions(for: contentRevision)
+            }
+            .onDisappear {
+                refreshTask?.cancel()
+            }
+            .persistenceFailureAlert($persistenceAlert)
+        }
+    }
+
+    @ViewBuilder
+    private var content: some View {
+        if journalEntries.isEmpty {
+            CoreInsightsEmptyCard(
+                title: "No reflections yet",
+                message: "Save a reflection first. Insights will look for patterns here."
+            )
+        } else {
+            switch selectedMode {
+            case .patterns:
+                if patternSuggestions.isEmpty && !isAnalyzing {
+                    CoreInsightsEmptyCard(
+                        title: "Patterns need a little more material",
+                        message: "A few more reflections will make recurring patterns easier to see."
+                    )
+                } else {
+                    VStack(alignment: .leading, spacing: DSSpacing.md) {
+                        ForEach(patternSuggestions) { suggestion in
+                            CoreInsightSuggestionCard(
+                                suggestion: suggestion,
+                                entriesByID: entriesByID,
+                                actionTitle: "Brainstorm",
+                                onBrainstorm: { activeSheet = .brainstorm(suggestion) }
+                            )
+                        }
+                    }
+                    .accessibilityIdentifier("insights.core.patterns")
+                }
+
+            case .experiences:
+                if experienceGroups.isEmpty && !isAnalyzing {
+                    CoreInsightsEmptyCard(
+                        title: "No experience patterns yet",
+                        message: "Reflections will gather here by experience type."
+                    )
+                } else {
+                    VStack(alignment: .leading, spacing: DSSpacing.lg) {
+                        ForEach(experienceGroups, id: \.type) { group in
+                            VStack(alignment: .leading, spacing: DSSpacing.sm) {
+                                Text(group.type.displayName)
+                                    .font(DSFont.sectionTitle)
+                                    .foregroundStyle(DSColor.textPrimary)
+
+                                ForEach(group.suggestions) { suggestion in
+                                    CoreInsightSuggestionCard(
+                                        suggestion: suggestion,
+                                        entriesByID: entriesByID,
+                                        actionTitle: "Brainstorm",
+                                        onBrainstorm: { activeSheet = .brainstorm(suggestion) }
+                                    )
+                                }
+                            }
+                        }
+                    }
+                    .accessibilityIdentifier("insights.core.experiences")
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func sheetContent(for route: SheetRoute) -> some View {
+        switch route {
+        case .brainstorm(let suggestion):
+            CoreInsightBrainstormSheet(
+                suggestion: suggestion,
+                entriesByID: entriesByID,
+                onSave: { draft in
+                    _ = saveBrainstorm(draft)
+                    activeSheet = nil
+                },
+                onSendToWriting: { draft in
+                    guard let entry = saveBrainstorm(draft) else { return }
+                    activeSheet = .addToDraft(entry.id)
+                }
+            )
+        case .addToDraft(let entryID):
+            AddToStatementSheet(
+                selectedEntries: [],
+                selectedWorkspaceEntries: workspaceEntries.filter { $0.id == entryID },
+                onComplete: { activeSheet = nil }
+            )
+        }
+    }
+
+    private func refreshSuggestions(for revision: Int) {
+        let inputs = analysisService.makeInputs(from: journalEntries)
+        let taxonomyTitles = practiceThemes.map { ($0.id, $0.title, $0.themeDescription) }
+        guard !inputs.isEmpty else {
+            refreshTask?.cancel()
+            activeAnalysisRevision = revision
+            patternSuggestions = []
+            experienceSuggestions = []
+            isAnalyzing = false
+            return
+        }
+
+        activeAnalysisRevision = revision
+        isAnalyzing = true
+        refreshTask?.cancel()
+
+        refreshTask = Task.detached(priority: .userInitiated) {
+            let service = InsightsAnalysisService()
+            let patterns = service.analyzeThemes(
+                entries: inputs,
+                taxonomyTitles: taxonomyTitles,
+                scope: .acrossExperiences,
+                selectedExperience: nil
+            )
+            let experiences = service.analyzeExperiences(entries: inputs)
+
+            guard !Task.isCancelled else { return }
+
+            await MainActor.run {
+                guard activeAnalysisRevision == revision else { return }
+                patternSuggestions = patterns
+                experienceSuggestions = experiences
+                isAnalyzing = false
+            }
+        }
+    }
+
+    private func saveBrainstorm(_ draft: CoreInsightBrainstormDraft) -> InsightWorkspaceEntry? {
+        let trimmed = draft.body.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+        let trimmedTitle = draft.title.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        let entry = InsightWorkspaceEntry(
+            lens: draft.lens,
+            title: trimmedTitle.isEmpty ? "Brainstorm" : trimmedTitle,
+            promptKey: draft.promptKey,
+            body: trimmed,
+            sourceEntryIDs: draft.sourceEntryIDs
+        )
+        modelContext.insert(entry)
+
+        do {
+            _ = try modelContext.persistIfNeeded(for: "save your brainstorming")
+            return entry
+        } catch let error as PersistenceOperationError {
+            persistenceAlert = error.alertContext
+            return nil
+        } catch {
+            persistenceAlert = PersistenceAlertContext.saveFailure(
+                for: "save your brainstorming",
+                details: error.localizedDescription
+            )
+            return nil
+        }
+    }
+}
+
+private struct CoreInsightBrainstormDraft {
+    let lens: InsightLens
+    let title: String
+    let promptKey: String?
+    let body: String
+    let sourceEntryIDs: [UUID]
+}
+
+private struct CoreInsightSuggestionCard: View {
+    let suggestion: InsightSuggestion
+    let entriesByID: [UUID: ExamenSession]
+    let actionTitle: String
+    let onBrainstorm: () -> Void
+
+    private var evidenceSnippets: [String] {
+        suggestion.entries
+            .prefix(2)
+            .map(\.evidenceSnippet)
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: DSSpacing.md) {
+            VStack(alignment: .leading, spacing: DSSpacing.xs) {
+                Text(suggestion.title)
+                    .font(DSFont.body.weight(.semibold))
+                    .foregroundStyle(DSColor.textPrimary)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Text("\(suggestion.entries.count) reflection\(suggestion.entries.count == 1 ? "" : "s")")
+                    .font(DSFont.supporting)
+                    .foregroundStyle(DSColor.quietText)
+            }
+
+            if !evidenceSnippets.isEmpty {
+                VStack(alignment: .leading, spacing: DSSpacing.xs) {
+                    ForEach(evidenceSnippets, id: \.self) { snippet in
+                        Text(snippet)
+                            .font(DSFont.supporting)
+                            .foregroundStyle(DSColor.textSecondary)
+                            .lineLimit(3)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+            }
+
+            Button(action: onBrainstorm) {
+                Label(actionTitle, systemImage: "square.and.pencil")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.appPrimary)
+            .accessibilityIdentifier("insights.core.brainstorm.\(suggestion.id.uuidString)")
+        }
+        .padding(DSSpacing.md)
+        .appSurfaceStyle(role: .interactive, highlighted: false)
+        .accessibilityElement(children: .contain)
+    }
+}
+
+private struct CoreInsightBrainstormSheet: View {
+    @Environment(\.dismiss) private var dismiss
+
+    let suggestion: InsightSuggestion
+    let entriesByID: [UUID: ExamenSession]
+    let onSave: (CoreInsightBrainstormDraft) -> Void
+    let onSendToWriting: (CoreInsightBrainstormDraft) -> Void
+
+    @State private var title: String
+    @State private var bodyText: String = ""
+    @State private var selectedPromptKey: String?
+
+    private var context: InsightPromptContext {
+        InsightsViewSupport.promptContext(for: suggestion)
+    }
+
+    private var templates: [InsightPromptTemplate] {
+        Array(InsightPromptCatalog.templates(for: suggestion.lens).prefix(3))
+    }
+
+    private var selectedTemplate: InsightPromptTemplate? {
+        templates.first { $0.promptKey == selectedPromptKey } ?? templates.first
+    }
+
+    private var canSave: Bool {
+        !bodyText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    init(
+        suggestion: InsightSuggestion,
+        entriesByID: [UUID: ExamenSession],
+        onSave: @escaping (CoreInsightBrainstormDraft) -> Void,
+        onSendToWriting: @escaping (CoreInsightBrainstormDraft) -> Void
+    ) {
+        self.suggestion = suggestion
+        self.entriesByID = entriesByID
+        self.onSave = onSave
+        self.onSendToWriting = onSendToWriting
+        let context = InsightsViewSupport.promptContext(for: suggestion)
+        let firstTemplate = InsightPromptCatalog.templates(for: suggestion.lens).first
+        self._title = State(initialValue: firstTemplate?.suggestedTitle(using: context) ?? suggestion.title)
+        self._selectedPromptKey = State(initialValue: firstTemplate?.promptKey)
+    }
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: DSSpacing.lg) {
+                    AppPanel(
+                        title: suggestion.title,
+                        subtitle: "\(suggestion.entries.count) reflection\(suggestion.entries.count == 1 ? "" : "s")",
+                        role: .reading,
+                        highlighted: true
+                    ) {
+                        VStack(alignment: .leading, spacing: DSSpacing.xs) {
+                            ForEach(suggestion.entries.prefix(2), id: \.entryID) { entry in
+                                Text(entry.evidenceSnippet)
+                                    .font(DSFont.supporting)
+                                    .foregroundStyle(DSColor.textSecondary)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                        }
+                    }
+
+                    VStack(alignment: .leading, spacing: DSSpacing.sm) {
+                        Text("Choose a prompt")
+                            .font(DSFont.body.weight(.semibold))
+                            .foregroundStyle(DSColor.textPrimary)
+
+                        ForEach(templates) { template in
+                            Button {
+                                selectedPromptKey = template.promptKey
+                                title = template.suggestedTitle(using: context)
+                            } label: {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(template.title)
+                                        .font(DSFont.body.weight(.semibold))
+                                        .foregroundStyle(DSColor.textPrimary)
+                                    Text(template.resolvedPrompt(using: context))
+                                        .font(DSFont.supporting)
+                                        .foregroundStyle(DSColor.quietText)
+                                        .fixedSize(horizontal: false, vertical: true)
+                                }
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(DSSpacing.md)
+                                .appSurfaceStyle(
+                                    role: .interactive,
+                                    highlighted: selectedPromptKey == template.promptKey
+                                )
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+
+                    VStack(alignment: .leading, spacing: DSSpacing.sm) {
+                        Text("Brainstorm")
+                            .font(DSFont.body.weight(.semibold))
+                            .foregroundStyle(DSColor.textPrimary)
+
+                        TextField("Title", text: $title)
+                            .font(DSFont.body.weight(.semibold))
+                            .padding(DSSpacing.md)
+                            .background(DSColor.surfaceElevated)
+                            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                            .accessibilityLabel("Brainstorm title")
+
+                        TextEditor(text: $bodyText)
+                            .scrollContentBackground(.hidden)
+                            .frame(minHeight: 260)
+                            .padding(12)
+                            .background(DSColor.readingSurface)
+                            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                    .stroke(DSColor.dividerSoft, lineWidth: 1)
+                            )
+                            .accessibilityLabel("Brainstorming")
+                            .accessibilityIdentifier("insights.core.brainstorm.editor")
+                    }
+
+                    HStack(spacing: DSSpacing.sm) {
+                        Button("Save") {
+                            onSave(draft)
+                        }
+                        .buttonStyle(.appSecondary)
+                        .disabled(!canSave)
+
+                        Button("Send to Writing") {
+                            onSendToWriting(draft)
+                        }
+                        .buttonStyle(.appPrimary)
+                        .disabled(!canSave)
+                        .accessibilityIdentifier("insights.core.sendToWriting")
+                    }
+                }
+                .padding(DSSpacing.lg)
+            }
+            .navigationTitle("Brainstorm")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Close") { dismiss() }
+                }
+            }
+        }
+    }
+
+    private var draft: CoreInsightBrainstormDraft {
+        CoreInsightBrainstormDraft(
+            lens: suggestion.lens,
+            title: title,
+            promptKey: selectedTemplate?.promptKey,
+            body: bodyText,
+            sourceEntryIDs: suggestion.entries.map(\.entryID)
+        )
+    }
+}
+
+private struct CoreInsightsLoadingCard: View {
+    var body: some View {
+        HStack(spacing: DSSpacing.md) {
+            ProgressView()
+            Text("Looking for patterns...")
+                .font(DSFont.supporting)
+                .foregroundStyle(DSColor.quietText)
+        }
+        .padding(DSSpacing.md)
+        .appSurfaceStyle(role: .quiet)
+    }
+}
+
+private struct CoreInsightsEmptyCard: View {
+    let title: String
+    let message: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: DSSpacing.sm) {
+            Text(title)
+                .font(DSFont.sectionTitle)
+                .foregroundStyle(DSColor.textPrimary)
+            Text(message)
+                .font(DSFont.supporting)
+                .foregroundStyle(DSColor.quietText)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(DSSpacing.md)
+        .appSurfaceStyle(role: .quiet)
     }
 }
 
@@ -764,8 +1351,7 @@ struct InsightStudioView: View {
                         DraftCreatedConfirmationBanner(
                             confirmation: createdDraftConfirmation,
                             onOpen: {
-                                settings.pendingWritingDraftID = createdDraftConfirmation.draftID
-                                settings.selectedTab = .statement
+                                settings.routeToWriting(draftID: createdDraftConfirmation.draftID)
                                 withAnimation(AnimationConfig.screenTransition) {
                                     self.createdDraftConfirmation = nil
                                 }

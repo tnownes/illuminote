@@ -53,6 +53,12 @@ struct StatementListView: View {
     @State private var persistenceAlert: PersistenceAlertContext?
     @AppStorage(AppCoachStorageKey.writing) private var isWritingCoachDismissed = false
 
+    @State private var renameTargetDraft: StatementDraft?
+    @State private var isRenameAlertPresented = false
+    @State private var draftRenameText = ""
+    @State private var deleteTargetDraft: StatementDraft?
+    @State private var isDeleteConfirmationPresented = false
+
     private let requirementsService = LocalStatementRequirementsService()
     private let targetCatalogService = LocalWritingTargetCatalogService()
     private let applicationEntryCatalogService = LocalApplicationEntryCatalogService()
@@ -93,11 +99,7 @@ struct StatementListView: View {
     }
 
     private var supplementalTargets: [WritingTargetDefinition] {
-        targets.filter { $0.category == .supplementalEssay }
-    }
-
-    private var schoolSpecificTargets: [WritingTargetDefinition] {
-        targets.filter { $0.category == .schoolSpecificEssay }
+        targets.filter { $0.category == .supplementalEssay || $0.category == .schoolSpecificEssay }
     }
 
     private var unassignedDrafts: [StatementDraft] {
@@ -139,6 +141,29 @@ struct StatementListView: View {
         .background(Color.clear)
         .toolbarColorScheme(useImmersive ? .dark : nil, for: .navigationBar)
         .persistenceFailureAlert($persistenceAlert)
+        .alert("Rename Draft", isPresented: $isRenameAlertPresented) {
+            TextField("Draft name", text: $draftRenameText)
+            Button("Cancel", role: .cancel) { }
+            Button("Save") {
+                commitDraftRename()
+            }
+        } message: {
+            Text("Choose a name you will recognize when you return to this essay.")
+        }
+        .alert("Delete Draft?", isPresented: $isDeleteConfirmationPresented) {
+            Button("Cancel", role: .cancel) { }
+            Button("Delete", role: .destructive) {
+                if let draft = deleteTargetDraft {
+                    deleteDraft(draft)
+                }
+            }
+        } message: {
+            if let draft = deleteTargetDraft {
+                Text("Are you sure you want to permanently delete '\(draft.title.isEmpty ? "Untitled Draft" : draft.title)'?")
+            } else {
+                Text("Are you sure you want to delete this draft?")
+            }
+        }
         .task(id: profileSignature) {
             await loadWritingTargets()
             consumePendingWritingDraftIfNeeded()
@@ -210,27 +235,15 @@ struct StatementListView: View {
                             .transition(.opacity.combined(with: .scale(scale: 0.98)))
                         }
 
-                        WritingTargetSectionView(
-                            title: "Core Statements",
+                        WritingPrimaryTargetsView(
                             targets: coreTargets,
                             drafts: drafts,
-                            requirements: requirements,
-                            catalog: targetCatalogService,
                             usesWideLayout: usesWideWritingLayout
                         )
 
                         WritingTargetSectionView(
                             title: "Supplemental Essays",
                             targets: supplementalTargets,
-                            drafts: drafts,
-                            requirements: requirements,
-                            catalog: targetCatalogService,
-                            usesWideLayout: usesWideWritingLayout
-                        )
-
-                        WritingTargetSectionView(
-                            title: "School-Specific Essays",
-                            targets: schoolSpecificTargets,
                             drafts: drafts,
                             requirements: requirements,
                             catalog: targetCatalogService,
@@ -253,7 +266,10 @@ struct StatementListView: View {
                                 usesWideLayout: usesWideWritingLayout,
                                 onAssign: { draft in
                                     activeSheet = .assignDraft(draft.id)
-                                }
+                                },
+                                onRename: { beginRenameDraft($0) },
+                                onDuplicate: { duplicateDraft($0) },
+                                onDelete: { requestDeleteDraft($0) }
                             )
                         }
                     }
@@ -275,7 +291,10 @@ struct StatementListView: View {
                     },
                     onAddFromJournal: {
                         activeSheet = .journalPicker(target.id)
-                    }
+                    },
+                    onRenameDraft: { beginRenameDraft($0) },
+                    onDuplicateDraft: { duplicateDraft($0) },
+                    onDeleteDraft: { requestDeleteDraft($0) }
                 )
             }
             .navigationDestination(for: UUID.self) { draftID in
@@ -360,9 +379,8 @@ struct StatementListView: View {
                     }
                     .accessibilityIdentifier("writing.sidebar.overview")
 
-                    writingTargetSidebarSection(title: "Core Statements", targets: coreTargets)
+                    writingTargetSidebarSection(title: "Personal Statements", targets: coreTargets)
                     writingTargetSidebarSection(title: "Supplemental Essays", targets: supplementalTargets)
-                    writingTargetSidebarSection(title: "School-Specific Essays", targets: schoolSpecificTargets)
 
                     if !unassignedDrafts.isEmpty {
                         VStack(alignment: .leading, spacing: DSSpacing.sm) {
@@ -377,6 +395,12 @@ struct StatementListView: View {
                                     selectWritingDraft(draft.id)
                                 }
                                 .accessibilityIdentifier("writing.sidebar.draft.\(draft.id.uuidString)")
+                                .draftContextMenu(
+                                    draft: draft,
+                                    onRename: { beginRenameDraft($0) },
+                                    onDuplicate: { duplicateDraft($0) },
+                                    onDelete: { requestDeleteDraft($0) }
+                                )
                             }
                         }
                     }
@@ -437,12 +461,14 @@ struct StatementListView: View {
                                     activeSheet = .journalPicker(target.id)
                                 },
                                 onAddFromInsights: {
-                                    settings.pendingWritingTargetID = target.id
-                                    settings.selectedTab = .insights
+                                    settings.routeToInsights(writingTargetID: target.id)
                                 },
                                 onOpenDraft: { draft in
                                     selectWritingDraft(draft.id)
-                                }
+                                },
+                                onRename: { beginRenameDraft($0) },
+                                onDuplicate: { duplicateDraft($0) },
+                                onDelete: { requestDeleteDraft($0) }
                             )
                             .transition(.opacity)
                         }
@@ -468,7 +494,10 @@ struct StatementListView: View {
                 onCreateDraft: { activeSheet = .addWriting(nil) },
                 onOpenDraft: { draft in
                     selectWritingDraft(draft.id)
-                }
+                },
+                onRename: { beginRenameDraft($0) },
+                onDuplicate: { duplicateDraft($0) },
+                onDelete: { requestDeleteDraft($0) }
             )
         case .target(let targetID):
             if let target = targets.first(where: { $0.id == targetID }) {
@@ -482,7 +511,10 @@ struct StatementListView: View {
                     },
                     onOpenDraft: { draft in
                         selectWritingDraft(draft.id)
-                    }
+                    },
+                    onRenameDraft: { beginRenameDraft($0) },
+                    onDuplicateDraft: { duplicateDraft($0) },
+                    onDeleteDraft: { requestDeleteDraft($0) }
                 )
             } else {
                 WritingEmptyDetailView(
@@ -665,6 +697,60 @@ struct StatementListView: View {
         try? await Task.sleep(nanoseconds: 350_000_000)
     }
 
+    private func beginRenameDraft(_ draft: StatementDraft) {
+        renameTargetDraft = draft
+        draftRenameText = draft.title.isEmpty ? "Untitled Draft" : draft.title
+        isRenameAlertPresented = true
+    }
+
+    private func commitDraftRename() {
+        guard let draft = renameTargetDraft else { return }
+        let trimmedTitle = draftRenameText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedTitle.isEmpty, trimmedTitle != draft.title else { return }
+
+        draft.title = trimmedTitle
+        draft.dateModified = Date()
+        draft.isLocked = false
+        draft.syncRevision = (draft.syncRevision ?? 0) + 1
+        persistChanges("rename this draft")
+        renameTargetDraft = nil
+    }
+
+    private func requestDeleteDraft(_ draft: StatementDraft) {
+        deleteTargetDraft = draft
+        isDeleteConfirmationPresented = true
+    }
+
+    private func deleteDraft(_ draft: StatementDraft) {
+        modelContext.delete(draft)
+        persistChanges("delete this draft")
+        deleteTargetDraft = nil
+    }
+
+    private func duplicateDraft(_ draft: StatementDraft) {
+        let duplicatedTitle = draft.title.isEmpty ? "Untitled Draft Copy" : "\(draft.title) Copy"
+        let copy = StatementDraft(
+            title: duplicatedTitle,
+            version: draft.version + 1,
+            richTextData: draft.richTextData,
+            draftScope: draft.draftScope,
+            writingTargetID: draft.writingTargetID,
+            writingTargetCategory: draft.writingTargetCategory,
+            customPromptText: draft.customPromptText
+        )
+        for section in draft.sections {
+            let clonedSection = StatementSection(
+                source: section.source,
+                content: section.content,
+                order: section.order,
+                sourceID: section.sourceID
+            )
+            copy.sections.append(clonedSection)
+        }
+        modelContext.insert(copy)
+        persistChanges("duplicate this draft")
+    }
+
     private func importDraft(from url: URL) {
         guard url.startAccessingSecurityScopedResource() else { return }
         defer { url.stopAccessingSecurityScopedResource() }
@@ -730,6 +816,63 @@ private struct WritingTargetSectionView: View {
                         .buttonStyle(.plain)
                         .accessibilityIdentifier("writing.target.\(target.id)")
                     }
+                }
+            }
+        }
+    }
+
+    private func draftCount(for target: WritingTargetDefinition) -> Int {
+        drafts.filter { $0.writingTargetID == target.id }.count
+    }
+
+    private func latestStatus(for target: WritingTargetDefinition) -> String {
+        guard let latest = drafts
+            .filter({ $0.writingTargetID == target.id })
+            .sorted(by: { $0.dateModified > $1.dateModified })
+            .first else {
+            return "No drafts yet"
+        }
+
+        let relative = RelativeDateTimeFormatter()
+        relative.unitsStyle = .abbreviated
+        let stamp = relative.localizedString(for: latest.dateModified, relativeTo: Date())
+        if latest.isSnapshot {
+            return "Snapshot updated \(stamp)"
+        }
+        return "Updated \(stamp)"
+    }
+}
+
+private struct WritingPrimaryTargetsView: View {
+    let targets: [WritingTargetDefinition]
+    let drafts: [StatementDraft]
+    let usesWideLayout: Bool
+
+    private var columns: [GridItem] {
+        [
+            GridItem(
+                usesWideLayout ? .adaptive(minimum: 260, maximum: 360) : .flexible(),
+                spacing: DSSpacing.sm,
+                alignment: .top
+            )
+        ]
+    }
+
+    var body: some View {
+        if targets.isEmpty {
+            WritingEmptySectionCard(message: "No personal statement target is active for your current profile yet.")
+        } else {
+            LazyVGrid(columns: columns, alignment: .leading, spacing: DSSpacing.sm) {
+                ForEach(targets) { target in
+                    NavigationLink(value: target) {
+                        WritingTargetCard(
+                            target: target,
+                            draftCount: draftCount(for: target),
+                            latestStatus: latestStatus(for: target)
+                        )
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("writing.target.\(target.id)")
                 }
             }
         }
@@ -825,6 +968,9 @@ private struct WritingAssignmentSection: View {
     let drafts: [StatementDraft]
     let usesWideLayout: Bool
     let onAssign: (StatementDraft) -> Void
+    let onRename: (StatementDraft) -> Void
+    let onDuplicate: (StatementDraft) -> Void
+    let onDelete: (StatementDraft) -> Void
 
     private var columns: [GridItem] {
         [
@@ -849,6 +995,12 @@ private struct WritingAssignmentSection: View {
                             WritingDraftRow(draft: draft, targetTitle: "Needs Assignment")
                         }
                         .buttonStyle(.plain)
+                        .draftContextMenu(
+                            draft: draft,
+                            onRename: onRename,
+                            onDuplicate: onDuplicate,
+                            onDelete: onDelete
+                        )
 
                         Button("Assign Essay Type") {
                             onAssign(draft)
@@ -867,10 +1019,17 @@ private struct WritingTargetCard: View {
     let draftCount: Int
     let latestStatus: String
 
+    private var displayTitle: String {
+        if target.category == .coreStatement && target.writingDisplayTitle == "Personal Statement" {
+            return "Personal Statements"
+        }
+        return target.writingDisplayTitle
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: DSSpacing.sm) {
             VStack(alignment: .leading, spacing: 4) {
-                Text(target.writingDisplayTitle)
+                Text(displayTitle)
                     .font(DSFont.sectionTitle)
                     .foregroundStyle(DSColor.textPrimary)
                     .lineLimit(2)
@@ -898,7 +1057,7 @@ private struct WritingTargetCard: View {
         .padding(DSSpacing.md)
         .frame(maxWidth: .infinity, alignment: .leading)
         .appSurfaceStyle(role: .reading, highlighted: true)
-        .accessibilityLabel("\(target.writingDisplayTitle), \(draftCount) drafts, \(latestStatus)")
+        .accessibilityLabel("\(displayTitle), \(draftCount) drafts, \(latestStatus)")
     }
 }
 
@@ -949,14 +1108,52 @@ private struct WritingDraftRow: View {
 
 private struct WritingEmptySectionCard: View {
     let message: String
+    var systemImage: String = "doc.text.magnifyingglass"
+    var actionTitle: String? = nil
+    var action: (() -> Void)? = nil
+
+    @Environment(AppSettings.self) private var settings
+
+    private var useImmersive: Bool {
+        settings.appThemeMode == .core
+    }
 
     var body: some View {
-        Text(message)
-            .font(DSFont.supporting)
-            .foregroundStyle(DSColor.textSecondary)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(DSSpacing.md)
-            .appSurfaceStyle(role: .quiet, highlighted: false)
+        VStack(spacing: DSSpacing.md) {
+            ZStack {
+                // Soft gold blurred circular glow
+                Circle()
+                    .fill(DSColor.goldLight.opacity(0.12))
+                    .frame(width: 80, height: 80)
+                    .blur(radius: 12)
+
+                Image(systemName: systemImage)
+                    .font(.system(size: 28, weight: .light))
+                    .foregroundStyle(DSColor.brandAccent)
+            }
+            .padding(.top, DSSpacing.xs)
+
+            VStack(spacing: DSSpacing.xs) {
+                Text(message)
+                    .font(DSFont.body)
+                    .foregroundStyle(DSColor.textPrimary)
+                    .multilineTextAlignment(.center)
+            }
+            .padding(.horizontal, DSSpacing.sm)
+
+            if let actionTitle, let action {
+                Button(action: action) {
+                    Text(actionTitle)
+                        .font(DSFont.meta.weight(.semibold))
+                }
+                .buttonStyle(.appSecondary)
+                .padding(.bottom, DSSpacing.xs)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, DSSpacing.xl)
+        .padding(.horizontal, DSSpacing.md)
+        .appSurfaceStyle(role: .quiet, highlighted: false)
     }
 }
 
@@ -1069,24 +1266,27 @@ private struct WritingSidebarExpandedTargetContent: View {
     let onAddFromJournal: () -> Void
     let onAddFromInsights: () -> Void
     let onOpenDraft: (StatementDraft) -> Void
+    let onRename: (StatementDraft) -> Void
+    let onDuplicate: (StatementDraft) -> Void
+    let onDelete: (StatementDraft) -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: DSSpacing.sm) {
             VStack(spacing: DSSpacing.xs) {
                 WritingSidebarTargetActionButton(
-                    title: "Create Draft",
+                    title: "New Draft",
                     systemImage: "plus",
                     emphasized: true,
                     action: onCreateDraft
                 )
                 WritingSidebarTargetActionButton(
-                    title: "Add from Journal",
+                    title: "From Journal",
                     systemImage: "book",
                     emphasized: false,
                     action: onAddFromJournal
                 )
                 WritingSidebarTargetActionButton(
-                    title: "Add from Insights",
+                    title: "From Insights",
                     systemImage: "sparkles",
                     emphasized: false,
                     action: onAddFromInsights
@@ -1111,6 +1311,12 @@ private struct WritingSidebarExpandedTargetContent: View {
                             }
                         )
                         .accessibilityIdentifier("writing.sidebar.target.\(target.id).draft.\(draft.id.uuidString)")
+                        .draftContextMenu(
+                            draft: draft,
+                            onRename: onRename,
+                            onDuplicate: onDuplicate,
+                            onDelete: onDelete
+                        )
                     }
                 }
             }
@@ -1216,6 +1422,82 @@ private struct WritingSidebarDraftChildRow: View {
     }
 }
 
+private struct WritingTargetOptionsBar: View {
+    let onCreateDraft: () -> Void
+    let onAddFromJournal: () -> Void
+    let onAddFromInsights: () -> Void
+    @State private var showsSourceOptions = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: DSSpacing.sm) {
+            Text("Options")
+                .font(DSFont.body.weight(.semibold))
+                .foregroundStyle(DSColor.textPrimary)
+
+            Button {
+                withAnimation(AnimationConfig.screenTransition) {
+                    showsSourceOptions.toggle()
+                }
+            } label: {
+                HStack(spacing: DSSpacing.sm) {
+                    Image(systemName: "plus")
+                    Text("New Draft")
+                    Spacer(minLength: DSSpacing.sm)
+                    Image(systemName: showsSourceOptions ? "chevron.up" : "chevron.down")
+                        .font(.caption.weight(.semibold))
+                        .accessibilityHidden(true)
+                }
+                .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.appPrimary)
+            .accessibilityIdentifier("writing.target.create.menu")
+            .accessibilityHint("Shows ways to start a draft")
+
+            if showsSourceOptions {
+                VStack(alignment: .leading, spacing: DSSpacing.sm) {
+                    compactButton("Start Blank", systemImage: "doc", action: onCreateDraft)
+                    HStack(spacing: DSSpacing.sm) {
+                        compactButton("From Journal", systemImage: "book", action: onAddFromJournal)
+                        compactButton("From Insights", systemImage: "sparkles", action: onAddFromInsights)
+                    }
+                }
+                .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+        }
+    }
+
+    private func compactButton(
+        _ title: String,
+        systemImage: String,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            Label(title, systemImage: systemImage)
+                .font(DSFont.meta.weight(.semibold))
+                .lineLimit(1)
+                .minimumScaleFactor(0.86)
+                .padding(.horizontal, DSSpacing.md)
+                .frame(maxWidth: .infinity)
+                .frame(minHeight: 44)
+        }
+        .buttonStyle(.appSecondary)
+        .accessibilityIdentifier(accessibilityIdentifier(for: title))
+    }
+
+    private func accessibilityIdentifier(for title: String) -> String {
+        switch title {
+        case "Start Blank":
+            return "writing.target.create"
+        case "From Journal":
+            return "writing.target.addJournal"
+        case "From Insights":
+            return "writing.target.addInsights"
+        default:
+            return "writing.target.option"
+        }
+    }
+}
+
 private struct WritingSplitWelcomeView: View {
     let settings: AppSettings
     let useImmersive: Bool
@@ -1227,6 +1509,9 @@ private struct WritingSplitWelcomeView: View {
     let onDismissCoach: () -> Void
     let onCreateDraft: () -> Void
     let onOpenDraft: (StatementDraft) -> Void
+    let onRename: (StatementDraft) -> Void
+    let onDuplicate: (StatementDraft) -> Void
+    let onDelete: (StatementDraft) -> Void
 
     var body: some View {
         ZStack {
@@ -1299,6 +1584,12 @@ private struct WritingSplitWelcomeView: View {
                                         }
                                         .buttonStyle(.plain)
                                         .accessibilityIdentifier("writing.overview.draft.\(draft.id.uuidString)")
+                                        .draftContextMenu(
+                                            draft: draft,
+                                            onRename: onRename,
+                                            onDuplicate: onDuplicate,
+                                            onDelete: onDelete
+                                        )
                                     }
                                 }
                             }
@@ -1344,6 +1635,9 @@ private struct WritingTargetDetailView: View {
     let onCreateDraft: () -> Void
     let onAddFromJournal: () -> Void
     var onOpenDraft: ((StatementDraft) -> Void)? = nil
+    let onRenameDraft: (StatementDraft) -> Void
+    let onDuplicateDraft: (StatementDraft) -> Void
+    let onDeleteDraft: (StatementDraft) -> Void
 
     @Query(sort: [SortDescriptor(\StatementDraft.dateModified, order: .reverse)])
     private var drafts: [StatementDraft]
@@ -1362,16 +1656,6 @@ private struct WritingTargetDetailView: View {
 
     private var detailCanvasMaxWidth: CGFloat {
         usesWideLayout ? 920 : .infinity
-    }
-
-    private var actionColumns: [GridItem] {
-        [
-            GridItem(
-                usesWideLayout ? .adaptive(minimum: 220, maximum: 280) : .flexible(),
-                spacing: DSSpacing.sm,
-                alignment: .top
-            )
-        ]
     }
 
     var body: some View {
@@ -1428,42 +1712,28 @@ private struct WritingTargetDetailView: View {
                     }
 
                     if !usesWideLayout {
-                        AppPanel(
-                            title: "Actions",
-                            subtitle: "Stay grounded in the prompt while deciding how to start this draft.",
-                            role: .interactive
-                        ) {
-                            LazyVGrid(columns: actionColumns, alignment: .leading, spacing: DSSpacing.sm) {
-                                Button("Create Draft") {
-                                    onCreateDraft()
-                                }
-                                .buttonStyle(.appPrimary)
-                                .accessibilityIdentifier("writing.target.create")
-
-                                Button("Add from Journal") {
-                                    onAddFromJournal()
-                                }
-                                .buttonStyle(.appSecondary)
-                                .accessibilityIdentifier("writing.target.addJournal")
-
-                                Button("Add from Insights") {
-                                    settings.pendingWritingTargetID = target.id
-                                    settings.selectedTab = .insights
-                                    dismiss()
-                                }
-                                .buttonStyle(.appSecondary)
-                                .accessibilityIdentifier("writing.target.addInsights")
+                        WritingTargetOptionsBar(
+                            onCreateDraft: onCreateDraft,
+                            onAddFromJournal: onAddFromJournal,
+                            onAddFromInsights: {
+                                settings.routeToInsights(writingTargetID: target.id)
+                                dismiss()
                             }
-                        }
+                        )
                     }
 
                     AppPanel(
-                        title: "Drafts",
-                        subtitle: matchedDrafts.isEmpty ? "No drafts are assigned here yet." : "Open and continue shaping any draft already tied to this target.",
+                        title: "Current Drafts",
+                        subtitle: nil,
                         role: .interactive
                     ) {
                         if matchedDrafts.isEmpty {
-                            WritingEmptySectionCard(message: "Start a draft here when you are ready.")
+                            WritingEmptySectionCard(
+                                message: "Start a draft here when you are ready.",
+                                systemImage: "pencil.line",
+                                actionTitle: "Create Draft",
+                                action: onCreateDraft
+                            )
                         } else {
                             VStack(spacing: DSSpacing.sm) {
                                 ForEach(matchedDrafts) { draft in
@@ -1475,12 +1745,24 @@ private struct WritingTargetDetailView: View {
                                         }
                                         .buttonStyle(.plain)
                                         .accessibilityIdentifier("writing.target.draft.\(draft.id.uuidString)")
+                                        .draftContextMenu(
+                                            draft: draft,
+                                            onRename: onRenameDraft,
+                                            onDuplicate: onDuplicateDraft,
+                                            onDelete: onDeleteDraft
+                                        )
                                     } else {
                                         NavigationLink(value: draft.id) {
                                             WritingDraftRow(draft: draft, targetTitle: target.writingDisplayTitle)
                                         }
                                         .buttonStyle(.plain)
                                         .accessibilityIdentifier("writing.target.draft.\(draft.id.uuidString)")
+                                        .draftContextMenu(
+                                            draft: draft,
+                                            onRename: onRenameDraft,
+                                            onDuplicate: onDuplicateDraft,
+                                            onDelete: onDeleteDraft
+                                        )
                                     }
                                 }
                             }
@@ -1543,6 +1825,37 @@ struct WritingDraftAssignmentSheet: View {
                 for: "assign that essay type",
                 details: error.localizedDescription
             )
+        }
+    }
+}
+
+extension View {
+    func draftContextMenu(
+        draft: StatementDraft,
+        onRename: @escaping (StatementDraft) -> Void,
+        onDuplicate: @escaping (StatementDraft) -> Void,
+        onDelete: @escaping (StatementDraft) -> Void
+    ) -> some View {
+        self.contextMenu {
+            Button {
+                onRename(draft)
+            } label: {
+                Label("Rename Draft", systemImage: "pencil")
+            }
+            
+            Button {
+                onDuplicate(draft)
+            } label: {
+                Label("Duplicate Draft", systemImage: "doc.on.doc")
+            }
+            
+            Divider()
+            
+            Button(role: .destructive) {
+                onDelete(draft)
+            } label: {
+                Label("Delete Draft", systemImage: "trash")
+            }
         }
     }
 }

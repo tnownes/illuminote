@@ -108,26 +108,73 @@ final class IlluminoteSceneDemoUITests: XCTestCase {
         XCTAssertTrue(app.navigationBars["Choose Notes"].waitForExistence(timeout: 5))
     }
 
-    func testJournalContextActionRoutesEntryToInsightsSelection() throws {
-        let app = launchSeededApp()
+    func testCoreQuickNoteSaveAndAddDetailsRoutesToJournalDetails() throws {
+        let app = launchSeededApp(extraArguments: ["-illuminote-core"])
 
-        app.tabBars.buttons["Journal"].tap()
+        openClinicalQuickNoteDetailsHandoff(in: app)
 
-        let selectButton = app.buttons["journal.selection.toggle"]
-        XCTAssertTrue(selectButton.waitForExistence(timeout: 5))
-        selectButton.tap()
+        XCTAssertTrue(app.navigationBars["Add Details"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Add details to this reflection"].exists)
+        XCTAssertTrue(app.buttons["journal.details.save"].exists)
+        XCTAssertTrue(app.buttons["journal.details.skip"].exists)
+        XCTAssertFalse(app.buttons["completion.viewJournal"].exists)
+        app.buttons["journal.details.skip"].tap()
+    }
 
-        let rowButton = app.buttons["journal.entryButton"].firstMatch
-        XCTAssertTrue(rowButton.waitForExistence(timeout: 5))
-        rowButton.tap()
+    func testCoreQuickNoteDetailsSaveUpdatesJournalRow() throws {
+        let app = launchSeededApp(extraArguments: ["-illuminote-core"])
 
-        let addToInsightsButton = app.buttons["journal.selection.primaryAddToInsights"]
-        XCTAssertTrue(addToInsightsButton.waitForExistence(timeout: 5))
-        XCTAssertTrue(addToInsightsButton.isEnabled)
-        addToInsightsButton.tap()
+        openClinicalQuickNoteDetailsHandoff(in: app)
 
-        XCTAssertTrue(app.buttons["insights.chooseNotes"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.staticTexts["Selected Reflections (1)"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.navigationBars["Add Details"].waitForExistence(timeout: 5))
+        let typePicker = app.buttons["journal.details.typePicker"]
+        XCTAssertTrue(typePicker.waitForExistence(timeout: 5))
+        typePicker.tap()
+        let leadershipOption = app.buttons["Leadership"]
+        XCTAssertTrue(leadershipOption.waitForExistence(timeout: 5))
+        leadershipOption.tap()
+
+        app.buttons["journal.details.save"].tap()
+
+        let leadershipText = app.staticTexts.matching(NSPredicate(format: "label CONTAINS[c] %@", "Leadership")).firstMatch
+        XCTAssertTrue(leadershipText.waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Examen Reflection"].waitForExistence(timeout: 5))
+    }
+
+    func testCoreQuickNoteDetailsTypeChangeUsesRelevantFields() throws {
+        let app = launchSeededApp(extraArguments: ["-illuminote-core"])
+
+        openClinicalQuickNoteDetailsHandoff(in: app)
+
+        XCTAssertTrue(app.staticTexts["Supervisor / Mentor"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Clinical Focus"].exists)
+
+        app.buttons["journal.details.typePicker"].tap()
+        let serviceOption = app.buttons["Service / Volunteer"]
+        XCTAssertTrue(serviceOption.waitForExistence(timeout: 5))
+        serviceOption.tap()
+
+        XCTAssertTrue(app.staticTexts["Role"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Organization"].exists)
+        XCTAssertFalse(app.staticTexts["Clinical Focus"].exists)
+        app.buttons["journal.details.skip"].tap()
+    }
+
+    func testCoreQuickNoteSaveToJournalKeepsCompletionFlow() throws {
+        let app = launchSeededApp(extraArguments: ["-illuminote-core"])
+
+        startClinicalQuickNote(in: app)
+
+        let saveToJournal = app.buttons["examen.details.saveToJournal"]
+        XCTAssertTrue(saveToJournal.waitForExistence(timeout: 5))
+        saveToJournal.tap()
+
+        let viewJournal = app.buttons["completion.viewJournal"]
+        XCTAssertTrue(viewJournal.waitForExistence(timeout: 5))
+        viewJournal.tap()
+
+        XCTAssertTrue(app.navigationBars["Journal Entry"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["journal.viewer.details"].exists)
     }
 
     func testJournalViewerRoutesDirectlyIntoEditSheet() throws {
@@ -329,5 +376,23 @@ final class IlluminoteSceneDemoUITests: XCTestCase {
         app.launchArguments = ["-ui-testing", "-ui-testing-seed-insights"] + extraArguments
         app.launch()
         return app
+    }
+
+    private func startClinicalQuickNote(in app: XCUIApplication) {
+        let quickNoteButton = app.buttons["home.quickNote"]
+        XCTAssertTrue(quickNoteButton.waitForExistence(timeout: 5))
+        quickNoteButton.tap()
+
+        let clinicalButton = app.buttons["Clinical"]
+        XCTAssertTrue(clinicalButton.waitForExistence(timeout: 5))
+        clinicalButton.tap()
+    }
+
+    private func openClinicalQuickNoteDetailsHandoff(in app: XCUIApplication) {
+        startClinicalQuickNote(in: app)
+
+        let saveAndAddDetails = app.buttons["examen.details.saveAndAddDetails"]
+        XCTAssertTrue(saveAndAddDetails.waitForExistence(timeout: 5))
+        saveAndAddDetails.tap()
     }
 }

@@ -2,6 +2,203 @@ import SwiftUI
 import SwiftData
 import NaturalLanguage
 
+enum JournalDetailsEditorSource: String, Hashable {
+    case postExamenHandoff
+    case journalEdit
+
+    var navigationTitle: String {
+        switch self {
+        case .postExamenHandoff: return "Add Details"
+        case .journalEdit: return "Edit Details"
+        }
+    }
+
+    var headerTitle: String {
+        switch self {
+        case .postExamenHandoff: return "Add details to this reflection"
+        case .journalEdit: return "Edit Details"
+        }
+    }
+
+    var headerSubtitle: String {
+        switch self {
+        case .postExamenHandoff:
+            return "You can keep this simple. These details help Journal stay searchable later."
+        case .journalEdit:
+            return "Update the context that helps this reflection stay findable."
+        }
+    }
+
+    var secondaryActionTitle: String {
+        switch self {
+        case .postExamenHandoff: return "Skip"
+        case .journalEdit: return "Cancel"
+        }
+    }
+}
+
+struct JournalDetailsDraft: Equatable {
+    var experience: ExperienceType?
+    var primaryValue = ""
+    var secondaryValue = ""
+    var focusValue = ""
+    var location = ""
+    var notes = ""
+    var hoursString = ""
+    var tags: [String] = []
+    var newTagText = ""
+
+    init() {
+        self.experience = nil
+    }
+
+    init(entry: ExamenSession) {
+        let type = entry.experienceType?.canonical
+        let config = (type ?? .other).detailFieldConfig
+
+        self.experience = type
+        self.primaryValue = config.showsPrimary ? (entry.resolvedPrimaryDetail ?? "") : ""
+        self.secondaryValue = config.showsFacility ? (entry.resolvedSecondaryDetail ?? "") : ""
+        self.focusValue = config.showsFocus ? (entry.resolvedFocusDetail ?? "") : ""
+        self.location = config.showsLocation ? (entry.location ?? "") : ""
+        self.notes = entry.notes ?? ""
+        self.hoursString = config.showsHours && entry.hours > 0 ? String(format: "%g", entry.hours) : ""
+        self.tags = entry.tags
+        self.newTagText = ""
+    }
+
+    var canonicalExperience: ExperienceType? {
+        experience?.canonical
+    }
+
+    var detailConfig: ExperienceDetailFieldConfig {
+        (canonicalExperience ?? .other).detailFieldConfig
+    }
+
+    mutating func changeExperience(to newExperience: ExperienceType?) {
+        let previousType = canonicalExperience
+        let newType = newExperience?.canonical
+        let newConfig = (newType ?? .other).detailFieldConfig
+
+        experience = newType
+
+        if !newConfig.showsPrimary {
+            primaryValue = ""
+        }
+
+        if !newConfig.showsFacility {
+            secondaryValue = ""
+        }
+
+        if !newConfig.showsLocation {
+            location = ""
+        }
+
+        if !newConfig.showsHours {
+            hoursString = ""
+        }
+
+        if !newConfig.showsFocus || focusFamily(for: previousType) != focusFamily(for: newType) {
+            focusValue = ""
+        }
+    }
+
+    mutating func addTag() {
+        let tag = newTagText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !tag.isEmpty else { return }
+        if !tags.contains(tag) {
+            tags.append(tag)
+        }
+        newTagText = ""
+    }
+
+    mutating func removeTag(_ tag: String) {
+        tags.removeAll { $0 == tag }
+    }
+
+    func apply(to entry: ExamenSession) {
+        entry.experienceType = canonicalExperience
+        entry.notes = Self.normalized(notes)
+        entry.tags = tags
+
+        guard let type = canonicalExperience else {
+            clearReflectionDetails(on: entry)
+            return
+        }
+
+        let config = type.detailFieldConfig
+        let primary = Self.normalized(primaryValue)
+        let secondary = Self.normalized(secondaryValue)
+        let focus = Self.normalized(focusValue)
+        let place = Self.normalized(location)
+
+        entry.location = config.showsLocation ? place : nil
+        entry.organizationName = config.showsFacility ? secondary : nil
+        entry.facility = config.showsFacility ? secondary : nil
+        entry.focusArea = config.showsFocus ? focus : nil
+        entry.specialty = config.showsFocus ? focus : nil
+        entry.hours = config.showsHours ? (Double(hoursString) ?? 0) : 0
+
+        switch type {
+        case .shadowing, .clinical, .research:
+            entry.mentorOrSupervisor = config.showsPrimary ? primary : nil
+            entry.physician = config.showsPrimary ? primary : nil
+            entry.roleTitle = nil
+        case .leadership, .service, .work:
+            entry.roleTitle = config.showsPrimary ? primary : nil
+            entry.mentorOrSupervisor = nil
+            entry.physician = nil
+        case .other, .volunteer, .discernment:
+            entry.roleTitle = nil
+            entry.mentorOrSupervisor = nil
+            entry.physician = nil
+        }
+    }
+
+    private func focusFamily(for type: ExperienceType?) -> JournalDetailsFocusFamily? {
+        switch type {
+        case .shadowing, .clinical, .research:
+            return .professional
+        case .discernment:
+            return .discernment
+        case .leadership, .work, .service, .volunteer, .other, .none:
+            return nil
+        }
+    }
+
+    private func clearReflectionDetails(on entry: ExamenSession) {
+        entry.hours = 0
+        entry.physician = nil
+        entry.facility = nil
+        entry.specialty = nil
+        entry.location = nil
+        entry.mentorOrSupervisor = nil
+        entry.roleTitle = nil
+        entry.organizationName = nil
+        entry.focusArea = nil
+    }
+
+    private static func normalized(_ value: String) -> String? {
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
+    }
+}
+
+private enum JournalDetailsFocusFamily {
+    case professional
+    case discernment
+}
+
+private enum JournalDetailsField: Hashable {
+    case hours
+    case primary
+    case secondary
+    case location
+    case focus
+    case notes
+    case tag
+}
+
 struct JournalView: View {
     private let journalDateStyle = Date.FormatStyle(date: .abbreviated, time: .shortened)
     private static let monthHeaderFormatter: DateFormatter = {
@@ -63,7 +260,7 @@ struct JournalView: View {
     enum DatePreset: String, CaseIterable { case all, last7, last30, last365, custom }
 
     private enum JournalSheetRoute: Identifiable {
-        case editDetails(UUID)
+        case editDetails(UUID, JournalDetailsEditorSource)
         case viewEntry(UUID)
         case editText(UUID)
         case bulkTagging
@@ -72,8 +269,8 @@ struct JournalView: View {
 
         var id: String {
             switch self {
-            case .editDetails(let entryID):
-                return "editDetails-\(entryID.uuidString)"
+            case .editDetails(let entryID, let source):
+                return "editDetails-\(source.rawValue)-\(entryID.uuidString)"
             case .viewEntry(let entryID):
                 return "viewEntry-\(entryID.uuidString)"
             case .editText(let entryID):
@@ -103,10 +300,8 @@ struct JournalView: View {
     @State private var customEnd: Date = .now
     @State private var activeSheet: JournalSheetRoute?
     @State private var activeCover: JournalCoverRoute?
-    
-    @State private var tempExperience: ExperienceType? = nil
-    @State private var tempTags: [String] = []
-    @State private var newTagText: String = ""
+
+    @State private var detailsDraft = JournalDetailsDraft()
 
     @State private var bulkTags: [String] = []
     @State private var bulkNewTagText: String = ""
@@ -209,7 +404,7 @@ struct JournalView: View {
 
     private var selectionModeCaption: String? {
         guard editMode == .active else { return nil }
-        return "Selection mode is on. Choose reflections, then add them to Insights or use the menu for bulk actions."
+        return "Selection mode is on. Choose reflections, then use the menu for available actions."
     }
 
     var body: some View {
@@ -228,7 +423,7 @@ struct JournalView: View {
                         JournalFirstUseState(
                             useImmersive: useImmersive,
                             onCaptureQuickNote: { showQuickNoteTypePicker = true },
-                            onGoHome: { settings.selectedTab = .home }
+                            onGoHome: { settings.routeHome() }
                         )
                     } else if usesJournalSidebar {
                         HStack(alignment: .top, spacing: 0) {
@@ -243,10 +438,7 @@ struct JournalView: View {
                                 .frame(width: 1)
                                 .padding(.bottom, DSSpacing.sm)
 
-                            VStack(spacing: DSSpacing.xs) {
-                                selectionInsightsButton
-                                journalResultsContent
-                            }
+                            journalResultsContent
                             .padding(.leading, DSSpacing.md)
                             .padding(.trailing, DSSpacing.lg)
                         }
@@ -277,13 +469,18 @@ struct JournalView: View {
             .onChange(of: allSessions.count) { _, _ in
                 refilter()
                 presentPendingJournalEntryIfNeeded()
+                presentPendingJournalDetailsIfNeeded()
             }
             .onChange(of: settings.pendingJournalEntryID) { _, _ in
                 presentPendingJournalEntryIfNeeded()
             }
+            .onChange(of: settings.pendingJournalDetailsEntryID) { _, _ in
+                presentPendingJournalDetailsIfNeeded()
+            }
             .onAppear {
                 refilter()
                 presentPendingJournalEntryIfNeeded()
+                presentPendingJournalDetailsIfNeeded()
             }
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
@@ -303,14 +500,6 @@ struct JournalView: View {
 
                     Menu {
                         Button {
-                            let chosen = filteredSessions.filter { selectedIDs.contains($0.id) }
-                            openInsights(with: chosen)
-                        } label: {
-                            Label("Open in Insights", systemImage: "sparkles.rectangle.stack")
-                        }
-                        .disabled(!(editMode == .active && !selectedIDs.isEmpty))
-
-                        Button {
                             clearFilters()
                         } label: {
                             Label("Clear Filters", systemImage: "xmark.circle")
@@ -327,14 +516,18 @@ struct JournalView: View {
                                 Label("Tag Selected", systemImage: "tag")
                             }
                             .disabled(!(editMode == .active && !selectedIDs.isEmpty))
+                        } else {
+                            Divider()
+                        }
 
-                            Button {
-                                exportSelectedNotes()
-                            } label: {
-                                Label("Export Selected", systemImage: "square.and.arrow.up")
-                            }
-                            .disabled(!(editMode == .active && !selectedIDs.isEmpty))
+                        Button {
+                            exportSelectedNotes()
+                        } label: {
+                            Label("Export Selected", systemImage: "square.and.arrow.up")
+                        }
+                        .disabled(!(editMode == .active && !selectedIDs.isEmpty))
 
+                        if !isCoreMode {
                             Button {
                                 let chosen = filteredSessions.filter { selectedIDs.contains($0.id) }
                                 presentAddToStatement(with: chosen)
@@ -348,19 +541,6 @@ struct JournalView: View {
                     }
                     .tint(useImmersive ? DSColor.goldLight : .accentColor)
                     .accessibilityIdentifier("journal.bulkMenu")
-                }
-
-                ToolbarItem(placement: .bottomBar) {
-                    if editMode == .active {
-                        Button {
-                            let chosen = filteredSessions.filter { selectedIDs.contains($0.id) }
-                            openInsights(with: chosen)
-                        } label: {
-                            Label("Open in Insights", systemImage: "sparkles.rectangle.stack")
-                        }
-                        .disabled(selectedIDs.isEmpty)
-                        .accessibilityIdentifier("journal.selection.addToInsights")
-                    }
                 }
             }
             .if(!usesJournalSidebar) { view in
@@ -397,7 +577,9 @@ struct JournalView: View {
         } message: {
             Text("Choose the kind of experience you want to capture. You can add the details right away.")
         }
-        .fullScreenCover(item: $activeCover) { route in
+        .fullScreenCover(item: $activeCover, onDismiss: {
+            settings.routeDeferredJournalDetailsIfNeeded(presentAfterDelay: 500_000_000)
+        }) { route in
             coverContent(for: route)
         }
         .sheet(item: $activeSheet, onDismiss: clearSheetScratchState) { route in
@@ -480,6 +662,13 @@ struct JournalView: View {
         activeSheet = .viewEntry(entry.id)
     }
 
+    private func presentPendingJournalDetailsIfNeeded() {
+        guard let targetID = settings.pendingJournalDetailsEntryID else { return }
+        guard let entry = sessions.first(where: { $0.id == targetID }) else { return }
+        settings.pendingJournalDetailsEntryID = nil
+        beginEditDetails(entry, source: .postExamenHandoff)
+    }
+
     @MainActor
     private func refreshJournalList() async {
         // CloudKit sync is system-driven; fetching refreshes the local SwiftData snapshot
@@ -488,6 +677,7 @@ struct JournalView: View {
         _ = try? modelContext.fetch(FetchDescriptor<StatementDraft>())
         refilter()
         presentPendingJournalEntryIfNeeded()
+        presentPendingJournalDetailsIfNeeded()
         try? await Task.sleep(nanoseconds: 350_000_000)
     }
 
@@ -512,20 +702,6 @@ struct JournalView: View {
         showFilterControls = false
     }
 
-    private func openInsights(with entries: [ExamenSession]) {
-        let ids = entries.map(\.id)
-        guard !ids.isEmpty else { return }
-        settings.pendingJournalEntryID = nil
-        settings.pendingInsightEntryIDs = ids
-        settings.pendingInsightsLens = .themes
-        withAnimation {
-            clearSelectionAndExitEditMode()
-        }
-        DispatchQueue.main.async {
-            settings.selectedTab = .insights
-        }
-    }
-    
     private func delete(_ entries: [ExamenSession]) {
         for entry in entries {
             modelContext.delete(entry)
@@ -545,25 +721,6 @@ struct JournalView: View {
             selectedIDs.remove(entryID)
         } else {
             selectedIDs.insert(entryID)
-        }
-    }
-
-    @ViewBuilder
-    private var selectionInsightsButton: some View {
-        if hasActiveSelection {
-            Button {
-                let chosen = filteredSessions.filter { selectedIDs.contains($0.id) }
-                openInsights(with: chosen)
-            } label: {
-                SelectionInsightsCard(
-                    count: selectedIDs.count,
-                    useImmersiveAccent: useImmersive
-                )
-            }
-            .buttonStyle(.plain)
-            .padding(.horizontal)
-            .padding(.bottom, DSSpacing.xs)
-            .accessibilityIdentifier("journal.selection.primaryAddToInsights")
         }
     }
 
@@ -608,11 +765,12 @@ struct JournalView: View {
         activeSheet = .viewEntry(entry.id)
     }
 
-    private func beginEditDetails(_ entry: ExamenSession) {
-        tempExperience = entry.experienceType
-        tempTags = entry.tags
-        newTagText = ""
-        activeSheet = .editDetails(entry.id)
+    private func beginEditDetails(
+        _ entry: ExamenSession,
+        source: JournalDetailsEditorSource = .journalEdit
+    ) {
+        detailsDraft = JournalDetailsDraft(entry: entry)
+        activeSheet = .editDetails(entry.id, source)
     }
 
     private func beginEditingEntry(_ entry: ExamenSession) {
@@ -626,9 +784,7 @@ struct JournalView: View {
     }
 
     private func clearSheetScratchState() {
-        tempExperience = nil
-        tempTags = []
-        newTagText = ""
+        detailsDraft = JournalDetailsDraft()
         bulkTags = []
         bulkNewTagText = ""
     }
@@ -636,9 +792,9 @@ struct JournalView: View {
     @ViewBuilder
     private func sheetContent(for route: JournalSheetRoute) -> some View {
         switch route {
-        case .editDetails(let entryID):
+        case .editDetails(let entryID, let source):
             if let entry = journalEntry(for: entryID) {
-                editDetailsSheet(for: entry)
+                editDetailsSheet(for: entry, source: source)
             } else {
                 unavailableEntrySheet
             }
@@ -648,6 +804,7 @@ struct JournalView: View {
                     entry: entry,
                     onClose: { activeSheet = nil },
                     onEdit: { beginEditingEntry(entry) },
+                    onEditDetails: { beginEditDetails(entry) },
                     onAddToStatement: { presentAddToStatement(with: [entry]) }
                 )
             } else {
@@ -733,16 +890,11 @@ struct JournalView: View {
             .accessibilityIdentifier("journal.entryRow")
             .accessibilityAddTraits(.isButton)
             .contextMenu {
-                if !isCoreMode {
-                    Button { beginEditDetails(session) } label: {
-                        Label("Edit Details", systemImage: "slider.horizontal.3")
-                    }
+                Button { beginEditDetails(session) } label: {
+                    Label("Details", systemImage: "slider.horizontal.3")
                 }
                 Button { presentViewer(for: session) } label: {
                     Label("View & Edit", systemImage: "doc.text.magnifyingglass")
-                }
-                Button { openInsights(with: [session]) } label: {
-                    Label(isCoreMode ? "Notice Patterns" : "Open in Insights", systemImage: "sparkles.rectangle.stack")
                 }
             }
             .swipeActions(edge: .trailing) {
@@ -763,15 +915,9 @@ struct JournalView: View {
                 }
             }
             .swipeActions(edge: .leading) {
-                Button { openInsights(with: [session]) } label: {
-                    Label(isCoreMode ? "Notice Patterns" : "Open in Insights", systemImage: "sparkles.rectangle.stack")
-                }.tint(useImmersive ? DSColor.goldLight : .accentColor)
-
-                if !isCoreMode {
-                    Button { beginEditDetails(session) } label: {
-                        Label("Edit Details", systemImage: "slider.horizontal.3")
-                    }.tint(useImmersive ? DSColor.goldLight : .blue)
-                }
+                Button { beginEditDetails(session) } label: {
+                    Label("Details", systemImage: "slider.horizontal.3")
+                }.tint(useImmersive ? DSColor.goldLight : .blue)
                 
                 Button { presentViewer(for: session) } label: {
                     Label("View & Edit", systemImage: "doc.text.magnifyingglass")
@@ -786,7 +932,7 @@ struct JournalView: View {
     private func quickNoteFlow(for type: ExperienceType) -> some View {
         ExamenSessionContainer(
             draft: ExamenSessionDraft(type: type),
-            initialStage: .details
+            initialStage: .finalReflection
         )
     }
 
@@ -794,56 +940,21 @@ struct JournalView: View {
         activeCover = .quickNote(type)
     }
 
-    private func editDetailsSheet(for entry: ExamenSession) -> some View {
-        NavigationStack {
-            Form {
-                Section("Experience Type") {
-                    Picker("Type", selection: $tempExperience) {
-                        Text("None").tag(ExperienceType?.none)
-                        ForEach(ExperienceType.allCases, id: \.self) { kind in
-                            Text(kind.displayName).tag(ExperienceType?.some(kind))
-                        }
-                    }
-                }
-
-                Section("Tags") {
-                    HStack {
-                        TextField("Add a tag", text: $newTagText)
-                            .submitLabel(.done)
-                            .onSubmit(addNewTag)
-                        Button("Add", action: addNewTag)
-                            .disabled(newTagText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                    }
-
-                    // Tag chips with remove buttons
-                    if tempTags.isEmpty {
-                        Text("No tags yet").foregroundStyle(.secondary)
-                    } else {
-                        TagCloud(tags: tempTags) { tag in
-                            removeTag(tag)
-                        }
-                        .padding(.vertical, 4)
-                    }
-                }
+    private func editDetailsSheet(
+        for entry: ExamenSession,
+        source: JournalDetailsEditorSource
+    ) -> some View {
+        JournalDetailsEditorSheet(
+            draft: $detailsDraft,
+            source: source,
+            useImmersive: useImmersive,
+            onSave: {
+                saveEditDetails(for: entry)
+            },
+            onSecondaryAction: {
+                activeSheet = nil
             }
-            .darkListStyle(enabled: useImmersive)
-            .navigationTitle("Edit Details")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
-                        activeSheet = nil
-                    }
-                    .accessibilityIdentifier("journal.editDetails.cancel")
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") {
-                        saveEditDetails(for: entry)
-                    }
-                    .accessibilityIdentifier("journal.editDetails.save")
-                }
-            }
-        }
+        )
     }
 
     private func editTextSheet(for entry: ExamenSession) -> some View {
@@ -857,6 +968,11 @@ struct JournalView: View {
                 if saveEditedText(text, for: entry) {
                     activeSheet = nil
                 }
+            },
+            onDetails: { text in
+                if saveEditedText(text, for: entry) {
+                    beginEditDetails(entry)
+                }
             }
         )
     }
@@ -866,6 +982,7 @@ struct JournalView: View {
         let useImmersive: Bool
         let onCancel: () -> Void
         let onSave: (String) -> Void
+        let onDetails: (String) -> Void
 
         @State private var draftText: String
 
@@ -873,12 +990,14 @@ struct JournalView: View {
             entry: ExamenSession,
             useImmersive: Bool,
             onCancel: @escaping () -> Void,
-            onSave: @escaping (String) -> Void
+            onSave: @escaping (String) -> Void,
+            onDetails: @escaping (String) -> Void
         ) {
             self.entry = entry
             self.useImmersive = useImmersive
             self.onCancel = onCancel
             self.onSave = onSave
+            self.onDetails = onDetails
             self._draftText = State(initialValue: entry.personalStatement)
         }
 
@@ -906,6 +1025,12 @@ struct JournalView: View {
                             onSave(draftText)
                         }
                         .accessibilityIdentifier("journal.editText.save")
+                    }
+                    ToolbarItem(placement: .bottomBar) {
+                        Button("Details") {
+                            onDetails(draftText)
+                        }
+                        .accessibilityIdentifier("journal.editText.details")
                     }
                 }
             }
@@ -1000,17 +1125,6 @@ struct JournalView: View {
         }
     }
     
-    private func addNewTag() {
-        let t = newTagText.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !t.isEmpty else { return }
-        if !tempTags.contains(t) { tempTags.append(t) }
-        newTagText = ""
-    }
-
-    private func removeTag(_ tag: String) {
-        tempTags.removeAll { $0 == tag }
-    }
-
     // Favorite toggle handler
     private func toggleFavorite(_ entry: ExamenSession) {
         entry.isFavorite.toggle()
@@ -1032,8 +1146,7 @@ struct JournalView: View {
 
     
     private func saveEditDetails(for entry: ExamenSession) {
-        entry.experienceType = tempExperience
-        entry.tags = tempTags
+        detailsDraft.apply(to: entry)
         if persistChanges("save those journal details") {
             refilter()
             activeSheet = nil
@@ -1083,9 +1196,6 @@ struct JournalView: View {
             )
             .padding(.horizontal)
             .padding(.bottom, DSSpacing.xs)
-
-            selectionInsightsButton
-
             if showFilterControls || !filtersAreClear {
                 JournalFilterTray {
                     FiltersRow(selectedExperience: $selectedExperience,
@@ -1297,6 +1407,381 @@ struct JournalView: View {
     }
 }
 
+private struct JournalDetailsEditorSheet: View {
+    @Binding var draft: JournalDetailsDraft
+    @FocusState private var focusedField: JournalDetailsField?
+
+    let source: JournalDetailsEditorSource
+    let useImmersive: Bool
+    let onSave: () -> Void
+    let onSecondaryAction: () -> Void
+
+    private var detailConfig: ExperienceDetailFieldConfig {
+        draft.detailConfig
+    }
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                DSColor.backgroundPrimary.ignoresSafeArea()
+
+                ScrollView {
+                    VStack(alignment: .leading, spacing: DSSpacing.lg) {
+                        AppSectionHeader(
+                            eyebrow: source == .postExamenHandoff ? "Saved to Journal" : "Journal",
+                            title: source.headerTitle,
+                            subtitle: source.headerSubtitle
+                        )
+
+                        experiencePanel
+
+                        if draft.experience != nil {
+                            detailsPanel
+                        }
+
+                        notesPanel
+                        tagsPanel
+                    }
+                    .padding(.horizontal, DSSpacing.lg)
+                    .padding(.top, DSSpacing.lg)
+                    .padding(.bottom, 112)
+                }
+                .scrollDismissesKeyboard(.interactively)
+            }
+            .navigationTitle(source.navigationTitle)
+            .navigationBarTitleDisplayMode(.inline)
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                actionBar
+            }
+        }
+        .interactiveDismissDisabled(source == .postExamenHandoff)
+    }
+
+    private var experiencePanel: some View {
+        AppPanel(
+            title: "Experience type",
+            subtitle: "Choose the closest fit, or leave this as a general reflection.",
+            role: .reading,
+            highlighted: source == .postExamenHandoff
+        ) {
+            Menu {
+                Button("None") {
+                    changeExperience(to: nil)
+                }
+                Divider()
+                ForEach(ExperienceType.allCases, id: \.self) { kind in
+                    Button(kind.displayName) {
+                        changeExperience(to: kind)
+                    }
+                }
+            } label: {
+                JournalDetailsPickerLabel(
+                    title: draft.experience?.displayName ?? "General reflection",
+                    subtitle: draft.experience == nil ? "No structured type" : "Tap to change",
+                    icon: "line.3.horizontal.decrease.circle"
+                )
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("journal.details.typePicker")
+        }
+    }
+
+    @ViewBuilder
+    private var detailsPanel: some View {
+        AppPanel(
+            title: "Experience details",
+            subtitle: "Add only what helps you recognize this reflection later.",
+            role: .interactive
+        ) {
+            VStack(spacing: DSSpacing.md) {
+                if detailConfig.showsHours {
+                    JournalDetailsTextField(
+                        title: "Hours",
+                        prompt: "0",
+                        systemImage: "clock",
+                        text: $draft.hoursString,
+                        field: .hours,
+                        focusedField: $focusedField,
+                        keyboardType: .decimalPad,
+                        capitalization: .never,
+                        accessibilityIdentifier: "journal.details.hours"
+                    )
+                }
+
+                if detailConfig.showsPrimary {
+                    JournalDetailsTextField(
+                        title: detailConfig.primaryLabel,
+                        prompt: detailConfig.primaryLabel,
+                        systemImage: "person",
+                        text: $draft.primaryValue,
+                        field: .primary,
+                        focusedField: $focusedField,
+                        capitalization: .words,
+                        accessibilityIdentifier: "journal.details.primary"
+                    )
+                }
+
+                if detailConfig.showsFacility {
+                    JournalDetailsTextField(
+                        title: detailConfig.facilityLabel,
+                        prompt: detailConfig.facilityLabel,
+                        systemImage: "building.2",
+                        text: $draft.secondaryValue,
+                        field: .secondary,
+                        focusedField: $focusedField,
+                        capitalization: .words,
+                        accessibilityIdentifier: "journal.details.secondary"
+                    )
+                }
+
+                if detailConfig.showsLocation {
+                    JournalDetailsTextField(
+                        title: "Location",
+                        prompt: "City or place",
+                        systemImage: "mappin.and.ellipse",
+                        text: $draft.location,
+                        field: .location,
+                        focusedField: $focusedField,
+                        capitalization: .words,
+                        accessibilityIdentifier: "journal.details.location"
+                    )
+                }
+
+                if detailConfig.showsFocus {
+                    JournalDetailsTextField(
+                        title: detailConfig.focusLabel,
+                        prompt: detailConfig.focusLabel,
+                        systemImage: "scope",
+                        text: $draft.focusValue,
+                        field: .focus,
+                        focusedField: $focusedField,
+                        capitalization: .sentences,
+                        accessibilityIdentifier: "journal.details.focus"
+                    )
+                }
+
+                if !detailConfig.showsHours
+                    && !detailConfig.showsPrimary
+                    && !detailConfig.showsFacility
+                    && !detailConfig.showsLocation
+                    && !detailConfig.showsFocus {
+                    Text("No extra structured details are needed for this type.")
+                        .font(DSFont.supporting)
+                        .foregroundStyle(DSColor.quietText)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+            }
+        }
+    }
+
+    private var notesPanel: some View {
+        AppPanel(
+            title: "Private notes",
+            subtitle: "Optional context for your future self.",
+            role: .quiet
+        ) {
+            JournalDetailsTextField(
+                title: "Notes",
+                prompt: "Anything else to remember",
+                systemImage: "note.text",
+                text: $draft.notes,
+                field: .notes,
+                focusedField: $focusedField,
+                isMultiline: true,
+                accessibilityIdentifier: "journal.details.notes"
+            )
+        }
+    }
+
+    private var tagsPanel: some View {
+        AppPanel(
+            title: "Tags",
+            subtitle: "Use a few simple words if they help you find this later.",
+            role: .quiet
+        ) {
+            VStack(alignment: .leading, spacing: DSSpacing.md) {
+                HStack(spacing: DSSpacing.sm) {
+                    JournalDetailsTextField(
+                        title: "New tag",
+                        prompt: "Add a tag",
+                        systemImage: "tag",
+                        text: $draft.newTagText,
+                        field: .tag,
+                        focusedField: $focusedField,
+                        capitalization: .never,
+                        accessibilityIdentifier: "journal.details.tagInput"
+                    )
+                    .onSubmit(addTag)
+
+                    Button(action: addTag) {
+                        Image(systemName: "plus")
+                            .font(.headline.weight(.semibold))
+                            .appCircleControl(emphasized: canAddTag)
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(!canAddTag)
+                    .accessibilityLabel("Add tag")
+                    .accessibilityIdentifier("journal.details.addTag")
+                }
+
+                if draft.tags.isEmpty {
+                    Text("No tags yet")
+                        .font(DSFont.supporting)
+                        .foregroundStyle(DSColor.quietText)
+                } else {
+                    TagCloud(tags: draft.tags) { tag in
+                        var updated = draft
+                        updated.removeTag(tag)
+                        draft = updated
+                    }
+                }
+            }
+        }
+    }
+
+    private var actionBar: some View {
+        VStack(spacing: DSSpacing.sm) {
+            Button(action: onSave) {
+                Label("Save Details", systemImage: "checkmark")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.appPrimary)
+            .accessibilityIdentifier("journal.details.save")
+
+            Button(source.secondaryActionTitle, action: onSecondaryAction)
+                .buttonStyle(.appQuiet)
+                .accessibilityIdentifier("journal.details.skip")
+        }
+        .padding(.horizontal, DSSpacing.lg)
+        .padding(.top, DSSpacing.md)
+        .padding(.bottom, DSSpacing.md)
+        .background(
+            Rectangle()
+                .fill(DSColor.backgroundPrimary.opacity(0.96))
+                .overlay(alignment: .top) {
+                    Rectangle()
+                        .fill(DSColor.dividerSoft)
+                        .frame(height: 1)
+                }
+        )
+    }
+
+    private var canAddTag: Bool {
+        !draft.newTagText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    private func changeExperience(to experience: ExperienceType?) {
+        var updated = draft
+        updated.changeExperience(to: experience)
+        withAnimation(AnimationConfig.screenTransition) {
+            draft = updated
+        }
+    }
+
+    private func addTag() {
+        var updated = draft
+        updated.addTag()
+        draft = updated
+    }
+}
+
+private struct JournalDetailsPickerLabel: View {
+    let title: String
+    let subtitle: String
+    let icon: String
+
+    var body: some View {
+        HStack(spacing: DSSpacing.md) {
+            Image(systemName: icon)
+                .font(.headline.weight(.semibold))
+                .foregroundStyle(DSColor.brandAccent)
+                .frame(width: 28, height: 28)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .font(DSFont.body.weight(.semibold))
+                    .foregroundStyle(DSColor.textPrimary)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Text(subtitle)
+                    .font(DSFont.meta)
+                    .foregroundStyle(DSColor.quietText)
+            }
+
+            Spacer(minLength: DSSpacing.sm)
+
+            Image(systemName: "chevron.up.chevron.down")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(DSColor.quietTextMuted)
+        }
+        .padding(DSSpacing.md)
+        .frame(maxWidth: .infinity, minHeight: 56, alignment: .leading)
+        .background(DSColor.interactiveSurface.opacity(0.92))
+        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(DSColor.dividerSoft, lineWidth: 1)
+        )
+    }
+}
+
+private struct JournalDetailsTextField: View {
+    let title: String
+    let prompt: String
+    let systemImage: String
+    @Binding var text: String
+    let field: JournalDetailsField
+    var focusedField: FocusState<JournalDetailsField?>.Binding
+    var keyboardType: UIKeyboardType = .default
+    var capitalization: TextInputAutocapitalization = .sentences
+    var isMultiline = false
+    let accessibilityIdentifier: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: DSSpacing.xs) {
+            Label(title, systemImage: systemImage)
+                .font(DSFont.caption.weight(.semibold))
+                .foregroundStyle(DSColor.quietText)
+
+            if isMultiline {
+                styledInput(
+                    TextField(prompt, text: $text, axis: .vertical)
+                        .lineLimit(3...6)
+                )
+            } else {
+                styledInput(
+                    TextField(prompt, text: $text)
+                        .lineLimit(1)
+                )
+            }
+        }
+    }
+
+    private func styledInput<Input: View>(_ input: Input) -> some View {
+        input
+            .font(DSFont.body)
+            .foregroundStyle(DSColor.textPrimary)
+            .textInputAutocapitalization(capitalization)
+            .keyboardType(keyboardType)
+            .focused(focusedField, equals: field)
+            .textFieldStyle(.plain)
+            .padding(.horizontal, DSSpacing.md)
+            .padding(.vertical, DSSpacing.sm)
+            .frame(maxWidth: .infinity, minHeight: 48, alignment: .leading)
+            .background(DSColor.readingSurface.opacity(0.94))
+            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(DSColor.dividerSoft, lineWidth: 1)
+            )
+            .accessibilityLabel(title)
+            .accessibilityIdentifier(accessibilityIdentifier)
+            .onTapGesture {
+                focusedField.wrappedValue = field
+            }
+    }
+}
+
 private struct JournalBrowseBar: View {
     let summaryText: String
     let summaryIcon: String
@@ -1398,34 +1883,6 @@ private struct JournalBrowseBar: View {
                     .buttonStyle(.appQuiet)
             }
         }
-    }
-}
-
-private struct SelectionInsightsCard: View {
-    let count: Int
-    let useImmersiveAccent: Bool
-
-    var body: some View {
-        HStack(alignment: .center, spacing: DSSpacing.md) {
-            VStack(alignment: .leading, spacing: DSSpacing.xs) {
-                Text("Open in Insights")
-                    .font(DSFont.heading2)
-                    .foregroundStyle(DSColor.textPrimary)
-
-                Text("\(count) note\(count == 1 ? "" : "s") ready to bridge from reflection into themes and evidence.")
-                    .font(DSFont.supporting)
-                    .foregroundStyle(DSColor.quietText)
-                    .multilineTextAlignment(.leading)
-            }
-
-            Spacer(minLength: DSSpacing.sm)
-
-            Image(systemName: "sparkles.rectangle.stack")
-                .font(.system(size: 18, weight: .semibold))
-                .foregroundStyle(useImmersiveAccent ? DSColor.goldLight : Color.accentColor)
-        }
-        .padding(DSSpacing.md)
-        .appSurfaceStyle(role: .interactive, highlighted: true)
     }
 }
 
@@ -1559,7 +2016,7 @@ private struct JournalFirstUseState: View {
 
             AppPanel(role: .quiet, highlighted: useImmersive) {
                 VStack(spacing: DSSpacing.sm) {
-                    AppButton(title: "Capture a Quick Note", style: .primary, action: onCaptureQuickNote)
+                    AppButton(title: "Enter a Note", style: .primary, action: onCaptureQuickNote)
                     AppButton(title: "Go to Home", style: .quiet, action: onGoHome)
                 }
             }
@@ -1727,6 +2184,7 @@ struct JournalEntryViewer: View {
     let entry: ExamenSession
     var onClose: () -> Void
     var onEdit: () -> Void
+    var onEditDetails: () -> Void
     var onAddToStatement: () -> Void
     
     private let journalDateStyle = Date.FormatStyle(date: .abbreviated, time: .shortened)
@@ -1809,8 +2267,12 @@ struct JournalEntryViewer: View {
                 }
                 
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Edit", action: onEdit)
-                        .accessibilityIdentifier("journal.viewer.edit")
+                    HStack(spacing: DSSpacing.sm) {
+                        Button("Details", action: onEditDetails)
+                            .accessibilityIdentifier("journal.viewer.details")
+                        Button("Edit", action: onEdit)
+                            .accessibilityIdentifier("journal.viewer.edit")
+                    }
                 }
                 
                 ToolbarItem(placement: .bottomBar) {

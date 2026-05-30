@@ -7,7 +7,7 @@ struct OnboardingFlowView: View {
     @Environment(AppSettings.self) private var settings
     
     enum OnboardingStep: Int, CaseIterable {
-        case welcome, appMap, setup, done
+        case welcome, appMap, trackSelection, preferences, done
 
         var progressIndex: Int? {
             switch self {
@@ -15,8 +15,10 @@ struct OnboardingFlowView: View {
                 return 1
             case .appMap:
                 return 2
-            case .setup:
+            case .trackSelection:
                 return 3
+            case .preferences:
+                return 4
             case .done:
                 return nil
             }
@@ -26,6 +28,13 @@ struct OnboardingFlowView: View {
     @State private var currentStep: OnboardingStep = .welcome
     @State private var persistenceAlert: PersistenceAlertContext?
     
+    // Core Wizard State Bindings passed down to progressive steps
+    @State private var selectedTrack: PreProfessionalTrack = .preMedicine
+    @State private var degreeIntent: DegreeIntent = .md
+    @State private var isTexasApplicant = false
+    @State private var notificationsEnabled = false
+    @State private var notificationTime: Date = Calendar.current.date(from: DateComponents(hour: 20, minute: 0)) ?? Date.now
+
     var body: some View {
         ZStack {
             SacredScreenBackground(settings: settings)
@@ -34,7 +43,7 @@ struct OnboardingFlowView: View {
                 if let progressIndex = currentStep.progressIndex {
                     OnboardingProgressHeader(
                         stepIndex: progressIndex,
-                        totalSteps: 3,
+                        totalSteps: 4,
                         onSkip: completeWithDefaultsAndDismiss
                     )
                     .padding(.horizontal, DSSpacing.lg)
@@ -47,13 +56,26 @@ struct OnboardingFlowView: View {
                         OnboardingWelcomeView(onNext: { advance(to: .appMap) })
                             .transition(.opacity.combined(with: .move(edge: .trailing)))
                     case .appMap:
-                        OnboardingAppMapView(onNext: { advance(to: .setup) })
+                        OnboardingAppMapView(onNext: { advance(to: .trackSelection) })
                             .transition(.opacity.combined(with: .move(edge: .trailing)))
-                    case .setup:
-                        OnboardingSetupView(onComplete: { profile in
-                            saveProfile(profile)
-                            advance(to: .done)
-                        })
+                    case .trackSelection:
+                        OnboardingTrackSelectionView(
+                            selectedTrack: $selectedTrack,
+                            onNext: { advance(to: .preferences) }
+                        )
+                        .transition(.opacity.combined(with: .move(edge: .trailing)))
+                    case .preferences:
+                        OnboardingPreferencesView(
+                            selectedTrack: selectedTrack,
+                            degreeIntent: $degreeIntent,
+                            isTexasApplicant: $isTexasApplicant,
+                            notificationsEnabled: $notificationsEnabled,
+                            notificationTime: $notificationTime,
+                            onComplete: { profile in
+                                saveProfile(profile)
+                                advance(to: .done)
+                            }
+                        )
                         .transition(.opacity.combined(with: .move(edge: .trailing)))
                     case .done:
                         OnboardingCompletionView(onDismiss: finishAndDismiss)
@@ -75,7 +97,7 @@ struct OnboardingFlowView: View {
     }
 
     private func finishAndDismiss() {
-        settings.selectedTab = .home
+        settings.routeHome()
         dismiss()
     }
 

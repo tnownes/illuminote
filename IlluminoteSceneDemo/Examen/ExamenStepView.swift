@@ -88,7 +88,21 @@ struct ExamenStepView: View {
     }
 
     private var contentPadding: CGFloat {
-        isAccessibilityTextSize ? DSSpacing.lg : DSSpacing.xl
+        if isCoreFinalCapture {
+            return isAccessibilityTextSize ? DSSpacing.md : DSSpacing.lg
+        }
+        return isAccessibilityTextSize ? DSSpacing.lg : DSSpacing.xl
+    }
+
+    private var isCoreFinalCapture: Bool {
+        isFinalStep && !showNoteButton && !allowsVoiceTranscription && !allowsPromptSpeech
+    }
+
+    private var editorMinHeight: CGFloat {
+        if isCoreFinalCapture {
+            return isAccessibilityTextSize ? 320 : 420
+        }
+        return 180
     }
 
     // MARK: - Backward-compatible initializer
@@ -153,143 +167,155 @@ struct ExamenStepView: View {
             /* Removed manual background, handled by ExamenFlowView's ZStack */
 
             // 2) Content layer
-            VStack(spacing: isAccessibilityTextSize ? DSSpacing.md : DSSpacing.lg) {
-                VStack(spacing: isAccessibilityTextSize ? DSSpacing.xs : DSSpacing.sm) {
-                    if showDebugStageLabel && !stageName.isEmpty {
-                        Text(stageName.uppercased())
-                            .font(DSFont.eyebrow)
-                            .foregroundStyle(DSColor.quietTextMuted)
-                            .padding(.top, 4)
-                    }
-
-                    ZStack {
-                        if let outgoingQuestion {
-                            promptLayout(
-                                text: outgoingQuestion,
-                                accessibilityHidden: true
-                            )
-                            .opacity(outgoingPromptOpacity)
-                        }
-
-                        promptLayout(
-                            text: activePromptText,
-                            accessibilityHidden: false
-                        )
-                        .opacity(incomingPromptOpacity)
-                    }
-                    .frame(
-                        minHeight: promptContainerMinHeight,
-                        maxHeight: showEditor ? max(promptContainerMinHeight, promptContainerMaxHeight * 0.72) : promptContainerMaxHeight,
-                        alignment: .center
-                    )
-                    .padding(.vertical, isAccessibilityTextSize ? DSSpacing.md : DSSpacing.lg)
-                }
-                .frame(maxWidth: .infinity, alignment: .center)
-                .padding(.horizontal, isAccessibilityTextSize ? DSSpacing.sm : DSSpacing.md)
-                .padding(.vertical, isAccessibilityTextSize ? DSSpacing.sm : DSSpacing.md)
-                .appSurfaceStyle(role: .reading, highlighted: true)
-                .accessibilityElement(children: .contain)
-                .accessibilitySortPriority(2)
-
-                if showEditor {
-                    ZStack(alignment: .bottomTrailing) {
-                        TextEditor(text: $draft)
-                            .scrollContentBackground(.hidden)
-                            .focused($editorFocused)
-                            .textInputAutocapitalization(.sentences)
-                            .autocorrectionDisabled(false)
-                            .frame(minHeight: 180)
-                            .padding(12)
-                            .padding(.bottom, allowsVoiceTranscription ? 44 : 8)
-                            .background(DSColor.readingSurface)
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 12)
-                                    .stroke(DSColor.dividerSoft, lineWidth: 1)
-                            )
-                            .foregroundStyle(DSColor.textPrimary)
-                            .accessibilityLabel("Your response")
-                            .textSelection(.enabled)
-
-                        // Lightweight placeholder when empty
-                        if draft.isEmpty {
-                            Text(notePlaceholder)
-                                .font(DSFont.body)
-                                .foregroundStyle(DSColor.quietText)
-                                .padding(.top, 20)
-                                .padding(.leading, 16)
-                                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                                .allowsHitTesting(false)
-                        }
-                        
-                        if allowsVoiceTranscription {
-                            Button {
-                                if speechManager.isRecording {
-                                    speechManager.stopRecording()
-                                    appendTranscriptIfAvailable()
-                                } else {
-                                    promptSpeechManager.stop()
-                                    do {
-                                        try speechManager.startRecording()
-                                    } catch {
-                                        print("Speech start error:", error)
-                                    }
-                                }
-                            } label: {
-                                HStack(spacing: 6) {
-                                    Image(systemName: speechManager.isRecording ? "stop.fill" : "mic.fill")
-                                        .font(.headline)
-                                    if speechManager.isRecording {
-                                        Text("Listening...")
-                                            .font(DSFont.meta)
-                                            .fontWeight(.medium)
-                                    }
-                                }
-                                .foregroundStyle(speechManager.isRecording ? .white : DSColor.textSecondary)
-                                .padding(.vertical, 8)
-                                .padding(.horizontal, 12)
-                                .background(
-                                    speechManager.isRecording
-                                        ? AnyShapeStyle(Color.red.opacity(0.9))
-                                        : AnyShapeStyle(Material.ultraThinMaterial)
-                                )
-                                .clipShape(Capsule())
-                                .shadow(radius: 2)
+            ScrollView {
+                VStack(spacing: isAccessibilityTextSize ? DSSpacing.md : DSSpacing.lg) {
+                    if isCoreFinalCapture {
+                        coreFinalHeader
+                    } else {
+                        VStack(spacing: isAccessibilityTextSize ? DSSpacing.xs : DSSpacing.sm) {
+                            if showDebugStageLabel && !stageName.isEmpty {
+                                Text(stageName.uppercased())
+                                    .font(DSFont.eyebrow)
+                                    .foregroundStyle(DSColor.quietTextMuted)
+                                    .padding(.top, 4)
                             }
-                            .padding(12)
+
+                            ZStack {
+                                if let outgoingQuestion {
+                                    promptLayout(
+                                        text: outgoingQuestion,
+                                        accessibilityHidden: true
+                                    )
+                                    .opacity(outgoingPromptOpacity)
+                                }
+
+                                promptLayout(
+                                    text: activePromptText,
+                                    accessibilityHidden: false
+                                )
+                                .opacity(incomingPromptOpacity)
+                            }
+                            .frame(
+                                minHeight: promptContainerMinHeight,
+                                maxHeight: showEditor ? max(promptContainerMinHeight, promptContainerMaxHeight * 0.72) : promptContainerMaxHeight,
+                                alignment: .center
+                            )
+                            .padding(.vertical, isAccessibilityTextSize ? DSSpacing.md : DSSpacing.lg)
                         }
-                    }
-                    .appSurfaceStyle(role: .interactive)
-                }
-
-                Spacer(minLength: isAccessibilityTextSize ? DSSpacing.xs : DSSpacing.sm)
-
-                VStack(alignment: .leading, spacing: DSSpacing.sm) {
-                    if shouldShowPromptToolsHint {
-                        Text("Write a note any time")
-                            .font(DSFont.supporting)
-                            .foregroundStyle(DSColor.quietText)
-                            .fixedSize(horizontal: false, vertical: true)
-                            .transition(.opacity)
+                        .frame(maxWidth: .infinity, alignment: .center)
+                        .padding(.horizontal, isAccessibilityTextSize ? DSSpacing.sm : DSSpacing.md)
+                        .padding(.vertical, isAccessibilityTextSize ? DSSpacing.sm : DSSpacing.md)
+                        .appSurfaceStyle(role: .reading, highlighted: true)
+                        .accessibilityElement(children: .contain)
+                        .accessibilitySortPriority(2)
                     }
 
-                    ViewThatFits(in: .horizontal) {
-                        promptControlsRow(labelStyle: .full)
-                        promptControlsRow(labelStyle: .compact)
+                    if showEditor {
+                        ZStack(alignment: .bottomTrailing) {
+                            TextEditor(text: $draft)
+                                .scrollContentBackground(.hidden)
+                                .focused($editorFocused)
+                                .textInputAutocapitalization(.sentences)
+                                .autocorrectionDisabled(false)
+                                .frame(minHeight: editorMinHeight)
+                                .padding(12)
+                                .padding(.bottom, allowsVoiceTranscription ? 44 : 8)
+                                .background(DSColor.readingSurface)
+                                .clipShape(RoundedRectangle(cornerRadius: 12))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .stroke(DSColor.dividerSoft, lineWidth: 1)
+                                )
+                                .foregroundStyle(DSColor.textPrimary)
+                                .accessibilityLabel("Your response")
+                                .accessibilityIdentifier("examen.finalReflection.editor")
+                                .textSelection(.enabled)
 
-                        VStack(alignment: .leading, spacing: DSSpacing.sm) {
-                            promptToolsCluster(labelStyle: .full)
+                            // Lightweight placeholder when empty
+                            if draft.isEmpty {
+                                Text(notePlaceholder)
+                                    .font(DSFont.body)
+                                    .foregroundStyle(DSColor.quietText)
+                                    .padding(.top, 20)
+                                    .padding(.leading, 16)
+                                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                                    .allowsHitTesting(false)
+                            }
+                            
+                            if allowsVoiceTranscription {
+                                Button {
+                                    if speechManager.isRecording {
+                                        speechManager.stopRecording()
+                                        appendTranscriptIfAvailable()
+                                    } else {
+                                        promptSpeechManager.stop()
+                                        do {
+                                            try speechManager.startRecording()
+                                        } catch {
+                                            print("Speech start error:", error)
+                                        }
+                                    }
+                                } label: {
+                                    HStack(spacing: 6) {
+                                        Image(systemName: speechManager.isRecording ? "stop.fill" : "mic.fill")
+                                            .font(.headline)
+                                        if speechManager.isRecording {
+                                            Text("Listening...")
+                                                .font(DSFont.meta)
+                                                .fontWeight(.medium)
+                                        }
+                                    }
+                                    .foregroundStyle(speechManager.isRecording ? .white : DSColor.textSecondary)
+                                    .padding(.vertical, 8)
+                                    .padding(.horizontal, 12)
+                                    .background(
+                                        speechManager.isRecording
+                                            ? AnyShapeStyle(Color.red.opacity(0.9))
+                                            : AnyShapeStyle(Material.ultraThinMaterial)
+                                    )
+                                    .clipShape(Capsule())
+                                    .shadow(radius: 2)
+                                }
+                                .padding(12)
+                            }
+                        }
+                        .appSurfaceStyle(role: .interactive)
+                    }
+
+                    Spacer(minLength: isAccessibilityTextSize ? DSSpacing.xs : DSSpacing.sm)
+
+                    VStack(alignment: .leading, spacing: DSSpacing.sm) {
+                        if shouldShowPromptToolsHint {
+                            Text("Write a note any time")
+                                .font(DSFont.supporting)
+                                .foregroundStyle(DSColor.quietText)
+                                .fixedSize(horizontal: false, vertical: true)
+                                .transition(.opacity)
+                        }
+
+                        if isCoreFinalCapture {
                             nextButton
                                 .frame(maxWidth: .infinity)
+                        } else {
+                            ViewThatFits(in: .horizontal) {
+                                promptControlsRow(labelStyle: .full)
+                                promptControlsRow(labelStyle: .compact)
+
+                                VStack(alignment: .leading, spacing: DSSpacing.sm) {
+                                    promptToolsCluster(labelStyle: .full)
+                                    nextButton
+                                        .frame(maxWidth: .infinity)
+                                }
+                            }
                         }
                     }
+                    .padding(.bottom, isCoreFinalCapture ? 0 : DSSpacing.sm)
+                    .accessibilitySortPriority(1)
                 }
-                .padding(.bottom, DSSpacing.sm)
-                .accessibilitySortPriority(1)
+                .padding(contentPadding)
+                .animation(.easeInOut(duration: 0.2), value: showEditor)
             }
-            .animation(.easeInOut(duration: 0.2), value: showEditor)
-            .padding(contentPadding)
-            // Top Left Back Button removed here, moved to parent container
+            .scrollIndicators(.hidden)
         }
         .onAppear {
             displayedQuestion = question
@@ -369,7 +395,27 @@ struct ExamenStepView: View {
     }
 
     private var nextButtonRowWidth: CGFloat {
-        isAccessibilityTextSize ? 144 : 156
+        if isCoreFinalCapture {
+            return 196
+        }
+        return isAccessibilityTextSize ? 144 : 156
+    }
+
+    private var coreFinalHeader: some View {
+        VStack(alignment: .leading, spacing: DSSpacing.sm) {
+            Text("Reflection")
+                .font(DSFont.eyebrow)
+                .foregroundStyle(DSColor.quietTextMuted)
+
+            Text(question)
+                .font(DSFont.sectionTitle)
+                .foregroundStyle(DSColor.textPrimary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.isHeader)
+        .accessibilitySortPriority(2)
     }
 
     private func crossfadePrompt(to newQuestion: String) {
@@ -510,14 +556,14 @@ struct ExamenStepView: View {
             onNext(draft.trimmingCharacters(in: .whitespacesAndNewlines))
         } label: {
             HStack(spacing: 8) {
-                Text("Next")
+                Text(isFinalStep ? "Continue" : "Next")
                     .fontWeight(.medium)
                 Image(systemName: "chevron.right")
             }
             .padding(.horizontal, DSSpacing.sm)
         }
         .buttonStyle(SacredButtonStyle())
-        .accessibilityLabel("Next step")
+        .accessibilityLabel(isFinalStep ? "Continue to save" : "Next step")
     }
 }
 

@@ -5,6 +5,7 @@ struct ExperienceTypeSelectionView: View {
     var onCancel: () -> Void
 
     @State private var selectedType: ExperienceType?
+    @State private var selectionAdvanceTask: Task<Void, Never>?
 
     private var isCoreMode: Bool {
         AppSettings.featurePolicy.mode == .core
@@ -36,7 +37,7 @@ struct ExperienceTypeSelectionView: View {
                             showsHints: isCoreMode
                         ) { tapped in
                             if isCoreMode {
-                                selectedType = tapped
+                                selectCoreType(tapped)
                             } else {
                                 onSelect(tapped)
                             }
@@ -45,18 +46,8 @@ struct ExperienceTypeSelectionView: View {
 
                     if isCoreMode {
                         VStack(spacing: DSSpacing.md) {
-                            if let selectedType {
-                                Button {
-                                    onSelect(selectedType)
-                                } label: {
-                                    Label("Begin", systemImage: "chevron.right")
-                                        .frame(maxWidth: .infinity)
-                                }
-                                .buttonStyle(SacredButtonStyle())
-                                .accessibilityIdentifier("examen.type.begin")
-                            }
-
                             Button("Not sure yet") {
+                                selectionAdvanceTask?.cancel()
                                 onSelect(.other)
                             }
                             .buttonStyle(.appSecondary)
@@ -73,9 +64,13 @@ struct ExperienceTypeSelectionView: View {
         }
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
+        .onDisappear {
+            selectionAdvanceTask?.cancel()
+        }
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
                 Button {
+                    selectionAdvanceTask?.cancel()
                     onCancel()
                 } label: {
                     Image(systemName: "xmark")
@@ -85,6 +80,20 @@ struct ExperienceTypeSelectionView: View {
             }
         }
         .toolbarColorScheme(.dark, for: .navigationBar)
+    }
+
+    private func selectCoreType(_ type: ExperienceType) {
+        selectionAdvanceTask?.cancel()
+
+        withAnimation(AnimationConfig.examenControl) {
+            selectedType = type
+        }
+
+        selectionAdvanceTask = Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 240_000_000)
+            guard !Task.isCancelled else { return }
+            onSelect(type)
+        }
     }
 }
 

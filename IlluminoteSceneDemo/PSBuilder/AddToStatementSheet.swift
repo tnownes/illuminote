@@ -45,7 +45,6 @@ struct AddToDraftDestinationView: View {
     @Query(sort: \UserProfile.id)
     private var profiles: [UserProfile]
 
-    @State private var selectedScope: StatementDraftScope = .full
     @State private var requirements: [StatementRequirement] = []
     @State private var availableTargets: [WritingTargetDefinition] = []
     @State private var selectedTargetID: String?
@@ -105,12 +104,7 @@ struct AddToDraftDestinationView: View {
     }
 
     private var createButtonTitle: String {
-        switch selectedScope {
-        case .full:
-            return "Create Draft"
-        default:
-            return "Create \(selectedScope.shortLabel) Draft"
-        }
+        "New Draft"
     }
 
     private var eligibleDrafts: [StatementDraft] {
@@ -139,16 +133,37 @@ struct AddToDraftDestinationView: View {
 
             ScrollView {
                 VStack(alignment: .leading, spacing: DSSpacing.lg) {
-                    VStack(alignment: .leading, spacing: DSSpacing.md) {
-                            Text("Use in Writing")
+                        VStack(alignment: .leading, spacing: DSSpacing.md) {
+                            Text("New Draft")
                                 .font(DSFont.sectionTitle)
                                 .foregroundStyle(useImmersive ? DSColor.textPrimary : .primary)
 
-                        Text(destinationSummaryText)
-                            .font(DSFont.supporting)
-                            .foregroundStyle(useImmersive ? DSColor.quietText : .secondary)
-
                         AppInfoChip(text: selectionCountText, icon: "square.and.pencil")
+
+                        if let selectedTarget {
+                            VStack(alignment: .leading, spacing: DSSpacing.sm) {
+                                Text("Draft name")
+                                    .font(DSFont.body.weight(.semibold))
+                                    .foregroundStyle(useImmersive ? DSColor.textPrimary : .primary)
+
+                                TextField(
+                                    draftNamePlaceholder(for: selectedTarget),
+                                    text: $workingTitle
+                                )
+                                .font(DSFont.body.weight(.semibold))
+                                .textInputAutocapitalization(.words)
+                                .submitLabel(.done)
+                                .padding(DSSpacing.md)
+                                .frame(minHeight: 58)
+                                .background(useImmersive ? DSColor.surfaceElevated : Color(uiColor: .secondarySystemBackground))
+                                .clipShape(RoundedRectangle(cornerRadius: 14))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 14)
+                                        .stroke(useImmersive ? DSColor.brandAccent.opacity(0.36) : DSColor.dividerSoft, lineWidth: 1)
+                                )
+                                .accessibilityLabel("Draft name")
+                            }
+                        }
 
                         VStack(alignment: .leading, spacing: DSSpacing.sm) {
                             Text("Essay type")
@@ -172,7 +187,7 @@ struct AddToDraftDestinationView: View {
                                                 .font(DSFont.caption)
                                                 .foregroundStyle(useImmersive ? DSColor.textSecondary : .secondary)
                                         } else {
-                                            Text("Select the kind of essay or application writing this draft will support.")
+                                            Text("Choose the prompt this will support.")
                                                 .font(DSFont.caption)
                                                 .foregroundStyle(useImmersive ? DSColor.textSecondary : .secondary)
                                         }
@@ -190,7 +205,7 @@ struct AddToDraftDestinationView: View {
                         }
 
                         if isShowingFallbackEssayTypes {
-                            Text("Showing general essay types for now. Update your profile to unlock service-specific prompts and limits.")
+                            Text("General essay types are available now. Profile details can refine this later.")
                                 .font(DSFont.caption)
                                 .foregroundStyle(useImmersive ? DSColor.textSecondary : .secondary)
                                 .accessibilityIdentifier("writing.destination.guidance")
@@ -198,26 +213,11 @@ struct AddToDraftDestinationView: View {
 
                         if let selectedTarget {
                             VStack(alignment: .leading, spacing: DSSpacing.sm) {
-                                Text("Draft setup")
-                                    .font(DSFont.meta)
-                                    .foregroundStyle(useImmersive ? DSColor.quietTextMuted : .secondary)
-
-                                TextField(
-                                    "Draft name",
-                                    text: $workingTitle
-                                )
-                                .textInputAutocapitalization(.words)
-                                .submitLabel(.done)
-                                .padding(DSSpacing.md)
-                                .background(useImmersive ? DSColor.surfaceElevated : Color(uiColor: .secondarySystemBackground))
-                                .clipShape(RoundedRectangle(cornerRadius: 12))
-                                .accessibilityLabel("Draft name")
-
-                                Text(draftNameHelpText(for: selectedTarget))
-                                    .font(DSFont.caption)
-                                    .foregroundStyle(useImmersive ? DSColor.textSecondary : .secondary)
-
                                 if selectedTarget.category == .schoolSpecificEssay || selectedTarget.allowsCustomPrompt {
+                                    Text("Prompt")
+                                        .font(DSFont.meta)
+                                        .foregroundStyle(useImmersive ? DSColor.quietTextMuted : .secondary)
+
                                     TextEditor(text: $customPromptText)
                                         .frame(minHeight: 120)
                                         .padding(8)
@@ -232,16 +232,8 @@ struct AddToDraftDestinationView: View {
                             }
                         }
 
-                        VStack(alignment: .leading, spacing: DSSpacing.sm) {
-                            Text("Draft focus")
-                                .font(DSFont.meta)
-                                .foregroundStyle(useImmersive ? DSColor.quietTextMuted : .secondary)
-
-                            DraftScopePicker(selectedScope: $selectedScope)
-                        }
-
                         Button {
-                            createNewDraft(scope: selectedScope)
+                            createNewDraft(scope: .full)
                         } label: {
                             HStack(spacing: 8) {
                                 Image(systemName: "square.and.pencil")
@@ -305,7 +297,7 @@ struct AddToDraftDestinationView: View {
             }
             .scrollIndicators(.hidden)
             .background(Color.clear)
-            .navigationTitle("Essay Type")
+            .navigationTitle("Use in Writing")
             .toolbarColorScheme(useImmersive ? .dark : nil, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -375,8 +367,8 @@ struct AddToDraftDestinationView: View {
         return target.writingDisplayTitle
     }
 
-    private func draftNameHelpText(for target: WritingTargetDefinition) -> String {
-        "Leave blank to use \(target.writingDisplayTitle)."
+    private func draftNamePlaceholder(for target: WritingTargetDefinition) -> String {
+        "\(target.writingDisplayTitle) draft"
     }
 
     private func customPromptHelpText(for target: WritingTargetDefinition) -> String {
@@ -446,22 +438,6 @@ struct AddToDraftDestinationView: View {
         guard !trimmed.isEmpty else { return nil }
         guard target.category == .schoolSpecificEssay || target.allowsCustomPrompt else { return nil }
         return trimmed
-    }
-
-    private var destinationSummaryText: String {
-        if let selectedTarget {
-            return "Shape this writing for \(selectedTarget.writingDisplayTitle). You can start blank or bring in reflections and brainstorming notes."
-        }
-        if isLoadingTargets {
-            return "Loading essay types so you can choose the best fit for this draft."
-        }
-        if isShowingFallbackEssayTypes {
-            return "Select essay type first. You can keep moving with general options now, and add your profile later for more specific prompts and limits."
-        }
-        if hasSourceMaterial {
-            return "Select essay type first, then choose whether to create a new draft or add these sources to an existing one."
-        }
-        return "Select essay type first, then start a new draft with the right prompt and limits in view."
     }
 
     private func appendSources(to draft: StatementDraft) -> [StatementSection] {
@@ -632,41 +608,6 @@ struct WritingTargetPickerSheet: View {
                     Button("Close") { dismiss() }
                 }
             }
-        }
-    }
-}
-
-private struct DraftScopePicker: View {
-    @Binding var selectedScope: StatementDraftScope
-
-    var body: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: DSSpacing.sm) {
-                ForEach(StatementDraftScope.allCases) { scope in
-                    Button {
-                        selectedScope = scope
-                    } label: {
-                        Text(scope.displayName)
-                            .font(DSFont.meta.weight(.semibold))
-                            .foregroundStyle(selectedScope == scope ? DSColor.brandAccent : DSColor.textPrimary)
-                            .padding(.horizontal, 14)
-                            .padding(.vertical, 10)
-                            .background(
-                                Capsule()
-                                    .fill(selectedScope == scope ? DSColor.brandAccentSoft : DSColor.quietSurface)
-                            )
-                            .overlay(
-                                Capsule()
-                                    .stroke(
-                                        selectedScope == scope ? DSColor.brandAccent.opacity(0.42) : DSColor.dividerSoft,
-                                        lineWidth: 1
-                                    )
-                            )
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-            .padding(.vertical, 2)
         }
     }
 }

@@ -1,11 +1,16 @@
 import SwiftUI
 import SwiftData
 
+enum ExamenPostSaveIntent {
+    case completion
+    case journalDetails
+}
+
 struct ExamenDetailsView: View {
     @Query(sort: \ApplicationExperience.dateModified, order: .reverse) private var applicationExperiences: [ApplicationExperience]
 
     var draft: ExamenSessionDraft
-    var onSave: (ExamenSessionDraft) -> Void
+    var onSave: (ExamenSessionDraft, ExamenPostSaveIntent) -> Void
     var onCancel: () -> Void
     
 
@@ -309,47 +314,76 @@ struct ExamenDetailsView: View {
 
     private var coreSaveBody: some View {
         ZStack {
-            DSColor.backgroundPrimary.ignoresSafeArea()
+            // Keep the active choice's dynamic scene backdrop running quietly behind the save card
+            ExamenBackgroundHost(presentation: .flow)
+
+            // High-contrast immersive overlay to ensure high accessibility readability
+            DSColor.immersiveOverlay.ignoresSafeArea()
 
             VStack(spacing: DSSpacing.xl) {
                 Spacer()
 
                 AppPanel(
-                    title: "Save this reflection?",
-                    subtitle: nil,
+                    title: "Reflection Complete",
+                    subtitle: "Your insights are safe and private on this device.",
                     role: .reading,
                     highlighted: true
                 ) {
-                    VStack(spacing: DSSpacing.lg) {
+                    VStack(spacing: DSSpacing.xl) {
                         Image(systemName: "book.closed.fill")
-                            .font(.system(size: 56, weight: .semibold))
+                            .font(.system(size: 64, weight: .semibold))
                             .foregroundStyle(DSColor.brandAccent)
+                            .luminous() // Smooth contemplative gold pulse animation
                             .frame(maxWidth: .infinity)
                             .accessibilityHidden(true)
 
-                        VStack(spacing: DSSpacing.xs) {
+                        VStack(spacing: 8) {
+                            Text("EXAMEN REVIEW")
+                                .font(DSFont.eyebrow)
+                                .foregroundStyle(DSColor.quietTextMuted)
+                                .tracking(0.7)
+
                             Text(draft.type.displayName)
-                                .font(DSFont.sectionTitle)
+                                .font(DSFont.heading1)
                                 .foregroundStyle(DSColor.textPrimary)
 
-                            Text("Journal only")
-                                .font(DSFont.caption.weight(.semibold))
-                                .foregroundStyle(DSColor.quietText)
+                            HStack(spacing: 6) {
+                                Image(systemName: "lock.fill")
+                                    .font(.system(size: 11, weight: .semibold))
+                                Text("Private Journal")
+                                    .font(DSFont.meta.weight(.semibold))
+                            }
+                            .foregroundStyle(DSColor.brandAccent)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .background(
+                                Capsule()
+                                    .fill(DSColor.brandAccentSoft)
+                            )
                         }
+                        .frame(maxWidth: .infinity, alignment: .center)
 
-                        Button {
-                            saveCoreReflection()
-                        } label: {
-                            Label("Save to Journal", systemImage: "checkmark")
-                                .frame(maxWidth: .infinity)
-                        }
-                        .buttonStyle(SacredButtonStyle())
+                        VStack(spacing: DSSpacing.sm) {
+                            Button {
+                                saveCoreReflection(intent: .completion)
+                            } label: {
+                                Label("Add to Journal", systemImage: "checkmark")
+                                    .frame(maxWidth: .infinity)
+                            }
+                            .buttonStyle(SacredButtonStyle())
+                            .accessibilityIdentifier("examen.details.saveToJournal")
 
-                        Button("Add details later") {
-                            saveCoreReflection()
+                            Button {
+                                saveCoreReflection(intent: .journalDetails)
+                            } label: {
+                                Label("Add Details", systemImage: "square.and.pencil")
+                                    .frame(maxWidth: .infinity)
+                            }
+                            .buttonStyle(.appSecondary)
+                            .accessibilityIdentifier("examen.details.saveAndAddDetails")
                         }
-                        .buttonStyle(.appSecondary)
                     }
+                    .padding(.vertical, DSSpacing.xs)
                 }
                 .padding(.horizontal, DSSpacing.lg)
 
@@ -529,7 +563,7 @@ struct ExamenDetailsView: View {
         updatedDraft.pendingApplicationExperience = nil
 
         guard isUsingApplicationRecord else {
-            onSave(updatedDraft)
+            onSave(updatedDraft, .completion)
             return
         }
 
@@ -548,14 +582,14 @@ struct ExamenDetailsView: View {
         }
         
         // Pass back to parent to handle persistence via VM
-        onSave(updatedDraft)
+        onSave(updatedDraft, .completion)
     }
 
-    private func saveCoreReflection() {
+    private func saveCoreReflection(intent: ExamenPostSaveIntent) {
         var updatedDraft = draft
         updatedDraft.linkedApplicationExperienceID = nil
         updatedDraft.pendingApplicationExperience = nil
-        onSave(updatedDraft)
+        onSave(updatedDraft, intent)
     }
 }
 
@@ -649,7 +683,7 @@ private struct ApplicationRecordCopiedDetailsPreview: View {
 #Preview {
     ExamenDetailsView(
         draft: ExamenSessionDraft(type: .clinical),
-        onSave: {_ in },
+        onSave: { _, _ in },
         onCancel: {}
     )
     .modelContainer(for: [ExamenSession.self, ApplicationExperience.self, ExperiencePeriod.self], inMemory: true)

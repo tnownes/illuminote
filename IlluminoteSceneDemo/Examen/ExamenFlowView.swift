@@ -119,6 +119,112 @@ struct ExamenSafeBackground: View {
     }
 }
 
+private struct ExamenFinalReflectionCaptureView: View {
+    @State private var draft: String
+    @FocusState private var isEditorFocused: Bool
+
+    let question: String
+    let onContinue: (String) -> Void
+    let onExit: () -> Void
+
+    init(
+        question: String,
+        initialText: String,
+        onContinue: @escaping (String) -> Void,
+        onExit: @escaping () -> Void
+    ) {
+        self.question = question
+        self.onContinue = onContinue
+        self.onExit = onExit
+        self._draft = State(initialValue: initialText)
+    }
+
+    var body: some View {
+        ZStack {
+            ExamenBackgroundHost(presentation: .flow)
+
+            ScrollView {
+                VStack(alignment: .leading, spacing: DSSpacing.lg) {
+                    HStack {
+                        Button("Exit", action: onExit)
+                            .buttonStyle(.appSecondary)
+                            .accessibilityIdentifier("examen.finalReflection.exit")
+
+                        Spacer()
+                    }
+
+                    VStack(alignment: .leading, spacing: DSSpacing.sm) {
+                        Text("Reflection")
+                            .font(DSFont.eyebrow)
+                            .foregroundStyle(DSColor.quietTextMuted)
+
+                        Text(question)
+                            .font(DSFont.sectionTitle)
+                            .foregroundStyle(DSColor.textPrimary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .accessibilityElement(children: .combine)
+                    .accessibilityAddTraits(.isHeader)
+
+                    ZStack(alignment: .topLeading) {
+                        TextEditor(text: $draft)
+                            .scrollContentBackground(.hidden)
+                            .focused($isEditorFocused)
+                            .textInputAutocapitalization(.sentences)
+                            .autocorrectionDisabled(false)
+                            .padding(12)
+                            .background(DSColor.readingSurface)
+                            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                    .stroke(DSColor.dividerSoft, lineWidth: 1)
+                            )
+                            .foregroundStyle(DSColor.textPrimary)
+                            .accessibilityLabel("Your reflection")
+                            .accessibilityIdentifier("examen.finalReflection.editor")
+                            .textSelection(.enabled)
+
+                        if draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                            Text("Write it down")
+                                .font(DSFont.body)
+                                .foregroundStyle(DSColor.quietText)
+                                .padding(.top, 20)
+                                .padding(.leading, 16)
+                                .allowsHitTesting(false)
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
+                    .frame(minHeight: 180, maxHeight: .infinity)
+                    .appSurfaceStyle(role: .interactive)
+
+                    Button {
+                        onContinue(draft.trimmingCharacters(in: .whitespacesAndNewlines))
+                    } label: {
+                        Label("Continue", systemImage: "chevron.right")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(SacredButtonStyle())
+                    .accessibilityIdentifier("examen.finalReflection.continue")
+                }
+                .padding(.horizontal, DSSpacing.lg)
+                .padding(.vertical, DSSpacing.lg)
+            }
+            .scrollIndicators(.hidden)
+        }
+        .onAppear {
+            isEditorFocused = true
+        }
+        .toolbar {
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button("Done") {
+                    isEditorFocused = false
+                }
+            }
+        }
+    }
+}
+
 struct ExamenSessionContainer: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
@@ -158,6 +264,10 @@ struct ExamenSessionContainer: View {
     private var canGoBackWithinFlow: Bool {
         guard let firstPhase = vm.phases.first else { return false }
         return vm.phasePromptIndex > 0 || vm.currentPhase != firstPhase
+    }
+
+    private var usesSeparateFinalReflectionCapture: Bool {
+        AppSettings.featurePolicy.mode == .core
     }
     
     // Init with optional starting point (e.g. for "New Note" shortcut)
@@ -296,7 +406,7 @@ struct ExamenSessionContainer: View {
         case .prayerfulPosture:
             PrayerPostureView(
                 onConfirm: {
-                    withAnimation(AnimationConfig.examenPostureHandoff) {
+                    withAnimation(AnimationConfig.examenPrayerToPromptHandoff) {
                         vm.advanceFromPosture()
                     }
                 }
@@ -314,7 +424,9 @@ struct ExamenSessionContainer: View {
                         showDebugStageLabel: AppSettings.examenDebugLabelsAllowedInThisBuild && settings.showExamenDebugLabels,
                         initialText: vm.answerForCurrentPrompt(),
                         currentStep: vm.phasePromptIndex,
-                        isFinalStep: vm.isLastPhase && vm.isLastPromptInPhase,
+                        isFinalStep: vm.isLastPhase
+                            && vm.isLastPromptInPhase
+                            && !usesSeparateFinalReflectionCapture,
                         showNoteButton: AppSettings.featurePolicy.allowsExamenInlineNotes,
                         showPromptToolsHint: AppSettings.featurePolicy.allowsExamenInlineNotes
                             && vm.currentPhase == vm.phases.first
@@ -324,13 +436,18 @@ struct ExamenSessionContainer: View {
                         allowsPromptSpeech: AppSettings.featurePolicy.allowsExamenPromptSpeech,
                         onTogglePromptSpeech: togglePromptSpeechForSession,
                         notePlaceholder: vm.isLastPhase && vm.isLastPromptInPhase
-                            ? "What do you want to keep?"
+                            ? "Make a Journal Entry"
                             : "Type your note...",
                         onNext: { answer in
                             reflectiveHoldTask?.cancel()
                             reflectiveHoldTask = nil
                             promptSpeechManager.stop()
-                            vm.continueTapped(answer: answer)
+                            vm.continueTapped(
+                                answer: answer,
+                                usesSeparateFinalReflection: usesSeparateFinalReflectionCapture
+                                    && vm.isLastPhase
+                                    && vm.isLastPromptInPhase
+                            )
                         }
                     )
                     .safeAreaInset(edge: .top, spacing: 0) {
@@ -369,15 +486,37 @@ struct ExamenSessionContainer: View {
             }
             .transition(.opacity)
 
+        case .finalReflection:
+            ExamenFinalReflectionCaptureView(
+                question: "Make a Journal Entry",
+                initialText: vm.draft.personalStatement.isEmpty
+                    ? vm.answerForCurrentPrompt()
+                    : vm.draft.personalStatement,
+                onContinue: { answer in
+                    vm.continueFromFinalReflection(answer: answer)
+                },
+                onExit: {
+                    showExitAlert = true
+                }
+            )
+            .transition(.opacity)
+
         case .details:
             ExamenDetailsView(
                 draft: vm.draft,
-                onSave: { updatedDraft in
+                onSave: { updatedDraft, postSaveIntent in
                     // 1. Update VM with final details
                     vm.advanceFromDetails(finalDraft: updatedDraft)
                     
                     // 2. Perform Save
                     vm.saveSession(context: modelContext)
+
+                    if postSaveIntent == .journalDetails, let savedID = vm.lastSavedSessionID {
+                        settings.deferJournalDetailsRoute(for: savedID)
+                        withAnimation(AnimationConfig.transitionOut) {
+                            vm.finishSession()
+                        }
+                    }
                 },
                 onCancel: {
                     // User requested "Close without saving" functionality similar to Exit
@@ -391,37 +530,29 @@ struct ExamenSessionContainer: View {
                 hasSavedReflection: vm.lastSavedSessionID != nil,
                 applicationRecordOutcomeText: vm.lastApplicationRecordOutcomeText,
                 onViewJournal: {
-                    settings.pendingInsightEntryIDs = []
-                    settings.pendingInsightsLens = nil
-                    settings.selectedTab = .journal
-                    settings.pendingJournalEntryID = vm.lastSavedSessionID
+                    settings.routeToJournalEntry(vm.lastSavedSessionID)
                     withAnimation(AnimationConfig.transitionOut) {
                         vm.finishSession()
                     }
                 },
                 onOpenInsights: {
-                    settings.pendingJournalEntryID = nil
-                    settings.pendingInsightEntryIDs = vm.lastSavedSessionID.map { [$0] } ?? []
-                    settings.pendingInsightsLens = .themes
-                    settings.selectedTab = .insights
+                    if AppSettings.featurePolicy.mode == .core {
+                        settings.routeToInsights()
+                    } else {
+                        settings.routeToInsights(entryIDs: vm.lastSavedSessionID.map { [$0] } ?? [])
+                    }
                     withAnimation(AnimationConfig.transitionOut) {
                         vm.finishSession()
                     }
                 },
                 onGoToWriting: {
-                    settings.pendingJournalEntryID = nil
-                    settings.pendingInsightEntryIDs = []
-                    settings.pendingInsightsLens = nil
-                    settings.selectedTab = .statement
+                    settings.routeToWriting()
                     withAnimation(AnimationConfig.transitionOut) {
                         vm.finishSession()
                     }
                 },
                 onReturnHome: {
-                    settings.pendingJournalEntryID = nil
-                    settings.pendingInsightEntryIDs = []
-                    settings.pendingInsightsLens = nil
-                    settings.selectedTab = .home
+                    settings.routeHome()
                     withAnimation(AnimationConfig.transitionOut) {
                         vm.finishSession()
                     }

@@ -45,6 +45,9 @@ enum AnimationConfig {
     /// Calm handoff from prayer posture into the first reflective prompt.
     static let examenPostureHandoff: Animation = .easeInOut(duration: 1.0)
 
+    /// Slower handoff from prayerful posture into the first prompt.
+    static let examenPrayerToPromptHandoff: Animation = .easeInOut(duration: 1.45)
+
     /// Gentle crossfade for prompt-to-prompt changes.
     static let examenPromptCrossfade: Animation = .easeInOut(duration: 0.9)
 

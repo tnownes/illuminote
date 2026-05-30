@@ -1,6 +1,7 @@
 import SwiftUI
 import SwiftData
 import UIKit
+import UniformTypeIdentifiers
 
 // MARK: - Native Rich Text Editor
 struct PSRichTextEditorView: View {
@@ -25,12 +26,17 @@ struct PSRichTextEditorView: View {
     @State private var isBold: Bool = false
     @State private var isItalic: Bool = false
     @State private var isAdvisorPresented = false
+    @State private var isOutlinePresented = false
     @State private var advisorDraftText = ""
     @State private var advisorReviewID = UUID()
     @State private var showingTargetPicker = false
     @State private var showingRenameDraftDialog = false
     @State private var draftRenameText = ""
     @State private var persistenceAlert: PersistenceAlertContext?
+    @State private var showExportRTF = false
+    @State private var showExportTXT = false
+    @State private var exportDraftDocument: RichTextDocument?
+    @State private var exportDraftTextDocument: PlainTextDocument?
     @State private var requirements: [StatementRequirement] = []
     @State private var availableTargets: [WritingTargetDefinition] = []
     @State private var activeDraftConflict: DraftSyncConflict?
@@ -436,6 +442,15 @@ struct PSRichTextEditorView: View {
                 }
             }
             ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    isOutlinePresented.toggle()
+                } label: {
+                    Label("Outline", systemImage: "list.bullet.indent")
+                }
+                .tint(isOutlinePresented ? (useImmersive ? DSColor.goldLight : DSColor.brandAccent) : (useImmersive ? DSColor.goldLight : .accentColor))
+                .accessibilityLabel("Document Outline")
+            }
+            ToolbarItem(placement: .topBarTrailing) {
                 Button("Save") { saveDraft() }
                     .tint(useImmersive ? DSColor.goldLight : .accentColor)
             }
@@ -456,6 +471,20 @@ struct PSRichTextEditorView: View {
                     Button(draft.writingTargetID == nil ? "Assign Essay Type" : "Change Essay Type") {
                         showingTargetPicker = true
                     }
+                    
+                    Divider()
+                    
+                    Button {
+                        prepareRTFExport()
+                    } label: {
+                        Label("Export Draft (RTF)", systemImage: "doc.richtext")
+                    }
+                    
+                    Button {
+                        prepareTXTExport()
+                    } label: {
+                        Label("Export Draft (TXT)", systemImage: "doc.text")
+                    }
                 } label: {
                     Image(systemName: "ellipsis.circle")
                 }
@@ -471,6 +500,21 @@ struct PSRichTextEditorView: View {
             )
             .id(advisorReviewID)
             .inspectorColumnWidth(min: 340, ideal: 390, max: 460)
+            .presentationBackground(useImmersive ? DSColor.backgroundPrimary : Color(uiColor: .systemBackground))
+        }
+        .inspector(isPresented: $isOutlinePresented) {
+            OutlineNavigatorPanel(
+                headings: parseHeadings(from: attributedText),
+                useImmersive: useImmersive,
+                onSelect: { heading in
+                    NotificationCenter.default.post(
+                        name: .scrollToRangeCommand,
+                        object: nil,
+                        userInfo: ["range": heading.range]
+                    )
+                }
+            )
+            .inspectorColumnWidth(min: 280, ideal: 320, max: 400)
             .presentationBackground(useImmersive ? DSColor.backgroundPrimary : Color(uiColor: .systemBackground))
         }
         .sheet(isPresented: $showingTargetPicker) {
@@ -490,6 +534,36 @@ struct PSRichTextEditorView: View {
             Text("Choose a name you will recognize when you return to this essay.")
         }
         .persistenceFailureAlert($persistenceAlert)
+        .fileExporter(
+            isPresented: $showExportRTF,
+            document: exportDraftDocument,
+            contentType: .rtf,
+            defaultFilename: draft.title.isEmpty ? "Untitled Draft" : draft.title
+        ) { result in
+            if case .success(let url) = result {
+                print("Draft exported to: \(url)")
+            } else if case .failure(let error) = result {
+                persistenceAlert = PersistenceAlertContext(
+                    title: "Couldn't Export Draft",
+                    message: "Illuminote couldn't export this draft as RTF. \(error.localizedDescription)"
+                )
+            }
+        }
+        .fileExporter(
+            isPresented: $showExportTXT,
+            document: exportDraftTextDocument,
+            contentType: .plainText,
+            defaultFilename: draft.title.isEmpty ? "Untitled Draft" : draft.title
+        ) { result in
+            if case .success(let url) = result {
+                print("Draft exported to: \(url)")
+            } else if case .failure(let error) = result {
+                persistenceAlert = PersistenceAlertContext(
+                    title: "Couldn't Export Draft",
+                    message: "Illuminote couldn't export this draft as plain text. \(error.localizedDescription)"
+                )
+            }
+        }
         .onAppear {
             if !allowsAdvisor {
                 isAdvisorPresented = false
@@ -652,9 +726,72 @@ struct PSRichTextEditorView: View {
         availableTargets = targetCatalogService.targets(for: currentProfile, requirements: loadedRequirements)
     }
 
+    private func parseHeadings(from attrString: NSAttributedString) -> [HeadingItem] {
+        var items: [HeadingItem] = []
+        let fullString = attrString.string
+        
+        let paragraphs = fullString.components(separatedBy: "\n")
+        var currentPosition = 0
+        
+        for paragraph in paragraphs {
+            let trimmed = paragraph.trimmingCharacters(in: .whitespacesAndNewlines)
+            let lineRange = NSRange(location: currentPosition, length: (paragraph as NSString).length)
+            currentPosition += (paragraph as NSString).length + 1
+            
+            guard !trimmed.isEmpty else { continue }
+            
+            // 1. Markdown Check
+            if trimmed.hasPrefix("#") {
+                let hashCount = trimmed.prefix(while: { $0 == "#" }).count
+                if hashCount > 0 && hashCount <= 6 {
+                    let title = trimmed.dropFirst(hashCount).trimmingCharacters(in: .whitespacesAndNewlines)
+                    if !title.isEmpty {
+                        items.append(HeadingItem(title: String(title), range: lineRange, level: hashCount))
+                        continue
+                    }
+                }
+            }
+            
+            // 2. Bold / Underline Check
+            if lineRange.length > 0 {
+                var isParagraphBold = false
+                var isParagraphUnderlined = false
+                
+                let attributes = attrString.attributes(at: lineRange.location, effectiveRange: nil)
+                
+                if let font = attributes[.font] as? UIFont {
+                    if font.fontDescriptor.symbolicTraits.contains(.traitBold) {
+                        isParagraphBold = true
+                    }
+                }
+                
+                if attributes[.underlineStyle] != nil {
+                    isParagraphUnderlined = true
+                }
+                
+                if isParagraphBold || isParagraphUnderlined {
+                    let displayTitle = trimmed.count > 40 ? String(trimmed.prefix(40)) + "..." : trimmed
+                    items.append(HeadingItem(title: displayTitle, range: lineRange, level: isParagraphBold ? 2 : 3))
+                }
+            }
+        }
+        
+        return items
+    }
+
     private func beginRenameDraft() {
         draftRenameText = draft.title.isEmpty ? "Untitled Draft" : draft.title
         showingRenameDraftDialog = true
+    }
+
+    private func prepareRTFExport() {
+        exportDraftDocument = RichTextDocument(attributedText: attributedText)
+        showExportRTF = true
+    }
+
+    private func prepareTXTExport() {
+        exportDraftTextDocument = PlainTextDocument(text: attributedText.string)
+        showExportTXT = true
     }
 
     private func commitDraftRename() {
@@ -1015,6 +1152,63 @@ struct PSRichTextEditorView: View {
 extension Notification.Name {
     static let applyFormatCommand = Notification.Name("PSRichTextEditor_ApplyFormat")
     static let applyParagraphStyle = Notification.Name("PSRichTextEditor_ApplyParagraph")
+    static let scrollToRangeCommand = Notification.Name("PSRichTextEditor_ScrollToRange")
+}
+
+// MARK: - File Export Documents
+
+struct RichTextDocument: FileDocument, @unchecked Sendable {
+    static var readableContentTypes: [UTType] { [.rtf] }
+
+    var attributedText: NSAttributedString
+
+    init(attributedText: NSAttributedString) {
+        self.attributedText = attributedText
+    }
+
+    init(configuration: ReadConfiguration) throws {
+        if let data = configuration.file.regularFileContents {
+            self.attributedText = try NSAttributedString(
+                data: data,
+                options: [.documentType: NSAttributedString.DocumentType.rtf],
+                documentAttributes: nil
+            )
+        } else {
+            self.attributedText = NSAttributedString(string: "")
+        }
+    }
+
+    func fileWrapper(configuration: WriteConfiguration) throws -> FileWrapper {
+        let data = try attributedText.data(
+            from: NSRange(location: 0, length: attributedText.length),
+            documentAttributes: [.documentType: NSAttributedString.DocumentType.rtf]
+        )
+        return FileWrapper(regularFileWithContents: data)
+    }
+}
+
+struct PlainTextDocument: FileDocument {
+    static var readableContentTypes: [UTType] { [.plainText] }
+
+    var text: String
+
+    init(text: String) {
+        self.text = text
+    }
+
+    init(configuration: ReadConfiguration) throws {
+        if let data = configuration.file.regularFileContents,
+           let decoded = String(data: data, encoding: .utf8) {
+            self.text = decoded
+        } else {
+            self.text = ""
+        }
+    }
+
+    func fileWrapper(configuration: WriteConfiguration) throws -> FileWrapper {
+        let data = text.data(using: .utf8) ?? Data()
+        return FileWrapper(regularFileWithContents: data)
+    }
 }
 
 // MARK: - Export Helper
@@ -1497,6 +1691,7 @@ struct NativeUITextViewWrapper: UIViewRepresentable {
         // Listen for internal commands
         NotificationCenter.default.addObserver(context.coordinator, selector: #selector(Coordinator.handleFormatCommand(_:)), name: .applyFormatCommand, object: nil)
         NotificationCenter.default.addObserver(context.coordinator, selector: #selector(Coordinator.handleParagraphCommand(_:)), name: .applyParagraphStyle, object: nil)
+        NotificationCenter.default.addObserver(context.coordinator, selector: #selector(Coordinator.handleScrollToRangeCommand(_:)), name: .scrollToRangeCommand, object: nil)
         
         return textView
     }
@@ -1649,6 +1844,16 @@ struct NativeUITextViewWrapper: UIViewRepresentable {
             // Update binding
             parent.text = textView.attributedText
         }
+
+        @objc func handleScrollToRangeCommand(_ notification: Notification) {
+            guard let range = notification.userInfo?["range"] as? NSRange,
+                  let textView = self.textView else { return }
+            
+            if range.location + range.length <= textView.text.count {
+                textView.selectedRange = NSRange(location: range.location, length: 0)
+                textView.scrollRangeToVisible(range)
+            }
+        }
         
         private func toggleAttribute(_ key: NSAttributedString.Key, value: Any, in textView: UITextView) {
             let range = textView.selectedRange
@@ -1761,5 +1966,110 @@ struct NativeUITextViewWrapper: UIViewRepresentable {
             
              parent.text = textView.attributedText
         }
+    }
+}
+
+// MARK: - Outline Navigator Models & Component
+struct HeadingItem: Identifiable, Hashable {
+    let id = UUID()
+    let title: String
+    let range: NSRange
+    let level: Int // 1 for Markdown H1, 2 for Bold, 3 for Underline
+}
+
+struct OutlineNavigatorPanel: View {
+    let headings: [HeadingItem]
+    let useImmersive: Bool
+    let onSelect: (HeadingItem) -> Void
+    
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: DSSpacing.md) {
+            // Header
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Document Outline")
+                        .font(DSFont.heading2)
+                        .foregroundStyle(useImmersive ? DSColor.textPrimary : .primary)
+                    Text("Navigate statements by headers")
+                        .font(DSFont.caption)
+                        .foregroundStyle(useImmersive ? DSColor.textSecondary : .secondary)
+                }
+                Spacer()
+                Button {
+                    dismiss()
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.body.weight(.semibold))
+                        .appCircleControl()
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.horizontal, DSSpacing.md)
+            .padding(.top, DSSpacing.md)
+            
+            Divider()
+                .background(useImmersive ? DSColor.divider : Color(uiColor: .separator))
+
+            if headings.isEmpty {
+                VStack(spacing: DSSpacing.md) {
+                    Spacer()
+                    Image(systemName: "list.bullet.indent")
+                        .font(.system(size: 32))
+                        .foregroundStyle(useImmersive ? DSColor.quietTextMuted : .secondary)
+                    
+                    Text("No headings found.")
+                        .font(DSFont.supporting.weight(.semibold))
+                        .foregroundStyle(useImmersive ? DSColor.textSecondary : .primary)
+                        .multilineTextAlignment(.center)
+                    
+                    Text("Use bold text or Markdown `#` prefixes to organize your drafts into logical sections.")
+                        .font(DSFont.caption)
+                        .foregroundStyle(useImmersive ? DSColor.quietText : .secondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, DSSpacing.lg)
+                    Spacer()
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: DSSpacing.xs) {
+                        ForEach(headings) { heading in
+                            Button {
+                                onSelect(heading)
+                            } label: {
+                                HStack {
+                                    Image(systemName: "chevron.right")
+                                        .font(.caption)
+                                        .foregroundStyle(useImmersive ? DSColor.goldLight : DSColor.brandAccent)
+                                        .opacity(0.7)
+                                    
+                                    Text(heading.title)
+                                        .font(DSFont.supporting.weight(heading.level == 1 ? .bold : .medium))
+                                        .foregroundStyle(useImmersive ? DSColor.textPrimary : .primary)
+                                        .lineLimit(1)
+                                        .padding(.leading, CGFloat(heading.level - 1) * 8)
+                                    
+                                    Spacer()
+                                }
+                                .padding(.vertical, 8)
+                                .padding(.horizontal, DSSpacing.sm)
+                                .contentShape(Rectangle())
+                                .background(
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .fill(useImmersive ? DSColor.quietSurface.opacity(0.12) : Color(uiColor: .secondarySystemGroupedBackground))
+                                )
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                    .padding(.horizontal, DSSpacing.md)
+                    .padding(.vertical, DSSpacing.sm)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(useImmersive ? DSColor.backgroundPrimary : Color(uiColor: .systemGroupedBackground))
     }
 }

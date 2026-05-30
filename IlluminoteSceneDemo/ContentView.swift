@@ -53,19 +53,19 @@ struct ContentView: View {
         .fullScreenCover(isPresented: $showUITestCompletion) {
             ExamenCompletionView(
                 onViewJournal: {
-                    settings.selectedTab = .journal
+                    settings.routeToJournalEntry(nil)
                     showUITestCompletion = false
                 },
                 onOpenInsights: {
-                    settings.selectedTab = .insights
+                    settings.routeToInsights()
                     showUITestCompletion = false
                 },
                 onGoToWriting: {
-                    settings.selectedTab = .statement
+                    settings.routeToWriting()
                     showUITestCompletion = false
                 },
                 onReturnHome: {
-                    settings.selectedTab = .home
+                    settings.routeHome()
                     showUITestCompletion = false
                 }
             )

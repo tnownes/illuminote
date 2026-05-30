@@ -120,14 +120,14 @@ struct LandingView: View {
 
                     AppPanel(
                         title: "At a glance",
-                        subtitle: "A quiet summary of where reflection is already gathering.",
+                        subtitle: nil,
                         role: .quiet
                     ) {
                         VStack(spacing: DSSpacing.md) {
                             LandingInsightRow(
                                 title: sessions.isEmpty ? "Next step" : "Last reflection",
                                 value: sessions.isEmpty ? "Start your first Examen" : homeSummary.lastSessionDateText,
-                                detail: sessions.isEmpty ? "Your reflections will gather here over time." : "Open Journal when you want to revisit it."
+                                detail: sessions.isEmpty ? "Your reflections will gather here over time." : nil
                             )
 
                             LandingPanelDivider()
@@ -135,7 +135,7 @@ struct LandingView: View {
                             LandingInsightRow(
                                 title: "Writing",
                                 value: homeSummary.lastDraftDateText ?? "No draft yet",
-                                detail: homeSummary.lastDraftDateText == nil ? "Move a reflection into writing when you are ready." : "Return to Writing when you want to keep shaping it."
+                                detail: nil
                             )
 
                             if let top = homeSummary.topFocusExperience {
@@ -153,12 +153,18 @@ struct LandingView: View {
                     if !sessions.isEmpty {
                         AppPanel(
                             title: "Recent reflections",
-                            subtitle: "Return to the moments that are still speaking to you.",
+                            subtitle: nil,
                             role: .quiet
                         ) {
                             VStack(spacing: DSSpacing.sm) {
                                 ForEach(Array(sessions.prefix(3).enumerated()), id: \.element.id) { index, session in
-                                    LandingHistoryRow(session: session)
+                                    Button {
+                                        settings.routeToJournalEntry(session.id)
+                                    } label: {
+                                        LandingHistoryRow(session: session)
+                                    }
+                                    .buttonStyle(.plain)
+                                    .accessibilityLabel("Open \(session.experienceType?.displayName ?? "reflection") from \(session.date.formatted(date: .abbreviated, time: .shortened))")
                                     if index < min(3, sessions.count) - 1 {
                                         LandingPanelDivider()
                                     }
@@ -194,7 +200,9 @@ struct LandingView: View {
         } message: {
             Text("Choose the kind of experience you want to capture. You can add the details right away.")
         }
-        .fullScreenCover(item: $activeExamenLaunch) { launch in
+        .fullScreenCover(item: $activeExamenLaunch, onDismiss: {
+            settings.routeDeferredJournalDetailsIfNeeded(presentAfterDelay: 500_000_000)
+        }) { launch in
             ExamenSessionContainer(draft: launch.draft, initialStage: launch.stage)
         }
         .toolbar(settings.isTabBarVisible ? .visible : .hidden, for: .tabBar)
@@ -244,7 +252,7 @@ struct LandingView: View {
     private func startQuickNote(_ type: ExperienceType) {
         activeExamenLaunch = HomeExamenLaunch(
             draft: ExamenSessionDraft(type: type),
-            stage: .details
+            stage: .finalReflection
         )
     }
     
@@ -306,7 +314,7 @@ private struct LandingPanelDivider: View {
 private struct LandingInsightRow: View {
     let title: String
     let value: String
-    let detail: String
+    let detail: String?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -316,9 +324,11 @@ private struct LandingInsightRow: View {
             Text(value)
                 .font(DSFont.sectionTitle)
                 .foregroundStyle(DSColor.textPrimary)
-            Text(detail)
-                .font(DSFont.supporting)
-                .foregroundStyle(DSColor.quietText)
+            if let detail {
+                Text(detail)
+                    .font(DSFont.supporting)
+                    .foregroundStyle(DSColor.quietText)
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -330,7 +340,7 @@ private struct HomeLaunchPanel: View {
 
     var body: some View {
         VStack(spacing: DSSpacing.xl) {
-            Text("Slow down and reflect")
+            Text("Reflect")
                 .font(DSFont.supporting)
                 .foregroundStyle(DSColor.quietText)
                 .multilineTextAlignment(.center)
@@ -361,7 +371,7 @@ private struct HomeLaunchPanel: View {
                 }
 
                 Button(action: onCaptureQuickNote) {
-                    Label("Capture a Quick Note", systemImage: "square.and.pencil")
+                    Label("Enter a Note", systemImage: "square.and.pencil")
                 }
                 .buttonStyle(.appSecondary)
                 .accessibilityIdentifier("home.quickNote")

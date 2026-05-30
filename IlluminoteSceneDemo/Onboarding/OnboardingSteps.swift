@@ -100,43 +100,138 @@ struct OnboardingAppMapView: View {
     }
 }
 
-struct OnboardingSetupView: View {
-    let onComplete: (UserProfile) -> Void
+extension PreProfessionalTrack {
+    var systemIcon: String {
+        switch self {
+        case .preMedicine: return "stethoscope"
+        case .preDentistry: return "mouth.fill"
+        case .prePharmacy: return "pills.fill"
+        case .preOccupationalTherapy: return "figure.walk"
+        case .prePhysicalTherapy: return "figure.walk.motion"
+        case .prePhysicianAssistant: return "person.fill.checkmark"
+        case .preLaw: return "gavel.fill"
+        case .preVeterinaryMedicine: return "pawprint.fill"
+        case .preOptometry: return "eye.fill"
+        case .medicalOrDentalResidency: return "briefcase.fill"
+        case .general, .other: return "person.fill"
+        }
+    }
+    
+    var trackDescription: String {
+        switch self {
+        case .preMedicine: return "Fulfilling requirements for medical school admission."
+        case .preDentistry: return "Preparing for dental school and oral healthcare careers."
+        case .prePharmacy: return "Pursuing chemistry, patient care, and pharmaceutical paths."
+        case .preOccupationalTherapy: return "Enabling rehabilitation and everyday living therapy."
+        case .prePhysicalTherapy: return "Focusing on movement, strength, and physical recovery."
+        case .prePhysicianAssistant: return "Preparing for team-based medical practice and licensing."
+        case .preLaw: return "Discerning legal analysis, justice, and jurisprudence."
+        case .preVeterinaryMedicine: return "Caring for animal health, husbandry, and medicine."
+        case .preOptometry: return "Focusing on vision science, diagnostics, and eye care."
+        case .medicalOrDentalResidency: return "Navigating clinical training after graduation."
+        case .general, .other: return "Grounded personal reflection for everyday growth."
+        }
+    }
+}
 
-    @State private var selectedTrack: PreProfessionalTrack = .preMedicine
-    @State private var degreeIntent: DegreeIntent = .md
-    @State private var isTexasApplicant = false
-    @State private var notificationsEnabled = false
-    @State private var notificationTime = Calendar.current.date(from: DateComponents(hour: 20, minute: 0)) ?? Date.now
+struct OnboardingTrackSelectionView: View {
+    @Binding var selectedTrack: PreProfessionalTrack
+    let onNext: () -> Void
+
+    private let columns = [
+        GridItem(.adaptive(minimum: 155), spacing: DSSpacing.md)
+    ]
 
     var body: some View {
         OnboardingStageScaffold {
             AppSectionHeader(
-                eyebrow: "Preferences",
-                title: "Personalize your experience",
-                subtitle: "Choose only the defaults that make first use calmer. You can change everything else later in Settings."
+                eyebrow: "Step 3 of 4",
+                title: "Choose your focus",
+                subtitle: "Select the track that aligns with your current educational or career path to personalize your reflection prompts."
             )
 
-            AppPanel(
-                title: "Profile",
-                subtitle: "Help Illuminote frame your reflection and writing.",
-                role: .reading
-            ) {
-                VStack(alignment: .leading, spacing: 16) {
-                    HStack {
-                        ThemedText(text: "Track", style: .body)
-                        Spacer()
-                        Picker("Track", selection: $selectedTrack) {
-                            ForEach(PreProfessionalTrack.selectableCases, id: \.self) { track in
-                                Text(track.displayName).tag(track)
+            LazyVGrid(columns: columns, spacing: DSSpacing.md) {
+                ForEach(PreProfessionalTrack.selectableCases, id: \.self) { track in
+                    Button {
+                        selectedTrack = track
+                    } label: {
+                        VStack(alignment: .leading, spacing: DSSpacing.sm) {
+                            HStack {
+                                Image(systemName: track.systemIcon)
+                                    .font(.title3)
+                                    .foregroundStyle(selectedTrack == track ? DSColor.brandAccent : DSColor.quietText)
+                                Spacer()
+                                if selectedTrack == track {
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .foregroundStyle(DSColor.brandAccent)
+                                        .font(.subheadline)
+                                }
                             }
+                            
+                            Text(track.displayName)
+                                .font(DSFont.sectionTitle)
+                                .foregroundStyle(DSColor.textPrimary)
+                                .multilineTextAlignment(.leading)
+                            
+                            Text(track.trackDescription)
+                                .font(DSFont.meta)
+                                .foregroundStyle(DSColor.quietText)
+                                .multilineTextAlignment(.leading)
+                                .lineLimit(3)
+                                .fixedSize(horizontal: false, vertical: true)
                         }
-                        .tint(DSColor.goldLight)
+                        .padding(DSSpacing.md)
+                        .frame(maxWidth: .infinity, minHeight: 140, alignment: .topLeading)
+                        .background(
+                            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                .fill(selectedTrack == track ? DSColor.brandAccentSoft.opacity(0.12) : DSColor.interactiveSurface.opacity(0.5))
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                .stroke(selectedTrack == track ? DSColor.brandAccent : DSColor.dividerSoft, lineWidth: selectedTrack == track ? 2 : 1)
+                        )
                     }
+                    .buttonStyle(.plain)
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel("\(track.displayName) track")
+                    .accessibilityValue(selectedTrack == track ? "Selected" : "Not selected")
+                    .accessibilityHint(track.trackDescription)
+                }
+            }
+            .padding(.vertical, DSSpacing.sm)
+        } footer: {
+            Button(action: onNext) {
+                Text("Continue")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(SacredButtonStyle())
+        }
+    }
+}
 
-                    if selectedTrack == .preMedicine {
-                        OnboardingPanelDivider()
+struct OnboardingPreferencesView: View {
+    let selectedTrack: PreProfessionalTrack
+    @Binding var degreeIntent: DegreeIntent
+    @Binding var isTexasApplicant: Bool
+    @Binding var notificationsEnabled: Bool
+    @Binding var notificationTime: Date
+    let onComplete: (UserProfile) -> Void
 
+    var body: some View {
+        OnboardingStageScaffold {
+            AppSectionHeader(
+                eyebrow: "Step 4 of 4",
+                title: "Refine & Remind",
+                subtitle: "Set up details to structure your workspace and keep your reflective practice steady."
+            )
+
+            if selectedTrack == .preMedicine {
+                AppPanel(
+                    title: "Medical Track Customization",
+                    subtitle: "Personalize prompts for your specific application requirements.",
+                    role: .reading
+                ) {
+                    VStack(alignment: .leading, spacing: DSSpacing.md) {
                         HStack {
                             ThemedText(text: "Degree Intent", style: .body)
                             Spacer()
@@ -159,13 +254,13 @@ struct OnboardingSetupView: View {
             }
 
             AppPanel(
-                title: "Daily reminder",
-                subtitle: "Optional and easy to change later. Keep it gentle enough to support reflection without becoming noise.",
+                title: "Gentle Reminder",
+                subtitle: "A silent, high-contrast prompt to anchor your daily reflection without administrative noise.",
                 role: .interactive
             ) {
-                VStack(alignment: .leading, spacing: 16) {
+                VStack(alignment: .leading, spacing: DSSpacing.md) {
                     Toggle(isOn: $notificationsEnabled) {
-                        ThemedText(text: "Remind me to reflect", style: .body)
+                        ThemedText(text: "Daily Reflection Reminder", style: .body)
                     }
                     .tint(DSColor.goldLight)
 
@@ -173,7 +268,7 @@ struct OnboardingSetupView: View {
                         OnboardingPanelDivider()
 
                         DatePicker(selection: $notificationTime, displayedComponents: .hourAndMinute) {
-                            ThemedText(text: "Time", style: .body)
+                            ThemedText(text: "Reminder Time", style: .body)
                         }
                         .colorScheme(.dark)
                     }
@@ -195,7 +290,8 @@ struct OnboardingSetupView: View {
                 )
                 onComplete(profile)
             } label: {
-                Text("Save & Continue")
+                Text("Save & Complete")
+                    .frame(maxWidth: .infinity)
             }
             .buttonStyle(SacredButtonStyle())
         }

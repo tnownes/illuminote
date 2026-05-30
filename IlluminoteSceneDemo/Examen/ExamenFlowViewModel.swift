@@ -6,6 +6,7 @@ enum ExamenStage: Hashable {
     case selectType
     case prayerfulPosture
     case promptPhase
+    case finalReflection
     case details
     case summary
     case done
@@ -171,7 +172,7 @@ final class ExamenSessionViewModel {
     }
 
     /// Tap Continue logic
-    func continueTapped(answer: String) {
+    func continueTapped(answer: String, usesSeparateFinalReflection: Bool = false) {
         // Save answer
         if let prompt = currentPrompt {
             answersByPromptID[prompt.id] = answer
@@ -190,13 +191,19 @@ final class ExamenSessionViewModel {
         }
         // else show details/summary
         else {
-            stage = .details 
+            stage = usesSeparateFinalReflection ? .finalReflection : .details
         }
     }
 
     // Alias for compatibility
     func advanceFromPrompt(answer: String) {
         continueTapped(answer: answer)
+    }
+
+    func continueFromFinalReflection(answer: String) {
+        draft.personalStatement = answer
+        invalidatePromptTimer()
+        stage = .details
     }
 
     func goBackWithinPhase() {

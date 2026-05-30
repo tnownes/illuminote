@@ -49,26 +49,17 @@ struct ExamenCompletionView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 12))
 
                         VStack(spacing: DSSpacing.sm) {
-                            Button {
-                                onOpenInsights()
-                            } label: {
-                                Label(insightsActionTitle, systemImage: "sparkles.rectangle.stack")
-                                    .frame(maxWidth: .infinity)
-                            }
-                            .buttonStyle(.appPrimary)
-                            .disabled(!hasSavedReflection)
-                            .accessibilityIdentifier("completion.openInsights")
+                            if AppSettings.featurePolicy.mode == .core {
+                                journalButton
+                                    .buttonStyle(.appPrimary)
+                                insightsButton
+                                    .buttonStyle(.appSecondary)
+                            } else {
+                                insightsButton
+                                    .buttonStyle(.appPrimary)
+                                journalButton
+                                    .buttonStyle(.appSecondary)
 
-                            Button {
-                                onViewJournal()
-                            } label: {
-                                Label("View in Journal", systemImage: "book")
-                                    .frame(maxWidth: .infinity)
-                            }
-                            .buttonStyle(.appSecondary)
-                            .accessibilityIdentifier("completion.viewJournal")
-
-                            if AppSettings.featurePolicy.mode == .full {
                                 Button {
                                     onGoToWriting()
                                 } label: {
@@ -99,6 +90,27 @@ struct ExamenCompletionView: View {
         .toolbar(.hidden, for: .navigationBar)
         .sensoryFeedback(.success, trigger: appeared)
         .onAppear { appeared = true }
+    }
+
+    private var journalButton: some View {
+        Button {
+            onViewJournal()
+        } label: {
+            Label("View in Journal", systemImage: "book")
+                .frame(maxWidth: .infinity)
+        }
+        .accessibilityIdentifier("completion.viewJournal")
+    }
+
+    private var insightsButton: some View {
+        Button {
+            onOpenInsights()
+        } label: {
+            Label(insightsActionTitle, systemImage: "sparkles.rectangle.stack")
+                .frame(maxWidth: .infinity)
+        }
+        .disabled(!hasSavedReflection)
+        .accessibilityIdentifier("completion.openInsights")
     }
 
     private var completionMessage: String {

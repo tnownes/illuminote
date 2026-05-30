@@ -683,6 +683,310 @@ final class IlluminoteSceneDemoTests: XCTestCase {
     }
 
     @MainActor
+    func testCoreFinalReflectionStillAdvancesThroughNormalCompletionSave() throws {
+        let container = try makeExamenModelContainer()
+        let context = container.mainContext
+        let prompt = PromptTemplate(
+            id: UUID(),
+            text: "What do you want to keep?",
+            phase: 0,
+            stage: "closing",
+            depth: "standard",
+            stepIndex: 0
+        )
+        let vm = ExamenSessionViewModel(
+            draft: ExamenSessionDraft(type: .clinical),
+            initialStage: .promptPhase
+        )
+        vm.setPrompts([prompt])
+
+        vm.continueTapped(answer: "A first pass.", usesSeparateFinalReflection: true)
+
+        XCTAssertEqual(vm.stage, .finalReflection)
+        XCTAssertEqual(vm.answerForCurrentPrompt(), "A first pass.")
+
+        vm.continueFromFinalReflection(answer: "A steadier truth to remember.")
+
+        XCTAssertEqual(vm.stage, .details)
+        XCTAssertEqual(vm.draft.personalStatement, "A steadier truth to remember.")
+
+        vm.advanceFromDetails(finalDraft: vm.draft)
+        vm.saveSession(context: context)
+
+        XCTAssertEqual(vm.stage, .summary)
+        let savedID = try XCTUnwrap(vm.lastSavedSessionID)
+        let sessions = try context.fetch(FetchDescriptor<ExamenSession>())
+        let savedSession = try XCTUnwrap(sessions.first)
+
+        XCTAssertEqual(savedSession.id, savedID)
+        XCTAssertEqual(savedSession.personalStatement, "A steadier truth to remember.")
+        XCTAssertEqual(savedSession.responses.map(\.answerText), ["A first pass."])
+    }
+
+    func testRouteToJournalDetailsClearsConflictingPendingDestinations() {
+        let settings = AppSettings()
+        let detailsID = UUID()
+        let staleJournalID = UUID()
+        let staleInsightID = UUID()
+        let staleDraftID = UUID()
+
+        settings.pendingJournalEntryID = staleJournalID
+        settings.pendingInsightEntryIDs = [staleInsightID]
+        settings.pendingInsightsLens = .values
+        settings.pendingWritingTargetID = "amcas-personal-statement"
+        settings.pendingWritingDraftID = staleDraftID
+
+        settings.routeToJournalDetails(for: detailsID)
+
+        XCTAssertEqual(settings.selectedTab, .journal)
+        XCTAssertEqual(settings.pendingJournalDetailsEntryID, detailsID)
+        XCTAssertNil(settings.pendingJournalEntryID)
+        XCTAssertTrue(settings.pendingInsightEntryIDs.isEmpty)
+        XCTAssertNil(settings.pendingInsightsLens)
+        XCTAssertNil(settings.pendingWritingTargetID)
+        XCTAssertNil(settings.pendingWritingDraftID)
+    }
+
+    func testDeferredJournalDetailsRouteWaitsForCoverDismissal() {
+        let settings = AppSettings()
+        let detailsID = UUID()
+
+        settings.deferJournalDetailsRoute(for: detailsID)
+
+        XCTAssertEqual(settings.deferredJournalDetailsEntryID, detailsID)
+        XCTAssertNil(settings.pendingJournalDetailsEntryID)
+
+        settings.routeDeferredJournalDetailsIfNeeded()
+
+        XCTAssertEqual(settings.selectedTab, .journal)
+        XCTAssertNil(settings.deferredJournalDetailsEntryID)
+        XCTAssertEqual(settings.pendingJournalDetailsEntryID, detailsID)
+    }
+
+    func testDelayedDeferredJournalDetailsRouteCancelsWhenAnotherRouteWins() async {
+        let settings = AppSettings()
+        let detailsID = UUID()
+
+        settings.deferJournalDetailsRoute(for: detailsID)
+        settings.routeDeferredJournalDetailsIfNeeded(presentAfterDelay: 25_000_000)
+        XCTAssertEqual(settings.selectedTab, .journal)
+
+        settings.routeHome()
+        try? await Task.sleep(nanoseconds: 100_000_000)
+
+        XCTAssertEqual(settings.selectedTab, .home)
+        XCTAssertNil(settings.deferredJournalDetailsEntryID)
+        XCTAssertNil(settings.pendingJournalEntryID)
+        XCTAssertNil(settings.pendingJournalDetailsEntryID)
+    }
+
+    func testDelayedDeferredJournalDetailsRouteDoesNotPresentAfterDirectTabChange() async {
+        let settings = AppSettings()
+        let detailsID = UUID()
+
+        settings.deferJournalDetailsRoute(for: detailsID)
+        settings.routeDeferredJournalDetailsIfNeeded(presentAfterDelay: 25_000_000)
+        XCTAssertEqual(settings.selectedTab, .journal)
+
+        settings.selectedTab = .insights
+        try? await Task.sleep(nanoseconds: 100_000_000)
+
+        XCTAssertEqual(settings.selectedTab, .insights)
+        XCTAssertNil(settings.deferredJournalDetailsEntryID)
+        XCTAssertNil(settings.pendingJournalEntryID)
+        XCTAssertNil(settings.pendingJournalDetailsEntryID)
+    }
+
+    func testRouteToJournalEntryQueuesEntryAndClearsOtherHandoffs() {
+        let settings = AppSettings()
+        let entryID = UUID()
+
+        settings.pendingJournalDetailsEntryID = UUID()
+        settings.pendingInsightEntryIDs = [UUID()]
+        settings.pendingInsightsLens = .experiences
+        settings.pendingWritingTargetID = "tmDSAS-personal-statement"
+        settings.pendingWritingDraftID = UUID()
+
+        settings.routeToJournalEntry(entryID)
+
+        XCTAssertEqual(settings.selectedTab, .journal)
+        XCTAssertEqual(settings.pendingJournalEntryID, entryID)
+        XCTAssertNil(settings.pendingJournalDetailsEntryID)
+        XCTAssertTrue(settings.pendingInsightEntryIDs.isEmpty)
+        XCTAssertNil(settings.pendingInsightsLens)
+        XCTAssertNil(settings.pendingWritingTargetID)
+        XCTAssertNil(settings.pendingWritingDraftID)
+    }
+
+    func testRouteToInsightsWithEntrySelectionQueuesLensAndClearsWritingHandoff() {
+        let settings = AppSettings()
+        let entryID = UUID()
+
+        settings.pendingJournalEntryID = UUID()
+        settings.pendingJournalDetailsEntryID = UUID()
+        settings.pendingWritingTargetID = "aacomas-personal-statement"
+        settings.pendingWritingDraftID = UUID()
+
+        settings.routeToInsights(lens: .values, entryIDs: [entryID])
+
+        XCTAssertEqual(settings.selectedTab, .insights)
+        XCTAssertEqual(settings.pendingInsightEntryIDs, [entryID])
+        XCTAssertEqual(settings.pendingInsightsLens, .values)
+        XCTAssertNil(settings.pendingJournalEntryID)
+        XCTAssertNil(settings.pendingJournalDetailsEntryID)
+        XCTAssertNil(settings.pendingWritingTargetID)
+        XCTAssertNil(settings.pendingWritingDraftID)
+    }
+
+    func testRouteToInsightsForWritingTargetKeepsTargetWithoutLensHandoff() {
+        let settings = AppSettings()
+        let targetID = "amcas-personal-statement"
+
+        settings.pendingJournalEntryID = UUID()
+        settings.pendingInsightEntryIDs = [UUID()]
+        settings.pendingInsightsLens = .why
+        settings.pendingWritingDraftID = UUID()
+
+        settings.routeToInsights(writingTargetID: targetID)
+
+        XCTAssertEqual(settings.selectedTab, .insights)
+        XCTAssertEqual(settings.pendingWritingTargetID, targetID)
+        XCTAssertNil(settings.pendingInsightsLens)
+        XCTAssertTrue(settings.pendingInsightEntryIDs.isEmpty)
+        XCTAssertNil(settings.pendingJournalEntryID)
+        XCTAssertNil(settings.pendingWritingDraftID)
+    }
+
+    func testRouteToWritingDraftQueuesDraftAndClearsOtherHandoffs() {
+        let settings = AppSettings()
+        let draftID = UUID()
+
+        settings.pendingJournalEntryID = UUID()
+        settings.pendingInsightEntryIDs = [UUID()]
+        settings.pendingInsightsLens = .themes
+        settings.pendingWritingTargetID = "amcas-personal-statement"
+
+        settings.routeToWriting(draftID: draftID)
+
+        XCTAssertEqual(settings.selectedTab, .statement)
+        XCTAssertEqual(settings.pendingWritingDraftID, draftID)
+        XCTAssertNil(settings.pendingWritingTargetID)
+        XCTAssertNil(settings.pendingJournalEntryID)
+        XCTAssertTrue(settings.pendingInsightEntryIDs.isEmpty)
+        XCTAssertNil(settings.pendingInsightsLens)
+    }
+
+    func testRouteHomeClearsPendingHandoffs() {
+        let settings = AppSettings()
+
+        settings.pendingJournalEntryID = UUID()
+        settings.pendingJournalDetailsEntryID = UUID()
+        settings.pendingInsightEntryIDs = [UUID()]
+        settings.pendingInsightsLens = .values
+        settings.pendingWritingTargetID = "amcas-personal-statement"
+        settings.pendingWritingDraftID = UUID()
+
+        settings.routeHome()
+
+        XCTAssertEqual(settings.selectedTab, .home)
+        XCTAssertNil(settings.pendingJournalEntryID)
+        XCTAssertNil(settings.pendingJournalDetailsEntryID)
+        XCTAssertTrue(settings.pendingInsightEntryIDs.isEmpty)
+        XCTAssertNil(settings.pendingInsightsLens)
+        XCTAssertNil(settings.pendingWritingTargetID)
+        XCTAssertNil(settings.pendingWritingDraftID)
+    }
+
+    func testJournalDetailsDraftRemapsPrimaryAndClearsHiddenFieldsOnTypeChange() {
+        let entry = ExamenSession(
+            sessionType: .daily,
+            experienceType: .clinical,
+            location: "Omaha",
+            mentorOrSupervisor: "Nurse Ada",
+            organizationName: "Mercy Clinic",
+            focusArea: "Internal Medicine",
+            hours: 8
+        )
+        var draft = JournalDetailsDraft(entry: entry)
+
+        draft.changeExperience(to: ExperienceType.service)
+
+        XCTAssertEqual(draft.primaryValue, "Nurse Ada")
+        XCTAssertEqual(draft.secondaryValue, "Mercy Clinic")
+        XCTAssertEqual(draft.location, "Omaha")
+        XCTAssertEqual(draft.hoursString, "8")
+        XCTAssertEqual(draft.focusValue, "")
+
+        let saved = ExamenSession(sessionType: .daily, experienceType: .clinical)
+        draft.apply(to: saved)
+
+        XCTAssertEqual(saved.experienceType, ExperienceType.service)
+        XCTAssertEqual(saved.roleTitle, "Nurse Ada")
+        XCTAssertNil(saved.mentorOrSupervisor)
+        XCTAssertNil(saved.physician)
+        XCTAssertEqual(saved.organizationName, "Mercy Clinic")
+        XCTAssertEqual(saved.facility, "Mercy Clinic")
+        XCTAssertNil(saved.focusArea)
+        XCTAssertNil(saved.specialty)
+        XCTAssertEqual(saved.location, "Omaha")
+        XCTAssertEqual(saved.hours, 8, accuracy: 0.001)
+    }
+
+    func testJournalDetailsDraftSaveWritesNormalizedAndLegacyFields() {
+        var draft = JournalDetailsDraft()
+        draft.changeExperience(to: ExperienceType.service)
+        draft.primaryValue = " Pantry Lead "
+        draft.secondaryValue = " St. Anne Food Pantry "
+        draft.location = " Omaha "
+        draft.hoursString = "3.5"
+        draft.notes = " Remember the family who needed extra time. "
+        draft.tags = ["service", "presence"]
+
+        let entry = ExamenSession(sessionType: .daily, experienceType: .clinical)
+        draft.apply(to: entry)
+
+        XCTAssertEqual(entry.experienceType, ExperienceType.service)
+        XCTAssertEqual(entry.roleTitle, "Pantry Lead")
+        XCTAssertEqual(entry.organizationName, "St. Anne Food Pantry")
+        XCTAssertEqual(entry.facility, "St. Anne Food Pantry")
+        XCTAssertEqual(entry.location, "Omaha")
+        XCTAssertEqual(entry.hours, 3.5, accuracy: 0.001)
+        XCTAssertEqual(entry.notes, "Remember the family who needed extra time.")
+        XCTAssertEqual(entry.tags, ["service", "presence"])
+        XCTAssertNil(entry.mentorOrSupervisor)
+        XCTAssertNil(entry.physician)
+        XCTAssertNil(entry.focusArea)
+        XCTAssertNil(entry.specialty)
+    }
+
+    func testJournalDetailsDraftDoesNotMutateEntryUntilApplied() {
+        let entry = ExamenSession(
+            sessionType: .daily,
+            experienceType: .clinical,
+            mentorOrSupervisor: "Original Mentor",
+            organizationName: "Original Clinic",
+            notes: "Original note",
+            tags: ["original"],
+            hours: 6
+        )
+        var draft = JournalDetailsDraft(entry: entry)
+
+        draft.changeExperience(to: ExperienceType.service)
+        draft.primaryValue = "Changed Role"
+        draft.secondaryValue = "Changed Site"
+        draft.hoursString = "2"
+        draft.notes = "Changed note"
+        draft.tags = ["changed"]
+
+        XCTAssertEqual(entry.experienceType, ExperienceType.clinical)
+        XCTAssertEqual(entry.mentorOrSupervisor, "Original Mentor")
+        XCTAssertEqual(entry.organizationName, "Original Clinic")
+        XCTAssertEqual(entry.hours, 6, accuracy: 0.001)
+        XCTAssertEqual(entry.notes, "Original note")
+        XCTAssertEqual(entry.tags, ["original"])
+    }
+
+    @MainActor
     func testInsightNodePersistsRenameHideAndLinkedEvidence() throws {
         let container = try makeInsightsModelContainer()
         let context = container.mainContext
@@ -947,6 +1251,49 @@ final class IlluminoteSceneDemoTests: XCTestCase {
         let grouped = InsightsViewSupport.linkedWorkspaceEntriesByNodeID(from: [older, newer])
 
         XCTAssertEqual(grouped[node.id]?.map(\.id), [newer.id, older.id])
+    }
+
+    func testCoreInsightsUsesPatternsAndExperiencesOnly() {
+        XCTAssertEqual(InsightsViewSupport.coreDefaultLens, .themes)
+        XCTAssertEqual(InsightsViewSupport.coreVisibleLenses, [.themes, .experiences])
+        XCTAssertEqual(InsightsViewSupport.CoreMode.allCases.map(\.title), ["Patterns", "Experiences"])
+    }
+
+    func testCoreInsightsPromptContextUsesSurfacedSuggestion() {
+        let suggestion = makeInsightSuggestion(title: "Patient Presence", lens: .themes, kind: .theme)
+
+        let context = InsightsViewSupport.promptContext(for: suggestion)
+
+        XCTAssertEqual(context.lens, .themes)
+        XCTAssertEqual(context.entryCount, suggestion.entries.count)
+        XCTAssertTrue(context.signalTitles.contains("Patient Presence"))
+        XCTAssertTrue(context.signalSummary.contains("Patient Presence"))
+    }
+
+    @MainActor
+    func testCoreInsightsBrainstormSaveDoesNotRequireAcceptedInsightNode() throws {
+        let container = try makeInsightsModelContainer()
+        let context = ModelContext(container)
+        let sourceID = UUID()
+        let entry = InsightWorkspaceEntry(
+            lens: .themes,
+            title: "Pattern in patient presence",
+            promptKey: "themes.pattern",
+            body: "I keep noticing that calm presence matters before explanations.",
+            sourceEntryIDs: [sourceID]
+        )
+
+        context.insert(entry)
+        try context.save()
+
+        let workspaceEntries = try context.fetch(FetchDescriptor<InsightWorkspaceEntry>())
+        let nodes = try context.fetch(FetchDescriptor<InsightNode>())
+
+        XCTAssertEqual(workspaceEntries.count, 1)
+        XCTAssertEqual(workspaceEntries.first?.lens, .themes)
+        XCTAssertEqual(workspaceEntries.first?.promptKey, "themes.pattern")
+        XCTAssertEqual(workspaceEntries.first?.sourceEntryIDs, [sourceID])
+        XCTAssertTrue(nodes.isEmpty)
     }
 
     func testInsightsAnalysisValuesSuggestEmpathyFromEvidence() {
@@ -1404,25 +1751,68 @@ final class IlluminoteSceneDemoTests: XCTestCase {
     }
 
     @MainActor
-    private func makeInsightsModelContainer() throws -> ModelContainer {
+    private func makeExamenModelContainer() throws -> ModelContainer {
         let schema = Schema([
-            UserProfile.self,
             ExamenSession.self,
             StepResponse.self,
             ApplicationExperience.self,
-            ExperiencePeriod.self,
-            ThemeCluster.self,
-            ThemeEntryLink.self,
-            ThemeBundle.self,
-            InsightNode.self,
-            InsightEntryLink.self,
-            InsightWorkspaceEntry.self,
-            PracticeTheme.self
+            ExperiencePeriod.self
         ])
 
         return try ModelContainer(
             for: schema,
             configurations: ModelConfiguration(isStoredInMemoryOnly: true)
+        )
+    }
+
+    @MainActor
+    private func makeInsightsModelContainer() throws -> ModelContainer {
+        let syncedUserModelTypes: [any PersistentModel.Type] = [
+            UserProfile.self,
+            ExamenSession.self,
+            StepResponse.self,
+            ApplicationExperience.self,
+            ExperiencePeriod.self,
+            StatementDraft.self,
+            StatementSection.self,
+            ThemeCluster.self,
+            ThemeEntryLink.self,
+            ThemeBundle.self,
+            InsightNode.self,
+            InsightEntryLink.self,
+            InsightWorkspaceEntry.self
+        ]
+        let localAppModelTypes: [any PersistentModel.Type] = [
+            PromptTemplate.self,
+            SemanticVectorCache.self,
+            StatementField.self,
+            ApplicationService.self,
+            PromptCycle.self,
+            BestPractice.self,
+            ToneGuidelines.self,
+            StructureRecommendations.self,
+            PracticeTheme.self
+        ]
+        let syncedUserSchema = Schema(syncedUserModelTypes)
+        let localAppSchema = Schema(localAppModelTypes)
+        let fullSchema = Schema(syncedUserModelTypes + localAppModelTypes)
+
+        return try ModelContainer(
+            for: fullSchema,
+            configurations: [
+                ModelConfiguration(
+                    "InsightsTestUserContent",
+                    schema: syncedUserSchema,
+                    isStoredInMemoryOnly: true,
+                    cloudKitDatabase: .none
+                ),
+                ModelConfiguration(
+                    "InsightsTestLocalAppContent",
+                    schema: localAppSchema,
+                    isStoredInMemoryOnly: true,
+                    cloudKitDatabase: .none
+                )
+            ]
         )
     }
 
